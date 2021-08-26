@@ -25,5 +25,6 @@ typedef struct {
 } ScanResult;
 
 void init_scan_result(ScanResult *scanResult);
+char* scan_result_to_string(ScanResult *scanResult);
 
 #endif //TEST_SCAN_RESULT_H

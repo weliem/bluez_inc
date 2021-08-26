@@ -6,9 +6,9 @@
 #include <glib.h>
 
 void log_debug(const char *tag, const char *message) {
-    g_print("[%s] %s", tag, message);
+    g_print("[%s] %s\n", tag, message);
 }
 
 void log_info(const char *tag, const char *message) {
-    g_print("[%s] %s", tag, message);
+    g_print("[%s] %s\n", tag, message);
 }

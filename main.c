@@ -12,20 +12,26 @@
 
 #include "uuid.h"
 #include "central_manager.h"
+#include "logger.h"
 
+const char* MAIN_TAG = "Main";
 
 void on_scan_result(ScanResult *scanResult) {
-    g_print("Address : %s\n", scanResult->address);
-    g_print("Alias : %s\n", scanResult->alias);
-    g_print("Name : %s\n", scanResult->name);
-    g_print("RSSI : %d\n", scanResult->rssi);
+    char *scanResultString = scan_result_to_string(scanResult);
+    log_debug(MAIN_TAG, scanResultString);
+    g_free(scanResultString);
 
-    if (g_list_length(scanResult->uuids) > 0) {
-        g_print("UUIDs : \n");
-        for (GList *iterator = scanResult->uuids; iterator; iterator = iterator->next) {
-            g_print("<%s>\n", (char *) iterator->data);
-        }
-    }
+//    g_print("Address : %s\n", scanResult->address);
+//    g_print("Alias : %s\n", scanResult->alias);
+//    g_print("Name : %s\n", scanResult->name);
+//    g_print("RSSI : %d\n", scanResult->rssi);
+//
+//    if (g_list_length(scanResult->uuids) > 0) {
+//        g_print("UUIDs : \n");
+//        for (GList *iterator = scanResult->uuids; iterator; iterator = iterator->next) {
+//            g_print("<%s>\n", (char *) iterator->data);
+//        }
+//    }
 }
 
 gboolean callback(gpointer data) {
