@@ -7,12 +7,13 @@
 
 #include <gio/gio.h>
 #include "scan_result.h"
+#include "adapter.h"
 
 typedef void (*CentralManagerScanResultCallback) (ScanResult  *scanResult);
 
 typedef struct {
     GDBusConnection *dbusConnection;
-    const char *adapterPath;
+    Adapter *adapter;
     guint prop_changed;
     guint iface_added;
     guint iface_removed;
@@ -20,11 +21,11 @@ typedef struct {
 } CentralManager;
 
 
-CentralManager* create_central_manager();
-void close_central_manager(CentralManager *centralManager);
+CentralManager* binc_create_central_manager(Adapter *adapter);
+void binc_close_central_manager(CentralManager *centralManager);
 
-void register_scan_result_callback(CentralManager *centralManager, CentralManagerScanResultCallback callback);
-int scan_for_peripherals(CentralManager* centralManager);
-int stop_scanning(CentralManager *centralManager);
+void binc_register_scan_result_callback(CentralManager *centralManager, CentralManagerScanResultCallback callback);
+int binc_scan_for_peripherals(CentralManager* centralManager);
+int binc_stop_scanning(CentralManager *centralManager);
 
 #endif //TEST_CENTRAL_MANAGER_H

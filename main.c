@@ -10,11 +10,13 @@
 #include <glib.h>
 #include <gio/gio.h>
 
-#include "uuid.h"
+#include "adapter.h"
 #include "central_manager.h"
 #include "logger.h"
 
 const char* MAIN_TAG = "Main";
+
+CentralManager *centralManager = NULL;
 
 void on_scan_result(ScanResult *scanResult) {
     char *scanResultString = scan_result_to_string(scanResult);
@@ -34,6 +36,23 @@ void on_scan_result(ScanResult *scanResult) {
 //    }
 }
 
+void find_adapters_callback(GPtrArray *adapters) {
+    if (adapters->len > 0) {
+        // Take the first adapter
+        Adapter *adapter = (Adapter*) adapters->pdata[0];
+        log_debug("MAIN", adapter->path);
+
+        // Create CentralManager
+        centralManager = binc_create_central_manager(adapter);
+
+        // Start a scan
+        binc_register_scan_result_callback(centralManager, &on_scan_result);
+        binc_scan_for_peripherals(centralManager);
+    } else {
+        log_debug("MAIN", "No adapter found");
+    }
+}
+
 gboolean callback(gpointer data) {
     g_main_loop_quit((GMainLoop *) data);
     return FALSE;
@@ -43,24 +62,20 @@ int main(void) {
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-    // Create CentralManager
-    CentralManager *centralManager = create_central_manager();
+    // Find adapters
+    binc_find_adapters(&find_adapters_callback);
 
-    // Start a scan
-    register_scan_result_callback(centralManager, &on_scan_result);
-    scan_for_peripherals(centralManager);
-
-    // Scan for 10 seconds
+    // Bail out after 10 seconds
     g_timeout_add_seconds(10, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
 
     // Stop the scan
-    stop_scanning(centralManager);
+    binc_stop_scanning(centralManager);
 
     // Clean up
-    close_central_manager(centralManager);
+    binc_close_central_manager(centralManager);
 
     return 0;
 }

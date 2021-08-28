@@ -10,7 +10,7 @@
 const char* TAG = "CentralManager";
 
 
-void register_scan_result_callback(CentralManager *centralManager, CentralManagerScanResultCallback callback) {
+void binc_register_scan_result_callback(CentralManager *centralManager, CentralManagerScanResultCallback callback) {
     if (centralManager == NULL) {
         log_info(TAG, "central manager is null");
     }
@@ -21,15 +21,15 @@ void register_scan_result_callback(CentralManager *centralManager, CentralManage
     centralManager->scanResultCallback = callback;
 }
 
-int scan_for_peripherals(CentralManager* centralManager) {
+int binc_scan_for_peripherals(CentralManager* centralManager) {
     log_debug(TAG, "starting scan");
-    set_discovery_filter(centralManager->dbusConnection, centralManager->adapterPath, -100);
-    return adapter_start_discovery(centralManager->dbusConnection, centralManager->adapterPath);
+    binc_adapter_set_discovery_filter(centralManager->adapter, -100);
+    return binc_adapter_start_discovery(centralManager->adapter);
 }
 
-int stop_scanning(CentralManager *centralManager) {
+int binc_stop_scanning(CentralManager *centralManager) {
     log_debug(TAG, "stopping scan");
-    return adapter_stop_discovery(centralManager->dbusConnection, centralManager->adapterPath);
+    return binc_adapter_stop_discovery(centralManager->adapter);
 }
 
 static void bluez_signal_adapter_changed(GDBusConnection *conn,
@@ -273,17 +273,17 @@ void remove_signal_subscribers(CentralManager* centralManager) {
     g_dbus_connection_signal_unsubscribe(centralManager->dbusConnection, centralManager->iface_removed);
 }
 
-CentralManager* create_central_manager() {
+CentralManager* binc_create_central_manager(Adapter *adapter) {
     log_debug(TAG, "creating central manager");
     CentralManager* centralManager = g_new(CentralManager, 1);
-    centralManager->dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    centralManager->adapterPath = "/org/bluez/hci0";
+    centralManager->dbusConnection = adapter->connection;
+    centralManager->adapter = adapter;
     centralManager->scanResultCallback = NULL;
     setup_signal_subscribers(centralManager);
     return centralManager;
 }
 
-void close_central_manager(CentralManager *centralManager) {
+void binc_close_central_manager(CentralManager *centralManager) {
     log_debug(TAG, "closing central manager");
     remove_signal_subscribers(centralManager);
     g_object_unref(centralManager->dbusConnection);

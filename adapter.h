@@ -7,10 +7,23 @@
 
 #include <gio/gio.h>
 
-int adapter_start_discovery(GDBusConnection *connection, const char *adapterPath);
-int adapter_stop_discovery(GDBusConnection *connection, const char *adapterPath);
-int set_discovery_filter(GDBusConnection *connection, const char *adapterPath, short rssi_threshold);
-int adapter_power_on(GDBusConnection *connection, const char *adapterPath);
-int adapter_power_off(GDBusConnection *connection, const char *adapterPath);
+typedef struct {
+    GDBusConnection *connection;
+    const char *path;
+    const char *address;
+    int powered;
+    int discoverable;
+    int discovering;
+} Adapter;
+
+typedef void (*FindAdaptersCallback) (GPtrArray  *adapters);
+
+GPtrArray* binc_get_adapters();
+int binc_find_adapters(FindAdaptersCallback callback);
+int binc_adapter_start_discovery(Adapter *adapter);
+int binc_adapter_stop_discovery(Adapter *adapter);
+int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
+int binc_adapter_power_on(Adapter *adapter);
+int binc_adapter_power_off(Adapter *adapter);
 
 #endif //TEST_ADAPTER_H

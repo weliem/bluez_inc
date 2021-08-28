@@ -6,7 +6,6 @@
 #define TEST_SCAN_RESULT_H
 
 #include <glib.h>
-#include "uuid.h"
 
 typedef struct {
     const char *adapter_path;
@@ -21,7 +20,6 @@ typedef struct {
     short rssi;
     int trusted;
     GList* uuids;
-    uuid services[];
 } ScanResult;
 
 void init_scan_result(ScanResult *scanResult);
