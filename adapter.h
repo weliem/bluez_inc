@@ -19,7 +19,7 @@ typedef struct {
 typedef void (*FindAdaptersCallback) (GPtrArray  *adapters);
 
 GPtrArray* binc_get_adapters();
-int binc_find_adapters(FindAdaptersCallback callback);
+GPtrArray* binc_find_adapters();
 int binc_adapter_start_discovery(Adapter *adapter);
 int binc_adapter_stop_discovery(Adapter *adapter);
 int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);

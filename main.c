@@ -36,22 +36,7 @@ void on_scan_result(ScanResult *scanResult) {
 //    }
 }
 
-void find_adapters_callback(GPtrArray *adapters) {
-    if (adapters->len > 0) {
-        // Take the first adapter
-        Adapter *adapter = (Adapter*) adapters->pdata[0];
-        log_debug("MAIN", adapter->path);
 
-        // Create CentralManager
-        centralManager = binc_create_central_manager(adapter);
-
-        // Start a scan
-        binc_register_scan_result_callback(centralManager, &on_scan_result);
-        binc_scan_for_peripherals(centralManager);
-    } else {
-        log_debug("MAIN", "No adapter found");
-    }
-}
 
 gboolean callback(gpointer data) {
     g_main_loop_quit((GMainLoop *) data);
@@ -63,7 +48,22 @@ int main(void) {
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
     // Find adapters
-    binc_find_adapters(&find_adapters_callback);
+    GPtrArray *adapters = binc_find_adapters();
+
+    if (adapters->len > 0) {
+        // Take the first adapter
+        Adapter *adapter = g_ptr_array_index(adapters, 0);
+        log_debug("MAIN", adapter->path);
+
+        // Create CentralManager
+        centralManager = binc_create_central_manager(adapter);
+
+        // Start a scan
+        binc_register_scan_result_callback(centralManager, &on_scan_result);
+        binc_scan_for_peripherals(centralManager);
+    } else {
+        log_debug("MAIN", "No adapter found");
+    }
 
     // Bail out after 10 seconds
     g_timeout_add_seconds(10, callback, loop);
