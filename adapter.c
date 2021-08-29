@@ -5,6 +5,8 @@
 #include "adapter.h"
 #include "logger.h"
 
+#define TAG "Adapter"
+
 GPtrArray* binc_adapters = NULL;
 
 GPtrArray* binc_get_adapters() {
@@ -176,6 +178,10 @@ GPtrArray* binc_find_adapters() {
         }
         g_variant_unref(result);
     }
+
+//    char *message = g_strdup_printf("found %d adapters", binc_adapters->len);
+//    log_debug(TAG, message);
+    log_debug(TAG, "found %d adapters", binc_adapters->len);
     return binc_adapters;
 }
 

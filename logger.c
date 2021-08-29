@@ -26,12 +26,26 @@ char* current_time_string() {
     return g_date_time_format(now, "%F %R:%S");
 }
 
-void log_debug(const char *tag, const char *message) {
+void log_log(const char *tag, const char *level, const char *message) {
     char* timestamp = current_time_string();
-    g_print("%s:%lld [%s] %s\n", timestamp, current_timestamp_in_millis() % 1000, tag, message);
+    g_print("%s:%lld %s [%s] %s\n", timestamp, current_timestamp_in_millis() % 1000, level, tag, message);
     g_free(timestamp);
 }
 
-void log_info(const char *tag, const char *message) {
-    g_print("[%s] %s\n", tag, message);
+void log_debug(const char *tag, const char *format, ...) {
+    char buf[255];
+    va_list arg;
+    va_start(arg, format);
+    g_vsnprintf(buf, 255, format, arg);
+    log_log(tag, "DEBUG", buf);
+    va_end(arg);
+}
+
+void log_info(const char *tag, const char *format, ...) {
+    char buf[255];
+    va_list arg;
+    va_start(arg, format);
+    g_vsnprintf(buf, 255, format, arg);
+    log_log(tag, "INFO", buf);
+    va_end(arg);
 }

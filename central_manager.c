@@ -73,7 +73,10 @@ static void bluez_signal_adapter_changed(GDBusConnection *conn,
                         g_variant_get_type_string(value), "b");
                 goto done;
             }
-            g_print("Adapter scan \"%s\"\n", g_variant_get_boolean(value) ? "on" : "off");
+            int discovering = g_variant_get_boolean(value);
+            char *message = g_strdup_printf("discovery '%s'", discovering ? "on" : "off");
+            log_debug(TAG, message);
+            g_free(message);
         }
     }
     done:

@@ -14,13 +14,13 @@
 #include "central_manager.h"
 #include "logger.h"
 
-const char* MAIN_TAG = "Main";
+#define TAG "Main"
 
 CentralManager *centralManager = NULL;
 
 void on_scan_result(ScanResult *scanResult) {
     char *scanResultString = scan_result_to_string(scanResult);
-    log_debug(MAIN_TAG, scanResultString);
+    log_debug(TAG, scanResultString);
     g_free(scanResultString);
 
 //    g_print("Address : %s\n", scanResult->address);
@@ -53,7 +53,9 @@ int main(void) {
     if (adapters->len > 0) {
         // Take the first adapter
         Adapter *adapter = g_ptr_array_index(adapters, 0);
-        log_debug("MAIN", adapter->path);
+        char *message = g_strdup_printf("using adapter '%s'", adapter->path);
+        log_debug(TAG, message);
+        g_free(message);
 
         // Create CentralManager
         centralManager = binc_create_central_manager(adapter);
