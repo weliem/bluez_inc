@@ -22,21 +22,15 @@ void on_scan_result(ScanResult *scanResult) {
     char *scanResultString = scan_result_to_string(scanResult);
     log_debug(TAG, scanResultString);
     g_free(scanResultString);
-
-//    g_print("Address : %s\n", scanResult->address);
-//    g_print("Alias : %s\n", scanResult->alias);
-//    g_print("Name : %s\n", scanResult->name);
-//    g_print("RSSI : %d\n", scanResult->rssi);
-//
-//    if (g_list_length(scanResult->uuids) > 0) {
-//        g_print("UUIDs : \n");
-//        for (GList *iterator = scanResult->uuids; iterator; iterator = iterator->next) {
-//            g_print("<%s>\n", (char *) iterator->data);
-//        }
-//    }
 }
 
+void on_discovery_state_changed(Adapter *adapter) {
+    log_debug(TAG, "discovery '%s'", adapter->discovering ? "on" : "off");
+}
 
+void on_powered_state_changed(Adapter *adapter) {
+    log_debug(TAG, "powered '%s'", adapter->powered ? "on" : "off");
+}
 
 gboolean callback(gpointer data) {
     g_main_loop_quit((GMainLoop *) data);
@@ -53,22 +47,26 @@ int main(void) {
     if (adapters->len > 0) {
         // Take the first adapter
         Adapter *adapter = g_ptr_array_index(adapters, 0);
-        char *message = g_strdup_printf("using adapter '%s'", adapter->path);
-        log_debug(TAG, message);
-        g_free(message);
+        log_debug(TAG, "using adapter '%s'", adapter->path);
 
         // Create CentralManager
-        centralManager = binc_create_central_manager(adapter);
+        //centralManager = binc_create_central_manager(adapter);
+
+        binc_adapter_register_powered_state_callback(adapter, &on_powered_state_changed);
+        binc_adapter_power_off(adapter);
+        binc_adapter_power_on(adapter);
 
         // Start a scan
-        binc_register_scan_result_callback(centralManager, &on_scan_result);
-        binc_scan_for_peripherals(centralManager);
+        binc_adapter_register_scan_result_callback(adapter, &on_scan_result);
+        binc_adapter_register_discovery_state_callback(adapter, &on_discovery_state_changed);
+        binc_adapter_set_discovery_filter(adapter, -100);
+        binc_adapter_start_discovery(adapter);
     } else {
         log_debug("MAIN", "No adapter found");
     }
 
     // Bail out after 10 seconds
-    g_timeout_add_seconds(10, callback, loop);
+    g_timeout_add_seconds(30, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);

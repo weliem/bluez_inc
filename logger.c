@@ -28,7 +28,7 @@ char* current_time_string() {
 
 void log_log(const char *tag, const char *level, const char *message) {
     char* timestamp = current_time_string();
-    g_print("%s:%lld %s [%s] %s\n", timestamp, current_timestamp_in_millis() % 1000, level, tag, message);
+    g_print("%s:%03lld %s [%s] %s\n", timestamp, current_timestamp_in_millis() % 1000, level, tag, message);
     g_free(timestamp);
 }
 

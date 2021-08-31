@@ -31,11 +31,12 @@ char *scan_result_to_string(ScanResult *scanResult) {
     }
     g_string_append(uuids, "]");
 
-    return g_strdup_printf("ScanResult{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s }",
+    return g_strdup_printf("ScanResult{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, path='%s' }",
                            scanResult->name,
                            scanResult->address,
                            scanResult->address_type,
                            scanResult->rssi,
-                           uuids->str
+                           uuids->str,
+                           scanResult->path
     );
 }
