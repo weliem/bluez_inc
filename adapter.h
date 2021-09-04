@@ -21,13 +21,16 @@ typedef struct sAdapter {
     int discoverable;
     int discovering;
 
-    guint prop_changed;
+    guint device_prop_changed;
+    guint adapter_prop_changed;
     guint iface_added;
     guint iface_removed;
 
     AdapterScanResultCallback scan_results_callback;
     AdapterDiscoveryStateChangeCallback discoveryStateCallback;
     AdapterPoweredStateChangeCallback poweredStateCallback;
+
+    GHashTable* scan_results_cache;
 } Adapter;
 
 

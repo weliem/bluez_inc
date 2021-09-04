@@ -44,13 +44,11 @@ int main(void) {
     // Find adapters
     GPtrArray *adapters = binc_find_adapters();
 
+    Adapter *adapter = NULL;
     if (adapters->len > 0) {
         // Take the first adapter
-        Adapter *adapter = g_ptr_array_index(adapters, 0);
+        adapter = g_ptr_array_index(adapters, 0);
         log_debug(TAG, "using adapter '%s'", adapter->path);
-
-        // Create CentralManager
-        //centralManager = binc_create_central_manager(adapter);
 
         binc_adapter_register_powered_state_callback(adapter, &on_powered_state_changed);
         binc_adapter_power_off(adapter);
@@ -72,10 +70,9 @@ int main(void) {
     g_main_loop_run(loop);
 
     // Stop the scan
-    binc_stop_scanning(centralManager);
+    binc_adapter_stop_discovery(adapter);
 
     // Clean up
-    binc_close_central_manager(centralManager);
 
     return 0;
 }

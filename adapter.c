@@ -19,6 +19,7 @@ GPtrArray* binc_adapters = NULL;
 GDBusConnection *binc_dbus_connection = NULL;
 
 
+
 GPtrArray* binc_get_adapters() {
     return binc_adapters;
 }
@@ -33,8 +34,14 @@ void init_adapter(Adapter *adapter) {
     adapter->path = NULL;
     adapter->powered = FALSE;
     adapter->scan_results_callback = NULL;
+    adapter->scan_results_cache = NULL;
 }
 
+ScanResult* create_scan_result(const char* path) {
+    ScanResult *x = malloc(sizeof(ScanResult));
+    init_scan_result(x);
+    x->path = path;
+}
 
 int adapter_call_method(Adapter *adapter, const char *method, GVariant *param) {
     g_assert(adapter != NULL);
@@ -56,6 +63,64 @@ int adapter_call_method(Adapter *adapter, const char *method, GVariant *param) {
 
     g_variant_unref(result);
     return 0;
+}
+
+void bluez_signal_device_changed(GDBusConnection *conn,
+                                  const gchar *sender,
+                                  const gchar *path,
+                                  const gchar *interface,
+                                  const gchar *signal,
+                                  GVariant *params,
+                                  void *userdata) {
+    (void) conn;
+    (void) sender;
+    (void) path;
+    (void) interface;
+    (void) userdata;
+
+    GVariantIter *properties = NULL;
+    GVariantIter *unknown = NULL;
+    const char *iface;
+    const char *key;
+    GVariant *value = NULL;
+    const gchar *signature = g_variant_get_type_string(params);
+
+    Adapter *adapter = (Adapter*) userdata;
+    g_assert(adapter != NULL);
+
+    if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
+        g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
+        goto done;
+    }
+
+    // Look up scanresult for this
+    ScanResult *scanResult = g_hash_table_lookup(adapter->scan_results_cache, path);
+    if (scanResult == NULL) {
+        scanResult = create_scan_result(path);
+        g_hash_table_insert(adapter->scan_results_cache, (void*)scanResult->path, scanResult);
+    }
+
+    g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
+    while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
+        if (!g_strcmp0(key, "RSSI")) {
+            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_INT16)) {
+                g_print("Invalid argument type for %s: %s != %s", key,
+                        g_variant_get_type_string(value), "b");
+                goto done;
+            }
+            scanResult->rssi = g_variant_get_int16(value);
+        }
+    }
+
+    if (adapter->scan_results_callback != NULL) {
+        adapter->scan_results_callback(scanResult);
+    }
+
+    done:
+    if (properties != NULL)
+        g_variant_iter_free(properties);
+    if (value != NULL)
+        g_variant_unref(value);
 }
 
 void bluez_signal_adapter_changed(GDBusConnection *conn,
@@ -234,6 +299,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
             init_scan_result(x);
             x->path = object;
             x->interface = interface_name;
+
             const gchar *property_name;
             GVariantIter i;
             GVariant *prop_val;
@@ -260,6 +326,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
             // Deliver ScanResult to registered callback
             if (user_data != NULL) {
                 Adapter *adapter = (Adapter *) user_data;
+                g_hash_table_insert(adapter->scan_results_cache, (void*)x->path, x);
                 if (adapter->scan_results_callback != NULL) {
                     adapter->scan_results_callback(x);
                 }
@@ -272,16 +339,27 @@ static void bluez_device_appeared(GDBusConnection *sig,
 
 
 void setup_signal_subscribers(Adapter *adapter) {
-    adapter->prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
-                                                                      "org.bluez",
-                                                                      "org.freedesktop.DBus.Properties",
-                                                                      "PropertiesChanged",
-                                                                      NULL,
-                                                                      "org.bluez.Adapter1",
-                                                                      G_DBUS_SIGNAL_FLAGS_NONE,
-                                                                      bluez_signal_adapter_changed,
-                                                                      adapter,
-                                                                      NULL);
+    adapter->device_prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
+                                                               "org.bluez",
+                                                               "org.freedesktop.DBus.Properties",
+                                                               "PropertiesChanged",
+                                                               NULL,
+                                                               "org.bluez.Device1",
+                                                               G_DBUS_SIGNAL_FLAGS_NONE,
+                                                               bluez_signal_device_changed,
+                                                               adapter,
+                                                               NULL);
+
+    adapter->adapter_prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
+                                                                       "org.bluez",
+                                                                       "org.freedesktop.DBus.Properties",
+                                                                       "PropertiesChanged",
+                                                                       NULL,
+                                                                       "org.bluez.Adapter1",
+                                                                       G_DBUS_SIGNAL_FLAGS_NONE,
+                                                                       bluez_signal_adapter_changed,
+                                                                       adapter,
+                                                                       NULL);
 
     adapter->iface_added = g_dbus_connection_signal_subscribe(adapter->connection,
                                                                      "org.bluez",
@@ -307,7 +385,8 @@ void setup_signal_subscribers(Adapter *adapter) {
 }
 
 void remove_signal_subscribers(Adapter* adapter) {
-    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->prop_changed);
+    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->device_prop_changed);
+    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->adapter_prop_changed);
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_added);
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_removed);
 }
@@ -320,6 +399,7 @@ Adapter* create_adapter(GDBusConnection *connection, const char* path) {
     init_adapter(adapter);
     adapter->connection = connection;
     adapter->path = path;
+    adapter->scan_results_cache = g_hash_table_new(g_str_hash, g_str_equal);
     setup_signal_subscribers(adapter);
     return adapter;
 }
@@ -447,6 +527,8 @@ GPtrArray* binc_find_adapters() {
  * Adapter: StartDiscovery
  */
 int binc_adapter_start_discovery(Adapter *adapter) {
+    g_assert (adapter != NULL);
+
     return adapter_call_method(adapter, "StartDiscovery", NULL);
 }
 
@@ -454,6 +536,8 @@ int binc_adapter_start_discovery(Adapter *adapter) {
  * Adapter: StopDiscovery
  */
 int binc_adapter_stop_discovery(Adapter *adapter) {
+    g_assert (adapter != NULL);
+
     return adapter_call_method(adapter, "StopDiscovery", NULL);
 }
 
