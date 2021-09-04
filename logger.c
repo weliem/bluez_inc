@@ -6,6 +6,8 @@
 #include <glib.h>
 #include <sys/time.h>
 
+#define BUFFER_SIZE 512
+
 /**
  * Get the current UTC time in milliseconds since epoch
  * @return
@@ -33,19 +35,19 @@ void log_log(const char *tag, const char *level, const char *message) {
 }
 
 void log_debug(const char *tag, const char *format, ...) {
-    char buf[255];
+    char buf[BUFFER_SIZE];
     va_list arg;
     va_start(arg, format);
-    g_vsnprintf(buf, 255, format, arg);
+    g_vsnprintf(buf, BUFFER_SIZE, format, arg);
     log_log(tag, "DEBUG", buf);
     va_end(arg);
 }
 
 void log_info(const char *tag, const char *format, ...) {
-    char buf[255];
+    char buf[BUFFER_SIZE];
     va_list arg;
     va_start(arg, format);
-    g_vsnprintf(buf, 255, format, arg);
+    g_vsnprintf(buf, BUFFER_SIZE, format, arg);
     log_log(tag, "INFO", buf);
     va_end(arg);
 }

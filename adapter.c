@@ -65,63 +65,7 @@ int adapter_call_method(Adapter *adapter, const char *method, GVariant *param) {
     return 0;
 }
 
-void bluez_signal_device_changed(GDBusConnection *conn,
-                                  const gchar *sender,
-                                  const gchar *path,
-                                  const gchar *interface,
-                                  const gchar *signal,
-                                  GVariant *params,
-                                  void *userdata) {
-    (void) conn;
-    (void) sender;
-    (void) path;
-    (void) interface;
-    (void) userdata;
 
-    GVariantIter *properties = NULL;
-    GVariantIter *unknown = NULL;
-    const char *iface;
-    const char *key;
-    GVariant *value = NULL;
-    const gchar *signature = g_variant_get_type_string(params);
-
-    Adapter *adapter = (Adapter*) userdata;
-    g_assert(adapter != NULL);
-
-    if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
-        g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
-        goto done;
-    }
-
-    // Look up scanresult for this
-    ScanResult *scanResult = g_hash_table_lookup(adapter->scan_results_cache, path);
-    if (scanResult == NULL) {
-        scanResult = create_scan_result(path);
-        g_hash_table_insert(adapter->scan_results_cache, (void*)scanResult->path, scanResult);
-    }
-
-    g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
-        if (!g_strcmp0(key, "RSSI")) {
-            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_INT16)) {
-                g_print("Invalid argument type for %s: %s != %s", key,
-                        g_variant_get_type_string(value), "b");
-                goto done;
-            }
-            scanResult->rssi = g_variant_get_int16(value);
-        }
-    }
-
-    if (adapter->scan_results_callback != NULL) {
-        adapter->scan_results_callback(scanResult);
-    }
-
-    done:
-    if (properties != NULL)
-        g_variant_iter_free(properties);
-    if (value != NULL)
-        g_variant_unref(value);
-}
 
 void bluez_signal_adapter_changed(GDBusConnection *conn,
                                   const gchar *sender,
@@ -265,10 +209,28 @@ GList* variant_array_to_list(GVariant *value) {
     GVariantIter i;
     g_variant_iter_init(&i, value);
     while (g_variant_iter_next(&i, "s", &data)) {
-        g_print("\t\t%s\n", data);
+//        g_print("\t\t%s\n", data);
         list = g_list_append(list, data);
     }
     return list;
+}
+
+void scan_result_update(ScanResult *scan_result, const char *property_name, GVariant *prop_val) {
+    if (g_strcmp0(property_name, "Address") == 0) {
+        scan_result->address = g_variant_get_string(prop_val, NULL);
+    } else if (g_strcmp0(property_name, "AddressType") == 0) {
+        scan_result->address_type = g_variant_get_string(prop_val, NULL);
+    } else if (g_strcmp0(property_name, "Alias") == 0) {
+        scan_result->alias = g_variant_get_string(prop_val, NULL);
+    } else if (g_strcmp0(property_name, "Adapter") == 0) {
+        scan_result->adapter_path = g_variant_get_string(prop_val, NULL);
+    } else if (g_strcmp0(property_name, "Name") == 0) {
+        scan_result->name = g_variant_get_string(prop_val, NULL);
+    } else if (g_strcmp0(property_name, "RSSI") == 0) {
+        scan_result->rssi = g_variant_get_int16(prop_val);
+    } else if (g_strcmp0(property_name, "UUIDs") == 0) {
+        scan_result->uuids = variant_array_to_list(prop_val);
+    }
 }
 
 static void bluez_device_appeared(GDBusConnection *sig,
@@ -306,21 +268,22 @@ static void bluez_device_appeared(GDBusConnection *sig,
             g_variant_iter_init(&i, properties);
             while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)) {
                 //bluez_property_value(property_name, prop_val);
-                if (g_strcmp0(property_name, "Address") == 0) {
-                    x->address = g_variant_get_string(prop_val, NULL);
-                } else if (g_strcmp0(property_name, "AddressType") == 0) {
-                    x->address_type = g_variant_get_string(prop_val, NULL);
-                } else if (g_strcmp0(property_name, "Alias") == 0) {
-                    x->alias = g_variant_get_string(prop_val, NULL);
-                } else if (g_strcmp0(property_name, "Adapter") == 0) {
-                    x->adapter_path = g_variant_get_string(prop_val, NULL);
-                } else if (g_strcmp0(property_name, "Name") == 0) {
-                    x->name = g_variant_get_string(prop_val, NULL);
-                } else if (g_strcmp0(property_name, "RSSI") == 0) {
-                    x->rssi = g_variant_get_int16(prop_val);
-                } else if (g_strcmp0(property_name, "UUIDs") == 0) {
-                    x->uuids = variant_array_to_list(prop_val);
-                }
+//                if (g_strcmp0(property_name, "Address") == 0) {
+//                    x->address = g_variant_get_string(prop_val, NULL);
+//                } else if (g_strcmp0(property_name, "AddressType") == 0) {
+//                    x->address_type = g_variant_get_string(prop_val, NULL);
+//                } else if (g_strcmp0(property_name, "Alias") == 0) {
+//                    x->alias = g_variant_get_string(prop_val, NULL);
+//                } else if (g_strcmp0(property_name, "Adapter") == 0) {
+//                    x->adapter_path = g_variant_get_string(prop_val, NULL);
+//                } else if (g_strcmp0(property_name, "Name") == 0) {
+//                    x->name = g_variant_get_string(prop_val, NULL);
+//                } else if (g_strcmp0(property_name, "RSSI") == 0) {
+//                    x->rssi = g_variant_get_int16(prop_val);
+//                } else if (g_strcmp0(property_name, "UUIDs") == 0) {
+//                    x->uuids = variant_array_to_list(prop_val);
+//                }
+                scan_result_update(x, property_name, prop_val);
             }
 
             // Deliver ScanResult to registered callback
@@ -337,6 +300,97 @@ static void bluez_device_appeared(GDBusConnection *sig,
     }
 }
 
+ScanResult* device_getall_properties(Adapter *adapter, const char* device_path) {
+    ScanResult *scanResult = NULL;
+    GVariant *result = g_dbus_connection_call_sync(adapter->connection,
+                                                   "org.bluez",
+                                                   device_path,
+                                                   "org.freedesktop.DBus.Properties",
+                                                   "GetAll",
+                                                   g_variant_new("(s)", "org.bluez.Device1"),
+                                                   G_VARIANT_TYPE("(a{sv})"),
+                                                   G_DBUS_CALL_FLAGS_NONE,
+                                                   -1,
+                                                   NULL,
+                                                   NULL);
+
+    if(result == NULL) {
+        g_print("Unable to device properties\n");
+        return scanResult;
+    }
+
+    scanResult = create_scan_result(device_path);
+    result = g_variant_get_child_value(result, 0);
+    const gchar *property_name;
+    GVariantIter i;
+    GVariant *prop_val;
+    g_variant_iter_init(&i, result);
+    while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)) {
+        //bluez_property_value(property_name, prop_val);
+        scan_result_update(scanResult, property_name, prop_val);
+        g_variant_unref(prop_val);
+    }
+    return scanResult;
+}
+
+void bluez_signal_device_changed(GDBusConnection *conn,
+                                 const gchar *sender,
+                                 const gchar *path,
+                                 const gchar *interface,
+                                 const gchar *signal,
+                                 GVariant *params,
+                                 void *userdata) {
+    (void) conn;
+    (void) sender;
+    (void) path;
+    (void) interface;
+    (void) userdata;
+
+    GVariantIter *properties = NULL;
+    GVariantIter *unknown = NULL;
+    const char *iface;
+    const char *key;
+    GVariant *value = NULL;
+    const gchar *signature = g_variant_get_type_string(params);
+
+    Adapter *adapter = (Adapter*) userdata;
+    g_assert(adapter != NULL);
+
+    if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
+        g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
+        goto done;
+    }
+
+    // Look up scanresult for this
+    ScanResult *scanResult = g_hash_table_lookup(adapter->scan_results_cache, path);
+    if (scanResult == NULL) {
+        scanResult = device_getall_properties(adapter, path);
+        g_hash_table_insert(adapter->scan_results_cache, (void*)scanResult->path, scanResult);
+    }
+
+    g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
+    while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
+        scan_result_update(scanResult, key, value);
+//        if (!g_strcmp0(key, "RSSI")) {
+//            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_INT16)) {
+//                g_print("Invalid argument type for %s: %s != %s", key,
+//                        g_variant_get_type_string(value), "b");
+//                goto done;
+//            }
+//            scanResult->rssi = g_variant_get_int16(value);
+//        }
+    }
+
+    if (adapter->scan_results_callback != NULL) {
+        adapter->scan_results_callback(scanResult);
+    }
+
+    done:
+    if (properties != NULL)
+        g_variant_iter_free(properties);
+    if (value != NULL)
+        g_variant_unref(value);
+}
 
 void setup_signal_subscribers(Adapter *adapter) {
     adapter->device_prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
@@ -418,6 +472,8 @@ static void bluez_list_controllers(GDBusConnection *con,
 
 }
 
+
+
 void bluez_adapter_getall_property(GDBusConnection *con,
                                           GAsyncResult *res,
                                           gpointer data)
@@ -441,7 +497,9 @@ void bluez_adapter_getall_property(GDBusConnection *con,
     }
 }
 
-int adapter_get_properties(Adapter *adapter) {
+
+
+int adapter_getall_properties(Adapter *adapter) {
     g_dbus_connection_call(adapter->connection,
                            "org.bluez",
                            adapter->path,
