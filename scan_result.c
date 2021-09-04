@@ -11,11 +11,14 @@ void init_scan_result(ScanResult *scanResult) {
     scanResult->alias = NULL;
     scanResult->connected = FALSE;
     scanResult->interface = NULL;
+    scanResult->manufacturer_data = NULL;
+    scanResult->name = NULL;
     scanResult->paired = FALSE;
     scanResult->path = NULL;
-    scanResult->name = NULL;
     scanResult->rssi = -255;
+    scanResult->service_data = NULL;
     scanResult->trusted = 0;
+    scanResult->txpower = 0;
     scanResult->uuids = NULL;
 }
 
@@ -31,12 +34,14 @@ char *scan_result_to_string(ScanResult *scanResult) {
     }
     g_string_append(uuids, "]");
 
-    return g_strdup_printf("ScanResult{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, path='%s' }",
+    return g_strdup_printf("ScanResult{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, paired=%d, txpower=%d path='%s' }",
                            scanResult->name,
                            scanResult->address,
                            scanResult->address_type,
                            scanResult->rssi,
                            uuids->str,
+                           scanResult->paired,
+                           scanResult->txpower,
                            scanResult->path
     );
 }

@@ -2,6 +2,7 @@
 // Created by martijn on 26/8/21.
 //
 
+#include <stdint-gcc.h>
 #include "adapter.h"
 #include "logger.h"
 
@@ -216,6 +217,7 @@ GList* variant_array_to_list(GVariant *value) {
 }
 
 void scan_result_update(ScanResult *scan_result, const char *property_name, GVariant *prop_val) {
+    const gchar *signature = g_variant_get_type_string(prop_val);
     if (g_strcmp0(property_name, "Address") == 0) {
         scan_result->address = g_variant_get_string(prop_val, NULL);
     } else if (g_strcmp0(property_name, "AddressType") == 0) {
@@ -226,10 +228,33 @@ void scan_result_update(ScanResult *scan_result, const char *property_name, GVar
         scan_result->adapter_path = g_variant_get_string(prop_val, NULL);
     } else if (g_strcmp0(property_name, "Name") == 0) {
         scan_result->name = g_variant_get_string(prop_val, NULL);
+    } else if (g_strcmp0(property_name, "Paired") == 0) {
+        scan_result->paired = g_variant_get_boolean(prop_val);
     } else if (g_strcmp0(property_name, "RSSI") == 0) {
         scan_result->rssi = g_variant_get_int16(prop_val);
+    } else if (g_strcmp0(property_name, "TxPower") == 0) {
+        scan_result->txpower = g_variant_get_int16(prop_val);
     } else if (g_strcmp0(property_name, "UUIDs") == 0) {
         scan_result->uuids = variant_array_to_list(prop_val);
+    } else if (g_strcmp0(property_name, "ManufacturerData") == 0) {
+        GVariantIter *iter;
+        g_variant_get (prop_val, "a{qv}", &iter);
+
+        GVariant *array;
+        uint16_t key;
+        uint8_t val;
+        scan_result->manufacturer_data = g_hash_table_new(g_int_hash, g_int_equal);
+        while (g_variant_iter_loop(iter, "{qv}", &key, &array)) {
+            GByteArray *byteArray = g_byte_array_new();
+            GVariantIter it_array;
+            g_variant_iter_init(&it_array, array);
+            while(g_variant_iter_loop(&it_array, "y", &val)) {
+                byteArray = g_byte_array_append(byteArray, &val, 1);
+            }
+            g_hash_table_insert(scan_result->manufacturer_data, &key, byteArray);
+        }
+
+        g_variant_iter_free(iter);
     }
 }
 
@@ -267,22 +292,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
             GVariant *prop_val;
             g_variant_iter_init(&i, properties);
             while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)) {
-                //bluez_property_value(property_name, prop_val);
-//                if (g_strcmp0(property_name, "Address") == 0) {
-//                    x->address = g_variant_get_string(prop_val, NULL);
-//                } else if (g_strcmp0(property_name, "AddressType") == 0) {
-//                    x->address_type = g_variant_get_string(prop_val, NULL);
-//                } else if (g_strcmp0(property_name, "Alias") == 0) {
-//                    x->alias = g_variant_get_string(prop_val, NULL);
-//                } else if (g_strcmp0(property_name, "Adapter") == 0) {
-//                    x->adapter_path = g_variant_get_string(prop_val, NULL);
-//                } else if (g_strcmp0(property_name, "Name") == 0) {
-//                    x->name = g_variant_get_string(prop_val, NULL);
-//                } else if (g_strcmp0(property_name, "RSSI") == 0) {
-//                    x->rssi = g_variant_get_int16(prop_val);
-//                } else if (g_strcmp0(property_name, "UUIDs") == 0) {
-//                    x->uuids = variant_array_to_list(prop_val);
-//                }
+                bluez_property_value(property_name, prop_val);
                 scan_result_update(x, property_name, prop_val);
             }
 
@@ -356,6 +366,9 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     Adapter *adapter = (Adapter*) userdata;
     g_assert(adapter != NULL);
 
+    // If we are not scanning we're bailing out
+    if (adapter->discovering == FALSE) return;
+
     if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
         g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
         goto done;
@@ -371,14 +384,6 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
         scan_result_update(scanResult, key, value);
-//        if (!g_strcmp0(key, "RSSI")) {
-//            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_INT16)) {
-//                g_print("Invalid argument type for %s: %s != %s", key,
-//                        g_variant_get_type_string(value), "b");
-//                goto done;
-//            }
-//            scanResult->rssi = g_variant_get_int16(value);
-//        }
     }
 
     if (adapter->scan_results_callback != NULL) {

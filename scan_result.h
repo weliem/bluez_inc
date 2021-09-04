@@ -6,6 +6,7 @@
 #define TEST_SCAN_RESULT_H
 
 #include <glib.h>
+#include <stdint-gcc.h>
 
 typedef struct {
     const char *adapter_path;
@@ -19,6 +20,9 @@ typedef struct {
     const char *name;
     short rssi;
     int trusted;
+    int txpower;
+    GHashTable* manufacturer_data;
+    GHashTable* service_data;
     GList* uuids;
 } ScanResult;
 
