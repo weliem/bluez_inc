@@ -17,9 +17,9 @@ typedef struct sAdapter {
     GDBusConnection *connection;
     const char *path;
     const char *address;
-    int powered;
-    int discoverable;
-    int discovering;
+    gboolean powered;
+    gboolean discoverable;
+    gboolean discovering;
 
     guint device_prop_changed;
     guint adapter_prop_changed;

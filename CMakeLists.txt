@@ -7,5 +7,5 @@ include(FindPkgConfig)
 pkg_check_modules(GLIB glib-2.0 gio-2.0 REQUIRED)
 include_directories(${GLIB_INCLUDE_DIRS})
 
-add_executable(test main.c adapter.h adapter.c central_manager.c central_manager.h scan_result.c scan_result.h uuid.c uuid.h logger.c logger.h)
+add_executable(test main.c adapter.h adapter.c central_manager.c central_manager.h scan_result.c scan_result.h uuid.c uuid.h logger.c logger.h utility.c utility.h)
 target_link_libraries(${PROJECT_NAME} ${GLIB_LIBRARIES})

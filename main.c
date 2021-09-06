@@ -13,6 +13,7 @@
 #include "adapter.h"
 #include "central_manager.h"
 #include "logger.h"
+#include "utility.h"
 
 #define TAG "Main"
 
@@ -38,6 +39,13 @@ gboolean callback(gpointer data) {
 }
 
 int main(void) {
+    guint8 buf[] = {0, 1, 10, 11};
+    GByteArray *byteArray = g_byte_array_new_take(buf,4);
+    GString *result = g_byte_array_as_hex(byteArray);
+    log_debug(TAG, "bytes %s", result->str);
+    g_string_free(result, TRUE);
+    g_byte_array_free(byteArray, FALSE);
+
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
