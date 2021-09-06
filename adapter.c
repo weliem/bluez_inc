@@ -5,6 +5,7 @@
 #include <stdint-gcc.h>
 #include "adapter.h"
 #include "logger.h"
+#include "utility.h"
 
 #define BT_ADDRESS_STRING_SIZE 18
 #define TAG "Adapter"
@@ -162,7 +163,7 @@ static void bluez_device_disappeared(GDBusConnection *sig,
                 address[i] = *tmp;
             }
             g_print("\nDevice %s removed\n", address);
-            g_main_loop_quit((GMainLoop *) user_data);
+  //          g_main_loop_quit((GMainLoop *) user_data);
         }
     }
 }
@@ -251,7 +252,13 @@ void scan_result_update(ScanResult *scan_result, const char *property_name, GVar
             while(g_variant_iter_loop(&it_array, "y", &val)) {
                 byteArray = g_byte_array_append(byteArray, &val, 1);
             }
-            g_hash_table_insert(scan_result->manufacturer_data, &key, byteArray);
+            int *keyCopy = g_new0 (gint, 1);
+            *keyCopy = key;
+            g_hash_table_insert(scan_result->manufacturer_data, keyCopy, byteArray);
+
+//            GString *bytes = g_byte_array_as_hex(byteArray);
+//            log_debug(TAG, "bytes %s", bytes->str);
+//            g_string_free(bytes, TRUE);
         }
 
         g_variant_iter_free(iter);

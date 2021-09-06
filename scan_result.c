@@ -3,6 +3,7 @@
 //
 
 #include "scan_result.h"
+#include "utility.h"
 
 void init_scan_result(ScanResult *scanResult) {
     scanResult->adapter_path = NULL;
@@ -34,12 +35,32 @@ char *scan_result_to_string(ScanResult *scanResult) {
     }
     g_string_append(uuids, "]");
 
-    return g_strdup_printf("ScanResult{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, paired=%d, txpower=%d path='%s' }",
+    // Build up manufacturer data string
+    GString *manufacturer_data = g_string_new("[");
+    if (scanResult->manufacturer_data != NULL && g_hash_table_size(scanResult->manufacturer_data) > 0) {
+        GHashTableIter iter;
+        int *key;
+        gpointer value;
+        g_hash_table_iter_init (&iter, scanResult->manufacturer_data);
+        while (g_hash_table_iter_next (&iter, (gpointer) &key, &value))
+        {
+            /* do something with key and value */
+            GByteArray *byteArray = (GByteArray*) value;
+            GString *byteArrayString = g_byte_array_as_hex(byteArray);
+            gint keyInt = *key;
+            g_string_append_printf(manufacturer_data, "%04X -> %s, ", keyInt, byteArrayString->str);
+        }
+        g_string_truncate(manufacturer_data, manufacturer_data->len - 2);
+    }
+    g_string_append(manufacturer_data, "]");
+
+    return g_strdup_printf("ScanResult{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, manufacturer_data=%s, paired=%d, txpower=%d path='%s' }",
                            scanResult->name,
                            scanResult->address,
                            scanResult->address_type,
                            scanResult->rssi,
                            uuids->str,
+                           manufacturer_data->str,
                            scanResult->paired,
                            scanResult->txpower,
                            scanResult->path
