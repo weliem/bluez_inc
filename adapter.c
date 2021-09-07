@@ -24,10 +24,6 @@ GDBusConnection *binc_dbus_connection = NULL;
 
 
 
-GPtrArray* binc_get_adapters() {
-    return binc_adapters;
-}
-
 void init_adapter(Adapter *adapter) {
     g_assert(adapter != NULL);
 
@@ -41,8 +37,17 @@ void init_adapter(Adapter *adapter) {
     adapter->devices_cache = NULL;
 }
 
-int adapter_call_method(Adapter *adapter, const char *method, GVariant *param) {
+/**
+ * Synchronous method call to a adapter on DBUS
+ *
+ * @param adapter the adapter to use
+ * @param method the method to call
+ * @param param parameters for the method (can be NULL)
+ * @return EXIT_SUCCESS or EXIT_FAILURE
+ */
+int adapter_call_method(const Adapter *adapter, const char *method, GVariant *param) {
     g_assert(adapter != NULL);
+    g_assert(method != NULL);
 
     GError *error = NULL;
     GVariant *result = g_dbus_connection_call_sync(adapter->connection,
@@ -56,13 +61,15 @@ int adapter_call_method(Adapter *adapter, const char *method, GVariant *param) {
                                          -1,
                                          NULL,
                                          &error);
-    if (error != NULL)
-        return 1;
+    if (error != NULL) {
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", method, error->code, error->message);
+        g_clear_error(&error);
+        return EXIT_FAILURE;
+    }
 
     g_variant_unref(result);
-    return 0;
+    return EXIT_SUCCESS;
 }
-
 
 
 void bluez_signal_adapter_changed(GDBusConnection *conn,
@@ -72,22 +79,17 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
                                   const gchar *signal,
                                   GVariant *params,
                                   void *userdata) {
-    (void) conn;
-    (void) sender;
-    (void) path;
-    (void) interface;
-    (void) userdata;
 
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
     const char *iface;
     const char *key;
     GVariant *value = NULL;
-    const gchar *signature = g_variant_get_type_string(params);
 
     Adapter *adapter = (Adapter*) userdata;
     g_assert(adapter != NULL);
 
+    const gchar *signature = g_variant_get_type_string(params);
     if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
         g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
         goto done;
@@ -96,30 +98,19 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
         if (!g_strcmp0(key, "Powered")) {
-            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
-                g_print("Invalid argument type for %s: %s != %s", key,
-                        g_variant_get_type_string(value), "b");
-                goto done;
-            }
-
             adapter->powered = g_variant_get_boolean(value);
             if (adapter->poweredStateCallback != NULL) {
                 adapter->poweredStateCallback(adapter);
             }
         }
         if (!g_strcmp0(key, "Discovering")) {
-            if (!g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
-                g_print("Invalid argument type for %s: %s != %s", key,
-                        g_variant_get_type_string(value), "b");
-                goto done;
-            }
-
             adapter->discovering = g_variant_get_boolean(value);
             if (adapter->discoveryStateCallback != NULL) {
                 adapter->discoveryStateCallback(adapter);
             }
         }
     }
+
     done:
     if (properties != NULL)
         g_variant_iter_free(properties);
@@ -134,11 +125,6 @@ static void bluez_device_disappeared(GDBusConnection *sig,
                                      const gchar *signal_name,
                                      GVariant *parameters,
                                      gpointer user_data) {
-    (void) sig;
-    (void) sender_name;
-    (void) object_path;
-    (void) interface;
-    (void) signal_name;
 
     GVariantIter *interfaces;
     const char *object;
@@ -159,7 +145,6 @@ static void bluez_device_disappeared(GDBusConnection *sig,
                 address[i] = *tmp;
             }
             g_print("\nDevice %s removed\n", address);
-  //          g_main_loop_quit((GMainLoop *) user_data);
         }
     }
 }
@@ -198,20 +183,7 @@ static void bluez_property_value(const gchar *key, GVariant *value) {
     }
 }
 
-GList* variant_array_to_list(GVariant *value) {
-    const gchar *type = g_variant_get_type_string(value);
-    if (g_strcmp0(type, "as")) return NULL;
 
-    GList *list = NULL;
-    gchar *data;
-    GVariantIter i;
-    g_variant_iter_init(&i, value);
-    while (g_variant_iter_next(&i, "s", &data)) {
-//        g_print("\t\t%s\n", data);
-        list = g_list_append(list, data);
-    }
-    return list;
-}
 
 void scan_result_update(Device *scan_result, const char *property_name, GVariant *prop_val) {
     const gchar *signature = g_variant_get_type_string(prop_val);
@@ -232,7 +204,7 @@ void scan_result_update(Device *scan_result, const char *property_name, GVariant
     } else if (g_strcmp0(property_name, "TxPower") == 0) {
         scan_result->txpower = g_variant_get_int16(prop_val);
     } else if (g_strcmp0(property_name, "UUIDs") == 0) {
-        scan_result->uuids = variant_array_to_list(prop_val);
+        scan_result->uuids = g_variant_string_array_to_list(prop_val);
     } else if (g_strcmp0(property_name, "ManufacturerData") == 0) {
         GVariantIter *iter;
         g_variant_get (prop_val, "a{qv}", &iter);

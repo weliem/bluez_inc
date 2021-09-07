@@ -19,3 +19,20 @@ GString* g_byte_array_as_hex(GByteArray *byteArray) {
     return result;
 }
 
+GList* g_variant_string_array_to_list(GVariant *value) {
+    g_assert(value != NULL);
+
+    const gchar *type = g_variant_get_type_string(value);
+    if (g_strcmp0(type, "as")) return NULL;
+
+    GList *list = NULL;
+    gchar *data;
+    GVariantIter iter;
+
+    g_variant_iter_init(&iter, value);
+    while (g_variant_iter_next(&iter, "s", &data)) {
+        list = g_list_append(list, data);
+    }
+    return list;
+}
+
