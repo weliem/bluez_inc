@@ -1,7 +1,7 @@
 /*
  * bluez_adapter_scan.c - Scan for bluetooth devices
  * 	- This example scans for new devices after powering the adapter, if any devices
- * 	  appeared in /org/hciX/dev_XX_YY_ZZ_AA_BB_CC, it is monitered using "ScanResult"
+ * 	  appeared in /org/hciX/dev_XX_YY_ZZ_AA_BB_CC, it is monitered using "Device"
  *	  signal and all the properties of the device is printed
  *	- Scanning continues to run until any device is disappered, this happens after 180 seconds
  *	  automatically if the device is not used.
@@ -11,18 +11,16 @@
 #include <gio/gio.h>
 
 #include "adapter.h"
-#include "central_manager.h"
 #include "logger.h"
 #include "utility.h"
 
 #define TAG "Main"
 
-CentralManager *centralManager = NULL;
 
-void on_scan_result(ScanResult *scanResult) {
-    char *scanResultString = scan_result_to_string(scanResult);
-    log_debug(TAG, scanResultString);
-    g_free(scanResultString);
+void on_scan_result(Device *device) {
+    char *deviceToString = device_to_string(device);
+    log_debug(TAG, deviceToString);
+    g_free(deviceToString);
 }
 
 void on_discovery_state_changed(Adapter *adapter) {
@@ -63,7 +61,7 @@ int main(void) {
         binc_adapter_power_on(adapter);
 
         // Start a scan
-        binc_adapter_register_scan_result_callback(adapter, &on_scan_result);
+        binc_adapter_register_discovery_callback(adapter, &on_scan_result);
         binc_adapter_register_discovery_state_callback(adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(adapter, -100);
         binc_adapter_start_discovery(adapter);

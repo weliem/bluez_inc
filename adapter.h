@@ -6,10 +6,10 @@
 #define TEST_ADAPTER_H
 
 #include <gio/gio.h>
-#include "scan_result.h"
+#include "device.h"
 
 typedef struct sAdapter Adapter;
-typedef void (*AdapterScanResultCallback) (ScanResult  *scanResult);
+typedef void (*AdapterDiscoveryResultCallback) (Device  *device);
 typedef void (*AdapterDiscoveryStateChangeCallback) (Adapter  *adapter);
 typedef void (*AdapterPoweredStateChangeCallback) (Adapter  *adapter);
 
@@ -26,11 +26,11 @@ typedef struct sAdapter {
     guint iface_added;
     guint iface_removed;
 
-    AdapterScanResultCallback scan_results_callback;
+    AdapterDiscoveryResultCallback discoveryResultCallback;
     AdapterDiscoveryStateChangeCallback discoveryStateCallback;
     AdapterPoweredStateChangeCallback poweredStateCallback;
 
-    GHashTable* scan_results_cache;
+    GHashTable* devices_cache;
 } Adapter;
 
 
@@ -42,7 +42,7 @@ int binc_adapter_stop_discovery(Adapter *adapter);
 int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
 int binc_adapter_power_on(Adapter *adapter);
 int binc_adapter_power_off(Adapter *adapter);
-void binc_adapter_register_scan_result_callback(Adapter *adapter, AdapterScanResultCallback callback);
+void binc_adapter_register_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback);
 void binc_adapter_register_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback);
 void binc_adapter_register_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
 

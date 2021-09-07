@@ -1,6 +1,8 @@
 //
 // Created by martijn on 26/8/21.
 //
+// https://review.tizen.org/git/?p=platform/core/connectivity/bluetooth-frwk.git;a=blob;f=bt-api/bt-gatt-client.c;h=b51dbc5e40ce4b391dac6488ffd69f1a21e0e60b;hb=HEAD
+//
 
 #include <stdint-gcc.h>
 #include "adapter.h"
@@ -35,14 +37,8 @@ void init_adapter(Adapter *adapter) {
     adapter->discovering = FALSE;
     adapter->path = NULL;
     adapter->powered = FALSE;
-    adapter->scan_results_callback = NULL;
-    adapter->scan_results_cache = NULL;
-}
-
-ScanResult* create_scan_result(const char* path) {
-    ScanResult *x = malloc(sizeof(ScanResult));
-    init_scan_result(x);
-    x->path = path;
+    adapter->discoveryResultCallback = NULL;
+    adapter->devices_cache = NULL;
 }
 
 int adapter_call_method(Adapter *adapter, const char *method, GVariant *param) {
@@ -217,7 +213,7 @@ GList* variant_array_to_list(GVariant *value) {
     return list;
 }
 
-void scan_result_update(ScanResult *scan_result, const char *property_name, GVariant *prop_val) {
+void scan_result_update(Device *scan_result, const char *property_name, GVariant *prop_val) {
     const gchar *signature = g_variant_get_type_string(prop_val);
     if (g_strcmp0(property_name, "Address") == 0) {
         scan_result->address = g_variant_get_string(prop_val, NULL);
@@ -272,12 +268,12 @@ static void bluez_device_appeared(GDBusConnection *sig,
                                   const gchar *signal_name,
                                   GVariant *parameters,
                                   gpointer user_data) {
-    (void) sig;
-    (void) sender_name;
-    (void) object_path;
-    (void) interface;
-    (void) signal_name;
-    (void) user_data;
+//    (void) sig;
+//    (void) sender_name;
+//    (void) object_path;
+//    (void) interface;
+//    (void) signal_name;
+//    (void) user_data;
 
     GVariantIter *interfaces;
     const char *object;
@@ -287,12 +283,8 @@ static void bluez_device_appeared(GDBusConnection *sig,
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     while (g_variant_iter_next(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
         if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
-            //g_print("[ %s ]\n", object);
 
-            ScanResult *x = malloc(sizeof(ScanResult));
-            init_scan_result(x);
-            x->path = object;
-            x->interface = interface_name;
+            Device *x = create_device(object);
 
             const gchar *property_name;
             GVariantIter i;
@@ -303,12 +295,12 @@ static void bluez_device_appeared(GDBusConnection *sig,
                 scan_result_update(x, property_name, prop_val);
             }
 
-            // Deliver ScanResult to registered callback
+            // Deliver Device to registered callback
             if (user_data != NULL) {
                 Adapter *adapter = (Adapter *) user_data;
-                g_hash_table_insert(adapter->scan_results_cache, (void*)x->path, x);
-                if (adapter->scan_results_callback != NULL) {
-                    adapter->scan_results_callback(x);
+                g_hash_table_insert(adapter->devices_cache, (void*)x->path, x);
+                if (adapter->discoveryResultCallback != NULL) {
+                    adapter->discoveryResultCallback(x);
                 }
             }
             g_variant_unref(prop_val);
@@ -317,8 +309,8 @@ static void bluez_device_appeared(GDBusConnection *sig,
     }
 }
 
-ScanResult* device_getall_properties(Adapter *adapter, const char* device_path) {
-    ScanResult *scanResult = NULL;
+Device* device_getall_properties(Adapter *adapter, const char* device_path) {
+    Device *scanResult = NULL;
     GVariant *result = g_dbus_connection_call_sync(adapter->connection,
                                                    "org.bluez",
                                                    device_path,
@@ -336,7 +328,7 @@ ScanResult* device_getall_properties(Adapter *adapter, const char* device_path) 
         return scanResult;
     }
 
-    scanResult = create_scan_result(device_path);
+    scanResult = create_device(device_path);
     result = g_variant_get_child_value(result, 0);
     const gchar *property_name;
     GVariantIter i;
@@ -382,10 +374,10 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     }
 
     // Look up scanresult for this
-    ScanResult *scanResult = g_hash_table_lookup(adapter->scan_results_cache, path);
+    Device *scanResult = g_hash_table_lookup(adapter->devices_cache, path);
     if (scanResult == NULL) {
         scanResult = device_getall_properties(adapter, path);
-        g_hash_table_insert(adapter->scan_results_cache, (void*)scanResult->path, scanResult);
+        g_hash_table_insert(adapter->devices_cache, (void*)scanResult->path, scanResult);
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
@@ -393,8 +385,8 @@ void bluez_signal_device_changed(GDBusConnection *conn,
         scan_result_update(scanResult, key, value);
     }
 
-    if (adapter->scan_results_callback != NULL) {
-        adapter->scan_results_callback(scanResult);
+    if (adapter->discoveryResultCallback != NULL) {
+        adapter->discoveryResultCallback(scanResult);
     }
 
     done:
@@ -465,7 +457,7 @@ Adapter* create_adapter(GDBusConnection *connection, const char* path) {
     init_adapter(adapter);
     adapter->connection = connection;
     adapter->path = path;
-    adapter->scan_results_cache = g_hash_table_new(g_str_hash, g_str_equal);
+    adapter->devices_cache = g_hash_table_new(g_str_hash, g_str_equal);
     setup_signal_subscribers(adapter);
     return adapter;
 }
@@ -665,11 +657,11 @@ int binc_adapter_power_off(Adapter *adapter) {
     return adapter_set_property(adapter, "Powered", g_variant_new("b", FALSE));
 }
 
-void binc_adapter_register_scan_result_callback(Adapter *adapter, AdapterScanResultCallback callback) {
+void binc_adapter_register_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
 
-    adapter->scan_results_callback = callback;
+    adapter->discoveryResultCallback = callback;
 }
 
 void binc_adapter_register_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback) {
