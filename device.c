@@ -57,14 +57,30 @@ char *device_to_string(Device *device) {
     }
     g_string_append(manufacturer_data, "]");
 
+    // Build up service data string
+    GString *service_data = g_string_new("[");
+    if (device->service_data != NULL && g_hash_table_size(device->service_data) > 0) {
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, device->service_data);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            GByteArray *byteArray = (GByteArray *) value;
+            GString *byteArrayString = g_byte_array_as_hex(byteArray);
+            g_string_append_printf(service_data, "%s -> %s, ", (char*) key, byteArrayString->str);
+        }
+        g_string_truncate(service_data, service_data->len - 2);
+    }
+    g_string_append(service_data, "]");
+
     return g_strdup_printf(
-            "Device{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, manufacturer_data=%s, paired=%d, txpower=%d path='%s' }",
+            "Device{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, manufacturer_data=%s, service_data=%s, paired=%d, txpower=%d path='%s' }",
             device->name,
             device->address,
             device->address_type,
             device->rssi,
             uuids->str,
             manufacturer_data->str,
+            service_data->str,
             device->paired,
             device->txpower,
             device->path

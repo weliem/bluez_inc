@@ -230,6 +230,30 @@ void scan_result_update(Device *scan_result, const char *property_name, GVariant
         }
 
         g_variant_iter_free(iter);
+    } else if (g_strcmp0(property_name, "ServiceData") == 0) {
+        GVariantIter *iter;
+        g_variant_get (prop_val, "a{sv}", &iter);
+
+        GVariant *array;
+        char* key;
+        uint8_t val;
+
+        scan_result->service_data = g_hash_table_new(g_str_hash, g_str_equal);
+        while (g_variant_iter_loop(iter, "{sv}", &key, &array)) {
+            GByteArray *byteArray = g_byte_array_new();
+            GVariantIter it_array;
+            g_variant_iter_init(&it_array, array);
+            while(g_variant_iter_loop(&it_array, "y", &val)) {
+                byteArray = g_byte_array_append(byteArray, &val, 1);
+            }
+            gchar *keyCopy = g_strdup(key);
+            g_hash_table_insert(scan_result->service_data, keyCopy, byteArray);
+
+//            GString *bytes = g_byte_array_as_hex(byteArray);
+//            log_debug(TAG, "service data %s %s", key, bytes->str);
+//            g_string_free(bytes, TRUE);
+        }
+        g_variant_iter_free(iter);
     }
 }
 
@@ -240,12 +264,6 @@ static void bluez_device_appeared(GDBusConnection *sig,
                                   const gchar *signal_name,
                                   GVariant *parameters,
                                   gpointer user_data) {
-//    (void) sig;
-//    (void) sender_name;
-//    (void) object_path;
-//    (void) interface;
-//    (void) signal_name;
-//    (void) user_data;
 
     GVariantIter *interfaces;
     const char *object;
@@ -263,7 +281,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
             GVariant *prop_val;
             g_variant_iter_init(&i, properties);
             while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)) {
-                bluez_property_value(property_name, prop_val);
+ //               bluez_property_value(property_name, prop_val);
                 scan_result_update(x, property_name, prop_val);
             }
 
@@ -321,11 +339,6 @@ void bluez_signal_device_changed(GDBusConnection *conn,
                                  const gchar *signal,
                                  GVariant *params,
                                  void *userdata) {
-    (void) conn;
-    (void) sender;
-    (void) path;
-    (void) interface;
-    (void) userdata;
 
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
