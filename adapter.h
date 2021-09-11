@@ -9,9 +9,14 @@
 #include "device.h"
 
 typedef struct sAdapter Adapter;
-typedef void (*AdapterDiscoveryResultCallback) (Device  *device);
-typedef void (*AdapterDiscoveryStateChangeCallback) (Adapter  *adapter);
-typedef void (*AdapterPoweredStateChangeCallback) (Adapter  *adapter);
+
+typedef enum DiscoveryState {STOPPED = 0, STARTED = 1, STARTING = 2, STOPPING = 3} DiscoveryState;
+
+typedef void (*AdapterDiscoveryResultCallback)(Adapter *adapter, Device *device);
+
+typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter);
+
+typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter);
 
 typedef struct sAdapter {
     GDBusConnection *connection;
@@ -19,7 +24,7 @@ typedef struct sAdapter {
     const char *address;
     gboolean powered;
     gboolean discoverable;
-    gboolean discovering;
+    DiscoveryState discovery_state;
 
     guint device_prop_changed;
     guint adapter_prop_changed;
@@ -30,18 +35,26 @@ typedef struct sAdapter {
     AdapterDiscoveryStateChangeCallback discoveryStateCallback;
     AdapterPoweredStateChangeCallback poweredStateCallback;
 
-    GHashTable* devices_cache;
+    GHashTable *devices_cache;
 } Adapter;
 
 
-GPtrArray* binc_find_adapters();
+GPtrArray *binc_find_adapters();
+
 int binc_adapter_start_discovery(Adapter *adapter);
+
 int binc_adapter_stop_discovery(Adapter *adapter);
+
 int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
+
 int binc_adapter_power_on(Adapter *adapter);
+
 int binc_adapter_power_off(Adapter *adapter);
+
 void binc_adapter_register_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback);
+
 void binc_adapter_register_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback);
+
 void binc_adapter_register_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
 
 #endif //TEST_ADAPTER_H

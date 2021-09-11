@@ -11,20 +11,30 @@
 #include <gio/gio.h>
 
 #include "adapter.h"
+#include "device.h"
 #include "logger.h"
 #include "utility.h"
 
 #define TAG "Main"
 
+void on_connection_state_changed(Device *device) {
+    log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
+}
 
-void on_scan_result(Device *device) {
-    char *deviceToString = device_to_string(device);
+void on_scan_result(Adapter *adapter, Device *device) {
+    char *deviceToString = binc_device_to_string(device);
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
+
+    if (!g_strcmp0(device->name, "TAIDOC TD1242")) {
+        binc_adapter_stop_discovery(adapter);
+        binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
+        binc_device_connect(device);
+    }
 }
 
 void on_discovery_state_changed(Adapter *adapter) {
-    log_debug(TAG, "discovery '%s'", adapter->discovering ? "on" : "off");
+    log_debug(TAG, "discovery '%s'", adapter->discovery_state? "on" : "off");
 }
 
 void on_powered_state_changed(Adapter *adapter) {
@@ -65,6 +75,8 @@ int main(void) {
         binc_adapter_register_discovery_state_callback(adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(adapter, -100);
         binc_adapter_start_discovery(adapter);
+        binc_adapter_start_discovery(adapter);
+
     } else {
         log_debug("MAIN", "No adapter found");
     }
