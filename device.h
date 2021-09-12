@@ -33,10 +33,12 @@ typedef struct sDevice {
     GHashTable* service_data;
     GList* uuids;
 
+
     // Internal
     guint device_prop_changed;
     ConnectionStateChangedCallback connection_state_callback;
     ConnectionStateChangedCallback services_resolved_callback;
+    GHashTable* services;
 } Device;
 
 

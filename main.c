@@ -21,6 +21,10 @@ void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
 }
 
+void on_services_resolved(Device *device) {
+    log_debug(TAG, "'%s' services resolved", device->name);
+}
+
 void on_scan_result(Adapter *adapter, Device *device) {
     char *deviceToString = binc_device_to_string(device);
     log_debug(TAG, deviceToString);
@@ -29,6 +33,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     if (!g_strcmp0(device->name, "TAIDOC TD1242")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
+        binc_device_register_services_resolved_callback(device, &on_services_resolved);
         binc_device_connect(device);
     }
 }

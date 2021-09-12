@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "device.h"
 #include "utility.h"
+#include "service.h"
 
 #define TAG "Device"
 
@@ -35,6 +36,7 @@ void binc_init_device(Device *device) {
     device->trusted = FALSE;
     device->txpower = 0;
     device->uuids = NULL;
+    device->services = NULL;
 }
 
 Device* binc_create_device(const char* path, GDBusConnection *connection) {
@@ -137,6 +139,75 @@ int device_call_method(const Device *device, const char *method, GVariant *param
     return EXIT_SUCCESS;
 }
 
+void binc_device_get_services(Device *device) {
+    g_assert(device != NULL);
+
+    GError *error = NULL;
+    GVariant *result = g_dbus_connection_call_sync(device->connection,
+                                                   "org.bluez",
+                                                   "/",
+                                                   "org.freedesktop.DBus.ObjectManager",
+                                                   "GetManagedObjects",
+                                                   NULL,
+                                                   G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
+                                                   G_DBUS_CALL_FLAGS_NONE,
+                                                   -1,
+                                                   NULL,
+                                                   &error);
+
+    if (result == NULL) {
+        g_print("Unable to get result for GetManagedObjects\n");
+        if (error != NULL) {
+            log_debug(TAG, "call failed (error %d: %s)", error->code, error->message);
+            g_clear_error(&error);
+            return;
+        }
+    }
+
+    /* Parse the result */
+    GVariantIter i;
+    const gchar *object_path;
+    GVariant *ifaces_and_properties;
+    if (result) {
+        device->services = g_hash_table_new(g_str_hash, g_str_equal);
+
+        result = g_variant_get_child_value(result, 0);
+        g_variant_iter_init(&i, result);
+        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
+
+            if (g_str_has_prefix(object_path, device->path)) {
+                const gchar *interface_name;
+                GVariant *properties;
+                GVariantIter ii;
+                g_variant_iter_init(&ii, ifaces_and_properties);
+                while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
+                    if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "service")) {
+                        log_debug(TAG, "%s", object_path);
+                        Service *service = binc_service_create(device->connection, object_path);
+                        const gchar *property_name;
+                        GVariantIter iii;
+                        GVariant *prop_val;
+                        g_variant_iter_init(&iii, properties);
+                        while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val)) {
+                            if (g_strcmp0(property_name, "UUID") == 0) {
+                                service->uuid = g_strdup(g_variant_get_string(prop_val, NULL));
+                            }
+                        }
+                        g_hash_table_insert(device->services, g_strdup(service->uuid), service);
+                        g_variant_unref(prop_val);
+                    }
+                    g_variant_unref(properties);
+                }
+            }
+            g_variant_unref(ifaces_and_properties);
+        }
+        g_variant_unref(result);
+    }
+
+    log_debug(TAG, "found %d services", g_hash_table_size(device->services));
+//    return binc_adapters;
+}
+
 void device_changed(GDBusConnection *conn,
                                  const gchar *sender,
                                  const gchar *path,
@@ -174,8 +245,9 @@ void device_changed(GDBusConnection *conn,
         } else if (g_strcmp0(key, "ServicesResolved") == 0) {
             device->services_resolved = g_variant_get_boolean(value);
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
-            if (device->services_resolved_callback != NULL) {
+            if (device->services_resolved_callback != NULL && device->services_resolved == TRUE) {
                 device->services_resolved_callback(device);
+                binc_device_get_services(device);
             }
         }
     }
@@ -186,6 +258,8 @@ void device_changed(GDBusConnection *conn,
     if (value != NULL)
         g_variant_unref(value);
 }
+
+
 
 int binc_device_connect(Device *device) {
     g_assert(device != NULL);

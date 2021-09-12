@@ -446,18 +446,7 @@ Adapter *create_adapter(GDBusConnection *connection, const char *path) {
     return adapter;
 }
 
-static void bluez_list_controllers(GDBusConnection *con,
-                                   GAsyncResult *res,
-                                   gpointer data) {
-    (void) data;
-    GVariant *result = NULL;
-    GVariantIter i;
-    const gchar *object_path;
-    GVariant *ifaces_and_properties;
 
-    result = g_dbus_connection_call_finish(con, res, NULL);
-
-}
 
 
 void bluez_adapter_getall_property(GDBusConnection *con,
