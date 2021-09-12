@@ -7,6 +7,7 @@
 
 #include <glib.h>
 #include <stdint-gcc.h>
+#include "characteristic.h"
 
 typedef struct sDevice Device;
 
@@ -39,6 +40,7 @@ typedef struct sDevice {
     ConnectionStateChangedCallback connection_state_callback;
     ConnectionStateChangedCallback services_resolved_callback;
     GHashTable* services;
+    GHashTable* characteristics;
 } Device;
 
 
@@ -49,4 +51,5 @@ char* binc_device_to_string(Device *device);
 int binc_device_connect(Device *device);
 void binc_device_register_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 void binc_device_register_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback);
+Characteristic* binc_device_get_characteristic(Device *device, const char* service_uuid, const char* characteristic_uuid);
 #endif //TEST_DEVICE_H
