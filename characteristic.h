@@ -18,5 +18,6 @@ typedef struct {
 } Characteristic;
 
 Characteristic *binc_characteristic_create(GDBusConnection *connection, const char* path);
+GByteArray *binc_characteristic_read(Characteristic *characteristic);
 
 #endif //TEST_CHARACTERISTIC_H
