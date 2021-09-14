@@ -14,6 +14,7 @@
 #include "device.h"
 #include "logger.h"
 #include "utility.h"
+#include "parser.h"
 
 #define TAG "Main"
 
@@ -59,6 +60,12 @@ int main(void) {
     GByteArray *byteArray = g_byte_array_new_take(buf,4);
     GString *result = g_byte_array_as_hex(byteArray);
     log_debug(TAG, "bytes %s", result->str);
+
+    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+    int value1 = parser_get_uint16(parser);
+    int value2 = parser_get_uint16(parser);
+    log_debug(TAG, "value 1: %d, value 2: %d", value1, value2);
+
     g_string_free(result, TRUE);
     g_byte_array_free(byteArray, FALSE);
 
