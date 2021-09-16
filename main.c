@@ -56,15 +56,20 @@ gboolean callback(gpointer data) {
 }
 
 int main(void) {
-    guint8 buf[] = {0, 1, 10, 11};
+//    guint8 buf[] = {0xff, 0x00, 0x01, 0x6c};
+    guint8 buf[] = {0x6c, 0x01, 0x00, 0xff};
+
     GByteArray *byteArray = g_byte_array_new_take(buf,4);
     GString *result = g_byte_array_as_hex(byteArray);
     log_debug(TAG, "bytes %s", result->str);
 
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-    int value1 = parser_get_uint16(parser);
-    int value2 = parser_get_uint16(parser);
-    log_debug(TAG, "value 1: %d, value 2: %d", value1, value2);
+//    int value1 = parser_get_uint16(parser);
+//    int value2 = parser_get_uint16(parser);
+//    log_debug(TAG, "value 1: %d, value 2: %d", value1, value2);
+
+    float value = parser_get_float(parser);
+    log_debug(TAG, "value %f", value);
 
     g_string_free(result, TRUE);
     g_byte_array_free(byteArray, FALSE);
