@@ -493,7 +493,7 @@ GPtrArray *binc_find_adapters() {
     }
 
     binc_adapters = g_ptr_array_new();
-    log_debug("ADAPTER", "finding adapters");
+    log_debug(TAG, "finding adapters");
 
     GVariant *result = g_dbus_connection_call_sync(binc_dbus_connection,
                                                    "org.bluez",

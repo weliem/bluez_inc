@@ -14,10 +14,14 @@ typedef struct {
     const char *uuid;
     const char *service_path;
     const char *service_uuid;
+    gboolean notifying;
     GList *flags;
+
+    guint notify_signal;
 } Characteristic;
 
 Characteristic *binc_characteristic_create(GDBusConnection *connection, const char* path);
 GByteArray *binc_characteristic_read(Characteristic *characteristic);
+void binc_characteristic_start_notify(Characteristic *characteristic);
 
 #endif //TEST_CHARACTERISTIC_H

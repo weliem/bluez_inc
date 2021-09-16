@@ -24,9 +24,15 @@ void on_connection_state_changed(Device *device) {
 
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", device->name);
-    Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
-    GByteArray *byteArray = binc_characteristic_read(manufacturer);
-    log_debug(TAG, "manufacturer = %s", byteArray->data);
+//    Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
+//    GByteArray *byteArray = binc_characteristic_read(manufacturer);
+//    log_debug(TAG, "manufacturer = %s", byteArray->data);
+
+    Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
+    if (temperature != NULL) {
+        log_debug(TAG, "starting notify for temperature");
+        binc_characteristic_start_notify(temperature);
+    }
 }
 
 void on_scan_result(Adapter *adapter, Device *device) {
