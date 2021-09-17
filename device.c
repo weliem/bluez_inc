@@ -235,7 +235,6 @@ void binc_collect_gatt_tree(Device *device) {
     }
 
     log_debug(TAG, "found %d services", g_hash_table_size(device->services));
-//    return binc_adapters;
 }
 
 void device_changed(GDBusConnection *conn,

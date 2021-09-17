@@ -22,16 +22,23 @@ void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
 }
 
+void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
+    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+    parser->offset = 1;
+    float value = parser_get_float(parser);
+    log_debug(TAG, "temperature %.1f", value);
+}
+
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", device->name);
-//    Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
-//    GByteArray *byteArray = binc_characteristic_read(manufacturer);
-//    log_debug(TAG, "manufacturer = %s", byteArray->data);
+    Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
+    GByteArray *byteArray = binc_characteristic_read(manufacturer);
+    log_debug(TAG, "manufacturer = %s", byteArray->data);
 
     Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
     if (temperature != NULL) {
         log_debug(TAG, "starting notify for temperature");
-        binc_characteristic_start_notify(temperature);
+        binc_characteristic_start_notify(temperature, &on_notify);
     }
 }
 
@@ -62,24 +69,6 @@ gboolean callback(gpointer data) {
 }
 
 int main(void) {
-//    guint8 buf[] = {0xff, 0x00, 0x01, 0x6c};
-    guint8 buf[] = {0x6c, 0x01, 0x00, 0xff};
-
-    GByteArray *byteArray = g_byte_array_new_take(buf,4);
-    GString *result = g_byte_array_as_hex(byteArray);
-    log_debug(TAG, "bytes %s", result->str);
-
-    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-//    int value1 = parser_get_uint16(parser);
-//    int value2 = parser_get_uint16(parser);
-//    log_debug(TAG, "value 1: %d, value 2: %d", value1, value2);
-
-    float value = parser_get_float(parser);
-    log_debug(TAG, "value %f", value);
-
-    g_string_free(result, TRUE);
-    g_byte_array_free(byteArray, FALSE);
-
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
