@@ -38,6 +38,7 @@ void on_services_resolved(Device *device) {
     Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
     if (temperature != NULL) {
         log_debug(TAG, "starting notify for temperature");
+        log_debug(TAG, binc_characteristic_to_string(temperature));
         binc_characteristic_start_notify(temperature, &on_notify);
     }
 }

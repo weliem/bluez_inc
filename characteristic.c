@@ -19,6 +19,25 @@ Characteristic *binc_characteristic_create(GDBusConnection *connection, const ch
     return characteristic;
 }
 
+char *binc_characteristic_to_string(Characteristic *characteristic) {
+
+    // Build up flags
+    GString *flags = g_string_new("[");
+    if (g_list_length(characteristic->flags) > 0) {
+        for (GList *iterator = characteristic->flags; iterator; iterator = iterator->next) {
+            g_string_append_printf(flags, "%s, ", (char *) iterator->data);
+        }
+        g_string_truncate(flags, flags->len - 2);
+    }
+    g_string_append(flags, "]");
+
+    return g_strdup_printf(
+            "Characteristic{uuid='%s', flags='%s', service_uuid='%s'}",
+            characteristic->uuid,
+            flags->str,
+            characteristic->service_uuid);
+}
+
 GByteArray *g_variant_get_byte_array(GVariant *variant) {
     g_assert(variant != NULL);
 
