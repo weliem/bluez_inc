@@ -15,7 +15,9 @@ typedef struct {
 } Parser;
 
 Parser* parser_create(GByteArray *bytes, int byteOrder);
+guint8 parser_get_uint8(Parser *parser);
 guint16 parser_get_uint16(Parser *parser);
+guint32 parser_get_uint32(Parser *parser);
 float parser_get_sfloat(Parser *parser);
 float parser_get_float(Parser *parser);
 

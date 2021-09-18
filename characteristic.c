@@ -53,8 +53,6 @@ GByteArray *g_variant_get_byte_array(GVariant *variant) {
         byteArray = g_byte_array_append(byteArray, &val, 1);
     }
 
-//    GByteArray *byteArrayCopy = g_byte_array_sized_new(byteArray->len);
-//    g_byte_array_append(byteArrayCopy,byteArray->data, byteArray->len);
     g_variant_iter_free(iter);
     return byteArray;
 }
@@ -104,9 +102,12 @@ GByteArray *binc_characteristic_read(Characteristic *characteristic) {
         return NULL;
     }
 
+    GByteArray *byteArray = NULL;
     if (result != NULL) {
-        return g_variant_get_byte_array(result);
-    } else return NULL;
+        byteArray = g_variant_get_byte_array(result);
+        g_variant_unref(result);
+    }
+    return byteArray;
 }
 
 void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType) {
@@ -114,7 +115,7 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
     g_assert(byteArray != NULL);
 
     guint16 offset = 0;
-    const char* writeTypeString = writeType == WITH_RESPONSE ? "request" : "command";
+    const char *writeTypeString = writeType == WITH_RESPONSE ? "request" : "command";
 
     // Convert byte array to variant
     GVariantBuilder *builder1 = g_variant_builder_new(G_VARIANT_TYPE("ay"));
@@ -135,7 +136,7 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
                                                    characteristic->path,
                                                    "org.bluez.GattCharacteristic1",
                                                    "WriteValue",
-                                                   g_variant_new("(@ay@a{sv})",val, options),
+                                                   g_variant_new("(@ay@a{sv})", val, options),
                                                    NULL,
                                                    G_DBUS_CALL_FLAGS_NONE,
                                                    -1,
@@ -148,7 +149,10 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "WriteValue", error->code, error->message);
         g_clear_error(&error);
-        return;
+    }
+
+    if (result != NULL) {
+        g_variant_unref(result);
     }
 }
 
@@ -216,7 +220,7 @@ void binc_characteristic_start_notify(Characteristic *characteristic, OnNotifyCa
                                                                        "org.bluez",
                                                                        "org.freedesktop.DBus.Properties",
                                                                        "PropertiesChanged",
-                                                                       NULL,
+                                                                       characteristic->path,
                                                                        "org.bluez.GattCharacteristic1",
                                                                        G_DBUS_SIGNAL_FLAGS_NONE,
                                                                        binc_signal_characteristic_changed,
@@ -236,11 +240,13 @@ void binc_characteristic_start_notify(Characteristic *characteristic, OnNotifyCa
                                                    NULL,
                                                    &error);
 
-    if (result != NULL && error != NULL) {
+    if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "ReadValue", error->code, error->message);
         g_clear_error(&error);
-        return;
     }
+
+    if (result != NULL)
+        g_variant_unref(result);
 }
 
 void binc_characteristic_stop_notify(Characteristic *characteristic) {
@@ -259,14 +265,17 @@ void binc_characteristic_stop_notify(Characteristic *characteristic) {
                                                    NULL,
                                                    &error);
 
-    if (result != NULL && error != NULL) {
+    if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "ReadValue", error->code, error->message);
         g_clear_error(&error);
-        return;
     }
+
+    if (result != NULL)
+        g_variant_unref(result);
 }
 
-void binc_characteristic_register_notifying_state_change_callback(Characteristic *characteristic, NotifyingStateChangedCallback callback) {
+void binc_characteristic_register_notifying_state_change_callback(Characteristic *characteristic,
+                                                                  NotifyingStateChangedCallback callback) {
     g_assert(characteristic != NULL);
     g_assert(callback != NULL);
 

@@ -24,6 +24,14 @@ Parser* parser_create(GByteArray *bytes, int byteOrder) {
     parser->byteOrder = byteOrder;
 }
 
+guint8 parser_get_uint8(Parser *parser) {
+    g_assert(parser->offset < parser->bytes->len);
+
+    guint8 result = parser->bytes->data[parser->offset];
+    parser->offset = parser->offset + 1;
+    return result;
+}
+
 guint16 parser_get_uint16(Parser *parser) {
     g_assert((parser->offset+1) < parser->bytes->len);
 
@@ -111,7 +119,7 @@ GByteArray* binc_get_current_time() {
     guint8 hours = g_date_time_get_hour(now);
     guint8 minutes = g_date_time_get_minute(now);
     guint8 seconds = g_date_time_get_second(now);
-    guint8 dayOfWeek = (g_date_time_get_day_of_week(now) + 5) % 7 + 1;
+    guint8 dayOfWeek = g_date_time_get_day_of_week(now);
     guint8 miliseconds = (g_date_time_get_microsecond(now) / 1000) * 256 / 1000;
     guint8 reason = 1;
 
