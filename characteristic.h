@@ -10,6 +10,8 @@
 
 typedef struct sCharacteristic Characteristic;
 
+typedef enum WriteType {WITH_RESPONSE = 0, WITHOUT_RESPONSE = 1} WriteType;
+
 typedef void (*NotifyingStateChangedCallback)(Characteristic *characteristic);
 
 typedef void (*OnNotifyCallback)(Characteristic *characteristic, GByteArray *byteArray);
@@ -31,6 +33,8 @@ typedef struct sCharacteristic {
 Characteristic *binc_characteristic_create(GDBusConnection *connection, const char *path);
 
 GByteArray *binc_characteristic_read(Characteristic *characteristic);
+
+void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType);
 
 void binc_characteristic_register_notifying_state_change_callback(Characteristic *characteristic,
                                                                   NotifyingStateChangedCallback callback);

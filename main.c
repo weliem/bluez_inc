@@ -29,17 +29,37 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     log_debug(TAG, "temperature %.1f", value);
 }
 
+void on_notify_bpm(Characteristic *characteristic, GByteArray *byteArray) {
+    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+    parser->offset = 1;
+    float systolic = parser_get_sfloat(parser);
+    float diastolic = parser_get_sfloat(parser);
+    log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
+}
+
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", device->name);
     Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
-    GByteArray *byteArray = binc_characteristic_read(manufacturer);
-    log_debug(TAG, "manufacturer = %s", byteArray->data);
+    if (manufacturer != NULL) {
+        GByteArray *byteArray = binc_characteristic_read(manufacturer);
+        log_debug(TAG, "manufacturer = %s", byteArray->data);
+    }
 
     Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
     if (temperature != NULL) {
         log_debug(TAG, "starting notify for temperature");
-        log_debug(TAG, binc_characteristic_to_string(temperature));
         binc_characteristic_start_notify(temperature, &on_notify);
+    }
+
+    Characteristic *current_time = binc_device_get_characteristic(device, "00001805-0000-1000-8000-00805f9b34fb","00002a2b-0000-1000-8000-00805f9b34fb" );
+    if (current_time != NULL) {
+        GByteArray *timeBytes = binc_get_current_time();
+        log_debug(TAG, "writing current time" );
+        binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
+    }
+    Characteristic *bpm = binc_device_get_characteristic(device, "00001810-0000-1000-8000-00805f9b34fb", "00002a35-0000-1000-8000-00805f9b34fb");
+    if (bpm != NULL) {
+        binc_characteristic_start_notify(bpm, &on_notify_bpm);
     }
 }
 
@@ -48,7 +68,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (!g_strcmp0(device->name, "TAIDOC TD1242")) {
+    if (!g_strcmp0(device->name, "Systo MC 400")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
@@ -70,6 +90,8 @@ gboolean callback(gpointer data) {
 }
 
 int main(void) {
+    GByteArray *now = binc_get_current_time();
+
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 

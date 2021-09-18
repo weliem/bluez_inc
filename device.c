@@ -183,7 +183,7 @@ void binc_collect_gatt_tree(Device *device) {
                 g_variant_iter_init(&ii, ifaces_and_properties);
                 while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
                     if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "service")) {
-                        log_debug(TAG, "%s", object_path);
+                        //log_debug(TAG, "%s", object_path);
                         Service *service = binc_service_create(device->connection, object_path);
                         const gchar *property_name;
                         GVariantIter iii;
@@ -221,7 +221,7 @@ void binc_collect_gatt_tree(Device *device) {
                             characteristic->service_uuid = g_strdup(service->uuid);
                             g_hash_table_insert(device->characteristics, g_strdup(object_path), characteristic);
 
-                            log_debug(TAG, "characteristic %s of service %s", characteristic->uuid, characteristic->service_uuid);
+                            log_debug(TAG, binc_characteristic_to_string(characteristic));
                         } else {
                             log_debug(TAG, "could not find service %s", characteristic->service_path);
                         }

@@ -96,16 +96,60 @@ GByteArray *binc_characteristic_read(Characteristic *characteristic) {
                                                    NULL,
                                                    &error);
 
+    g_variant_builder_unref(builder);
+
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "ReadValue", error->code, error->message);
         g_clear_error(&error);
         return NULL;
     }
 
-    g_variant_builder_unref(builder);
     if (result != NULL) {
         return g_variant_get_byte_array(result);
     } else return NULL;
+}
+
+void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType) {
+    g_assert(characteristic != NULL);
+    g_assert(byteArray != NULL);
+
+    guint16 offset = 0;
+    const char* writeTypeString = writeType == WITH_RESPONSE ? "request" : "command";
+
+    // Convert byte array to variant
+    GVariantBuilder *builder1 = g_variant_builder_new(G_VARIANT_TYPE("ay"));
+    for (int i = 0; i < byteArray->len; i++) {
+        g_variant_builder_add(builder1, "y", byteArray->data[i]);
+    }
+    GVariant *val = g_variant_new("ay", builder1);
+
+    // Convert options to variant
+    GVariantBuilder *builder2 = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+    g_variant_builder_add(builder2, "{sv}", "offset", g_variant_new_uint16(offset));
+    g_variant_builder_add(builder2, "{sv}", "type", g_variant_new_string(writeTypeString));
+    GVariant *options = g_variant_new("a{sv}", builder2);
+
+    GError *error = NULL;
+    GVariant *result = g_dbus_connection_call_sync(characteristic->connection,
+                                                   "org.bluez",
+                                                   characteristic->path,
+                                                   "org.bluez.GattCharacteristic1",
+                                                   "WriteValue",
+                                                   g_variant_new("(@ay@a{sv})",val, options),
+                                                   NULL,
+                                                   G_DBUS_CALL_FLAGS_NONE,
+                                                   -1,
+                                                   NULL,
+                                                   &error);
+
+    g_variant_builder_unref(builder1);
+    g_variant_builder_unref(builder2);
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", "WriteValue", error->code, error->message);
+        g_clear_error(&error);
+        return;
+    }
 }
 
 void binc_signal_characteristic_changed(GDBusConnection *conn,

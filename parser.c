@@ -4,6 +4,7 @@
 
 #include "parser.h"
 #include "math.h"
+#include <time.h>
 
 // IEEE 11073 Reserved float values
 typedef enum {
@@ -96,4 +97,33 @@ float parser_get_float(Parser *parser)
     }
 
     return (float) output;
+}
+
+GByteArray* binc_get_current_time() {
+    GByteArray *byteArray = g_byte_array_new();
+
+    GDateTime* now = g_date_time_new_now_local();
+    guint year = g_date_time_get_year(now);
+    guint8 yearLsb = year & 0xFF;
+    guint8 yearMsb = year >> 8;
+    guint8 month = g_date_time_get_month(now);
+    guint8 day = g_date_time_get_day_of_month(now);
+    guint8 hours = g_date_time_get_hour(now);
+    guint8 minutes = g_date_time_get_minute(now);
+    guint8 seconds = g_date_time_get_second(now);
+    guint8 dayOfWeek = (g_date_time_get_day_of_week(now) + 5) % 7 + 1;
+    guint8 miliseconds = (g_date_time_get_microsecond(now) / 1000) * 256 / 1000;
+    guint8 reason = 1;
+
+    g_byte_array_append(byteArray, &yearLsb, 1);
+    g_byte_array_append(byteArray, &yearMsb, 1);
+    g_byte_array_append(byteArray, &month, 1);
+    g_byte_array_append(byteArray, &day, 1);
+    g_byte_array_append(byteArray, &hours, 1);
+    g_byte_array_append(byteArray, &minutes, 1);
+    g_byte_array_append(byteArray, &seconds, 1);
+    g_byte_array_append(byteArray, &dayOfWeek, 1);
+    g_byte_array_append(byteArray, &miliseconds, 1);
+    g_byte_array_append(byteArray, &reason,1);
+    return byteArray;
 }

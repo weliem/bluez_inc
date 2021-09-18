@@ -19,4 +19,6 @@ guint16 parser_get_uint16(Parser *parser);
 float parser_get_sfloat(Parser *parser);
 float parser_get_float(Parser *parser);
 
+GByteArray* binc_get_current_time();
+
 #endif //TEST_PARSER_H
