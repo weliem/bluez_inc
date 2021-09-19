@@ -43,7 +43,7 @@ void binc_init_device(Device *device) {
 Device* binc_create_device(const char* path, GDBusConnection *connection) {
     Device *x = g_new(Device, 1);
     binc_init_device(x);
-    x->path = path;
+    x->path = g_strdup(path);
     x->connection = connection;
 }
 
@@ -136,7 +136,9 @@ int device_call_method(const Device *device, const char *method, GVariant *param
         return EXIT_FAILURE;
     }
 
-    g_variant_unref(result);
+    if (result != NULL) {
+        g_variant_unref(result);
+    }
     return EXIT_SUCCESS;
 }
 
@@ -251,12 +253,9 @@ void device_changed(GDBusConnection *conn,
     const char *key;
     GVariant *value = NULL;
     const gchar *signature = g_variant_get_type_string(params);
-//
+
     Device *device = (Device *) userdata;
     g_assert(device != NULL);
-//
-//    // If we are not scanning we're bailing out
-//    if (adapter->discovering == FALSE) return;
 
     if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
         g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");

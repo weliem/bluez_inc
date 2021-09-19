@@ -18,6 +18,12 @@
 
 #define TAG "Main"
 
+#define NONIN "Nonin3230_502644076"
+#define SOEHNLE "Systo MC 400"
+#define TAIDOC "TAIDOC TD1241"
+
+#define CONNECT_DELAY 100
+
 void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
 }
@@ -39,10 +45,18 @@ void on_notify_bpm(Characteristic *characteristic, GByteArray *byteArray) {
 
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", device->name);
-    Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
+//    Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
+    Characteristic* manufacturer = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb", "00002a1c-0000-1000-8000-00805f9b34fb");
     if (manufacturer != NULL) {
-        GByteArray *byteArray = binc_characteristic_read(manufacturer);
-        log_debug(TAG, "manufacturer = %s", byteArray->data);
+        GError *error = NULL;
+        GByteArray *byteArray = binc_characteristic_read(manufacturer, &error);
+        if (byteArray != NULL) {
+            log_debug(TAG, "manufacturer = %s", byteArray->data);
+        }
+        if (error != NULL) {
+            log_debug(TAG, "error reading manufacturer");
+            g_clear_error(&error);
+        }
     }
 
     Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
@@ -63,18 +77,26 @@ void on_services_resolved(Device *device) {
     }
 }
 
+gboolean delayed_connect(gpointer device) {
+    binc_device_connect((Device*) device);
+    return FALSE;
+}
+
 void on_scan_result(Adapter *adapter, Device *device) {
     char *deviceToString = binc_device_to_string(device);
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (!g_strcmp0(device->name, "Systo MC 400")) {
+    if (!g_strcmp0(device->name, TAIDOC)) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
-        binc_device_connect(device);
+//        binc_device_connect(device);
+        log_debug(TAG, "connecting delayed..");
+        g_timeout_add(CONNECT_DELAY, delayed_connect, device);
     }
 }
+
 
 void on_discovery_state_changed(Adapter *adapter) {
     log_debug(TAG, "discovery '%s'", adapter->discovery_state? "on" : "off");

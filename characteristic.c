@@ -77,11 +77,13 @@ GByteArray *g_variant_get_byte_array2(GVariant *variant) {
 }
 
 
-GByteArray *binc_characteristic_read(Characteristic *characteristic) {
+GByteArray *binc_characteristic_read(Characteristic *characteristic, GError **error) {
     g_assert(characteristic != NULL);
 
+    guint16 offset = 0;
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-    GError *error = NULL;
+    g_variant_builder_add(builder, "{sv}", "offset", g_variant_new_uint16(offset));
+
     GVariant *result = g_dbus_connection_call_sync(characteristic->connection,
                                                    "org.bluez",
                                                    characteristic->path,
@@ -92,13 +94,12 @@ GByteArray *binc_characteristic_read(Characteristic *characteristic) {
                                                    G_DBUS_CALL_FLAGS_NONE,
                                                    -1,
                                                    NULL,
-                                                   &error);
-
+                                                   error);
     g_variant_builder_unref(builder);
 
-    if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "ReadValue", error->code, error->message);
-        g_clear_error(&error);
+    if ((*error) != NULL) {
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", "ReadValue", (*error)->code, (*error)->message);
+//        g_clear_error(error);
         return NULL;
     }
 

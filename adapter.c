@@ -440,7 +440,7 @@ Adapter *create_adapter(GDBusConnection *connection, const char *path) {
     Adapter *adapter = g_new(Adapter, 1);
     init_adapter(adapter);
     adapter->connection = connection;
-    adapter->path = path;
+    adapter->path = g_strdup(path);
     adapter->devices_cache = g_hash_table_new(g_str_hash, g_str_equal);
     setup_signal_subscribers(adapter);
     return adapter;
