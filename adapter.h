@@ -19,13 +19,15 @@ typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter);
 typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter);
 
 typedef struct sAdapter {
-    GDBusConnection *connection;
-    const char *path;
-    const char *address;
+    // Public stuff
+    char *path;
+    char *address;
     gboolean powered;
     gboolean discoverable;
     DiscoveryState discovery_state;
 
+    // Internal stuff
+    GDBusConnection *connection;
     guint device_prop_changed;
     guint adapter_prop_changed;
     guint iface_added;
@@ -38,8 +40,16 @@ typedef struct sAdapter {
     GHashTable *devices_cache;
 } Adapter;
 
+/**
+ * Get the default adapter
+ *
+ * @return the default adapter or NULL if no adapter was found. Caller owns adapter.
+ */
+Adapter* binc_get_default_adapter();
 
 GPtrArray *binc_find_adapters();
+
+void binc_adapter_free(Adapter *adapter);
 
 int binc_adapter_start_discovery(Adapter *adapter);
 

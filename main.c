@@ -24,6 +24,8 @@
 
 #define CONNECT_DELAY 100
 
+
+
 void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
 }
@@ -87,13 +89,13 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (!g_strcmp0(device->name, TAIDOC)) {
+    if (device->name != NULL && g_str_has_prefix(device->name, "TAIDOC")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
-//        binc_device_connect(device);
-        log_debug(TAG, "connecting delayed..");
-        g_timeout_add(CONNECT_DELAY, delayed_connect, device);
+        binc_device_connect(device);
+//        log_debug(TAG, "connecting delayed..");
+//        g_timeout_add(CONNECT_DELAY, delayed_connect, device);
     }
 }
 
@@ -112,18 +114,13 @@ gboolean callback(gpointer data) {
 }
 
 int main(void) {
-    GByteArray *now = binc_get_current_time();
-
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-    // Find adapters
-    GPtrArray *adapters = binc_find_adapters();
+    // Get the default adapter
+    Adapter *adapter = binc_get_default_adapter();
 
-    Adapter *adapter = NULL;
-    if (adapters->len > 0) {
-        // Take the first adapter
-        adapter = g_ptr_array_index(adapters, 0);
+    if (adapter != NULL) {
         log_debug(TAG, "using adapter '%s'", adapter->path);
 
         binc_adapter_register_powered_state_callback(adapter, &on_powered_state_changed);
@@ -135,8 +132,6 @@ int main(void) {
         binc_adapter_register_discovery_state_callback(adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(adapter, -100);
         binc_adapter_start_discovery(adapter);
-        binc_adapter_start_discovery(adapter);
-
     } else {
         log_debug("MAIN", "No adapter found");
     }

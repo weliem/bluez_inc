@@ -15,7 +15,7 @@
 /**
  * Array of all found adapters
  */
-GPtrArray *binc_adapters = NULL;
+//GPtrArray *binc_adapters = NULL;
 
 /**
  * Global dbusconnection used in all adapters.
@@ -36,6 +36,8 @@ void init_adapter(Adapter *adapter) {
     adapter->devices_cache = NULL;
 }
 
+
+
 /**
  * Synchronous method call to a adapter on DBUS
  *
@@ -48,6 +50,7 @@ int adapter_call_method(const Adapter *adapter, const char *method, GVariant *pa
     g_assert(adapter != NULL);
     g_assert(method != NULL);
 
+    int return_value = EXIT_SUCCESS;
     GError *error = NULL;
     GVariant *result = g_dbus_connection_call_sync(adapter->connection,
                                                    "org.bluez",
@@ -60,14 +63,15 @@ int adapter_call_method(const Adapter *adapter, const char *method, GVariant *pa
                                                    -1,
                                                    NULL,
                                                    &error);
+
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", method, error->code, error->message);
         g_clear_error(&error);
-        return EXIT_FAILURE;
+        return_value = EXIT_FAILURE;
     }
 
     g_variant_unref(result);
-    return EXIT_SUCCESS;
+    return return_value;
 }
 
 
@@ -183,29 +187,30 @@ static void bluez_property_value(const gchar *key, GVariant *value) {
 }
 
 
-void device_update_property(Device *device, const char *property_name, GVariant *prop_val) {
-    const gchar *signature = g_variant_get_type_string(prop_val);
-    if (g_strcmp0(property_name, "Address") == 0) {
-        device->address = g_variant_get_string(prop_val, NULL);
-    } else if (g_strcmp0(property_name, "AddressType") == 0) {
-        device->address_type = g_variant_get_string(prop_val, NULL);
-    } else if (g_strcmp0(property_name, "Alias") == 0) {
-        device->alias = g_variant_get_string(prop_val, NULL);
-    } else if (g_strcmp0(property_name, "Adapter") == 0) {
-        device->adapter_path = g_variant_get_string(prop_val, NULL);
-    } else if (g_strcmp0(property_name, "Name") == 0) {
-        device->name = g_variant_get_string(prop_val, NULL);
-    } else if (g_strcmp0(property_name, "Paired") == 0) {
-        device->paired = g_variant_get_boolean(prop_val);
-    } else if (g_strcmp0(property_name, "RSSI") == 0) {
-        device->rssi = g_variant_get_int16(prop_val);
-    } else if (g_strcmp0(property_name, "TxPower") == 0) {
-        device->txpower = g_variant_get_int16(prop_val);
-    } else if (g_strcmp0(property_name, "UUIDs") == 0) {
-        device->uuids = g_variant_string_array_to_list(prop_val);
-    } else if (g_strcmp0(property_name, "ManufacturerData") == 0) {
+void binc_device_update_property(Device *device, const char *property_name, GVariant *property_value) {
+    if (g_str_equal(property_name, "Address")) {
+        device->address = g_strdup(g_variant_get_string(property_value, NULL));
+    } else if (g_str_equal(property_name, "AddressType")) {
+        device->address_type = g_strdup(g_variant_get_string(property_value, NULL));
+    } else if (g_str_equal(property_name, "Alias")) {
+        device->alias = g_strdup(g_variant_get_string(property_value, NULL));
+    } else if (g_str_equal(property_name, "Adapter")) {
+        device->adapter_path = g_strdup(g_variant_get_string(property_value, NULL));
+    } else if (g_str_equal(property_name, "Name")) {
+        device->name = g_strdup(g_variant_get_string(property_value, NULL));
+    } else if (g_str_equal(property_name, "Paired")) {
+        device->paired = g_variant_get_boolean(property_value);
+    } else if (g_str_equal(property_name, "RSSI")) {
+        device->rssi = g_variant_get_int16(property_value);
+    } else if (g_str_equal(property_name, "Trusted")) {
+        device->trusted = g_variant_get_boolean(property_value);
+    } else if (g_str_equal(property_name, "TxPower")) {
+        device->txpower = g_variant_get_int16(property_value);
+    } else if (g_str_equal(property_name, "UUIDs")) {
+        device->uuids = g_variant_string_array_to_list(property_value);
+    } else if (g_str_equal(property_name, "ManufacturerData")) {
         GVariantIter *iter;
-        g_variant_get(prop_val, "a{qv}", &iter);
+        g_variant_get(property_value, "a{qv}", &iter);
 
         GVariant *array;
         uint16_t key;
@@ -228,9 +233,9 @@ void device_update_property(Device *device, const char *property_name, GVariant 
         }
 
         g_variant_iter_free(iter);
-    } else if (g_strcmp0(property_name, "ServiceData") == 0) {
+    } else if (g_str_equal(property_name, "ServiceData")) {
         GVariantIter *iter;
-        g_variant_get(prop_val, "a{sv}", &iter);
+        g_variant_get(property_value, "a{sv}", &iter);
 
         GVariant *array;
         char *key;
@@ -283,7 +288,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
             g_variant_iter_init(&i, properties);
             while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)) {
                 //               bluez_property_value(property_name, prop_val);
-                device_update_property(device, property_name, prop_val);
+                binc_device_update_property(device, property_name, prop_val);
             }
 
             // Deliver Device to registered callback
@@ -299,7 +304,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
 }
 
 Device *device_getall_properties(Adapter *adapter, const char *device_path) {
-    Device *scanResult = NULL;
+    Device *device = NULL;
     GVariant *result = g_dbus_connection_call_sync(adapter->connection,
                                                    "org.bluez",
                                                    device_path,
@@ -314,10 +319,10 @@ Device *device_getall_properties(Adapter *adapter, const char *device_path) {
 
     if (result == NULL) {
         g_print("Unable to device properties\n");
-        return scanResult;
+        return device;
     }
 
-    scanResult = binc_create_device(device_path, adapter->connection);
+    device = binc_create_device(device_path, adapter->connection);
     result = g_variant_get_child_value(result, 0);
     const gchar *property_name;
     GVariantIter i;
@@ -325,10 +330,10 @@ Device *device_getall_properties(Adapter *adapter, const char *device_path) {
     g_variant_iter_init(&i, result);
     while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)) {
         //bluez_property_value(property_name, prop_val);
-        device_update_property(scanResult, property_name, prop_val);
+        binc_device_update_property(device, property_name, prop_val);
         g_variant_unref(prop_val);
     }
-    return scanResult;
+    return device;
 }
 
 void bluez_signal_device_changed(GDBusConnection *conn,
@@ -366,7 +371,7 @@ void bluez_signal_device_changed(GDBusConnection *conn,
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
-        device_update_property(device, key, value);
+        binc_device_update_property(device, key, value);
     }
 
     if (adapter->discoveryResultCallback != NULL) {
@@ -446,7 +451,14 @@ Adapter *create_adapter(GDBusConnection *connection, const char *path) {
     return adapter;
 }
 
+void binc_adapter_free(Adapter *adapter) {
+    g_assert(adapter != NULL);
 
+    remove_signal_subscribers(adapter);
+    g_free(adapter->path);
+    g_free(adapter->address);
+    g_free(adapter);
+}
 
 
 void bluez_adapter_getall_property(GDBusConnection *con,
@@ -492,7 +504,7 @@ GPtrArray *binc_find_adapters() {
         binc_dbus_connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
     }
 
-    binc_adapters = g_ptr_array_new();
+    GPtrArray *binc_adapters = g_ptr_array_new();
     log_debug(TAG, "finding adapters");
 
     GVariant *result = g_dbus_connection_call_sync(binc_dbus_connection,
@@ -531,7 +543,7 @@ GPtrArray *binc_find_adapters() {
                     g_variant_iter_init(&iii, properties);
                     while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val)) {
                         if (g_strcmp0(property_name, "Address") == 0) {
-                            adapter->address = g_variant_get_string(prop_val, NULL);
+                            adapter->address = g_strdup(g_variant_get_string(prop_val, NULL));
                         } else if (g_strcmp0(property_name, "Powered") == 0) {
                             adapter->powered = g_variant_get_boolean(prop_val);
                         } else if (g_strcmp0(property_name, "Discovering") == 0) {
@@ -552,6 +564,22 @@ GPtrArray *binc_find_adapters() {
 
     log_debug(TAG, "found %d adapters", binc_adapters->len);
     return binc_adapters;
+}
+
+Adapter* binc_get_default_adapter() {
+    Adapter *adapter = NULL;
+    GPtrArray *adapters = binc_find_adapters();
+    if (adapters->len > 0) {
+        // Choose the first one in the array, typically the 'hciX' with the highest X
+        adapter = g_ptr_array_index(adapters, 0);
+
+        // Free any other adapters we are not going to use
+        for(int i=1; i<adapters->len; i++) {
+            binc_adapter_free(g_ptr_array_index(adapters, i));
+        }
+        g_ptr_array_free(adapters, FALSE);
+    }
+    return adapter;
 }
 
 /*

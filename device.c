@@ -47,6 +47,22 @@ Device* binc_create_device(const char* path, GDBusConnection *connection) {
     x->connection = connection;
 }
 
+void binc_device_free(Device *device) {
+    g_assert(device != NULL);
+
+    // Free strings
+    g_free((char*)device->path);
+    g_free((char*)device->adapter_path);
+    g_free((char*)device->address_type);
+    g_free((char*)device->address);
+    g_free((char*)device->alias);
+    g_free((char*)device->name);
+
+    // Free hash tables
+
+    g_free(device);
+}
+
 char *binc_device_to_string(Device *device) {
 
     // First build up uuids string
