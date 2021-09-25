@@ -6,4 +6,4 @@ The goal of this library is to provide a clean C interface to Bluez, without nee
 todo
 * Device: remove object
 * Device: free
-* 
+* Pairing
