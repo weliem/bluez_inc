@@ -15,6 +15,7 @@
 #include "logger.h"
 #include "utility.h"
 #include "parser.h"
+#include "agent.h"
 
 #define TAG "Main"
 
@@ -89,7 +90,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (device->name != NULL && g_str_has_prefix(device->name, "TAIDOC")) {
+    if (device->name != NULL && g_str_has_prefix(device->name, "Contour")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
@@ -114,6 +115,8 @@ gboolean callback(gpointer data) {
 }
 
 int main(void) {
+    Agent* agent = NULL;
+
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
@@ -122,6 +125,8 @@ int main(void) {
 
     if (adapter != NULL) {
         log_debug(TAG, "using adapter '%s'", adapter->path);
+
+        agent = binc_agent_create(adapter, KEYBOARD_DISPLAY);
 
         binc_adapter_register_powered_state_callback(adapter, &on_powered_state_changed);
         binc_adapter_power_off(adapter);
@@ -146,6 +151,9 @@ int main(void) {
     binc_adapter_stop_discovery(adapter);
 
     // Clean up
+    if (agent != NULL) {
+        binc_agent_free(agent);
+    }
 
     return 0;
 }
