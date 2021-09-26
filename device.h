@@ -14,6 +14,7 @@ typedef struct sDevice Device;
 typedef void (*ConnectionStateChangedCallback)(Device *device);
 
 typedef enum ConnectionState {DISCONNECTED = 0, CONNECTED = 1, CONNECTING = 2, DISCONNECTING = 3} ConnectionState;
+typedef enum BondingState { NONE = 0, BONDING = 1, BONDED = 2} BondingState;
 
 typedef struct sDevice {
     GDBusConnection *connection;
@@ -25,6 +26,7 @@ typedef struct sDevice {
     gboolean connecting;
     gboolean services_resolved;
     gboolean paired;
+    BondingState bondingState;
     const char *path;
     const char *name;
     short rssi;

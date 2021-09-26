@@ -14,6 +14,7 @@ typedef struct {
     char *path;
     IoCapability io_capability;
     GDBusConnection *connection;
+    Adapter *adapter;
 } Agent;
 
 Agent* binc_agent_create(Adapter *adapter, IoCapability io_capability);

@@ -88,7 +88,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (device->name != NULL && g_str_has_prefix(device->name, "Contour")) {
+    if (device->name != NULL && g_str_has_prefix(device->name, "Nonin")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);

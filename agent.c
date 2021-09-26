@@ -23,10 +23,14 @@ static void bluez_agent_method_call(GDBusConnection *conn,
 {
     int pass;
     int entered;
-    char *opath;
+    char *opath = NULL;
     GVariant *p= g_dbus_method_invocation_get_parameters(invocation);
 
-    log_debug(TAG, "Agent method call: %s : %s()\n", interface, method);
+    log_debug(TAG, "agent called: %s()", method);
+
+    Adapter *adapter = (Adapter *) userdata;
+    g_assert(adapter != NULL);
+
     if(!strcmp(method, "RequestPinCode")) {
         ;
     }
@@ -49,7 +53,13 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         g_dbus_method_invocation_return_value(invocation, NULL);
     }
     else if(!strcmp(method, "RequestAuthorization")) {
-        log_debug(TAG, "request for authorization");
+        g_variant_get(params, "(o)", &opath);
+        log_debug(TAG, "request for authorization %s", opath);
+        Device *device = g_hash_table_lookup(adapter->devices_cache, opath);
+        if (device != NULL) {
+            device->bondingState = BONDING;
+        }
+        g_dbus_method_invocation_return_value(invocation, NULL);
     }
     else if(!strcmp(method, "AuthorizeService")) {
         log_debug(TAG, "authorize service");
@@ -65,7 +75,7 @@ static const GDBusInterfaceVTable agent_method_table = {
         .method_call = bluez_agent_method_call,
 };
 
-int bluez_register_agent(GDBusConnection *con)
+int bluez_register_agent(Agent *agent)
 {
     GError *error = NULL;
     guint id = 0;
@@ -116,11 +126,11 @@ int bluez_register_agent(GDBusConnection *con)
         return 0;
     }
 
-    id = g_dbus_connection_register_object(con,
+    id = g_dbus_connection_register_object(agent->connection,
                                            AGENT_PATH,
                                            info->interfaces[0],
                                            &agent_method_table,
-                                           NULL, NULL, &error);
+                                           agent->adapter, NULL, &error);
     g_dbus_node_info_unref(info);
     //g_dbus_connection_unregister_object(con, id);
     /* call register method in AgentManager1 interface */
@@ -196,8 +206,9 @@ Agent* binc_agent_create(Adapter *adapter, IoCapability io_capability) {
     Agent* agent = g_new0(Agent, 1);
     agent->path = AGENT_PATH;
     agent->connection = adapter->connection;
+    agent->adapter = adapter;
     agent->io_capability = io_capability;
-    bluez_register_agent(adapter->connection);
+    bluez_register_agent(agent);
     binc_agentmanager_register_agent(agent);
     return agent;
 }
