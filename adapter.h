@@ -10,7 +10,9 @@
 
 typedef struct sAdapter Adapter;
 
-typedef enum DiscoveryState {STOPPED = 0, STARTED = 1, STARTING = 2, STOPPING = 3} DiscoveryState;
+typedef enum DiscoveryState {
+    STOPPED = 0, STARTED = 1, STARTING = 2, STOPPING = 3
+} DiscoveryState;
 
 typedef void (*AdapterDiscoveryResultCallback)(Adapter *adapter, Device *device);
 
@@ -45,7 +47,7 @@ typedef struct sAdapter {
  *
  * @return the default adapter or NULL if no adapter was found. Caller owns adapter.
  */
-Adapter* binc_get_default_adapter();
+Adapter *binc_get_default_adapter();
 
 GPtrArray *binc_find_adapters();
 
@@ -56,6 +58,8 @@ int binc_adapter_start_discovery(Adapter *adapter);
 int binc_adapter_stop_discovery(Adapter *adapter);
 
 int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
+
+int binc_adapter_remove_device(Adapter *adapter, Device *device);
 
 int binc_adapter_power_on(Adapter *adapter);
 

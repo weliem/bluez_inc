@@ -610,6 +610,16 @@ int binc_adapter_stop_discovery(Adapter *adapter) {
     }
 }
 
+int binc_adapter_remove_device(Adapter *adapter, Device *device) {
+    g_assert(device != NULL);
+    g_assert (adapter != NULL);
+
+    int rc = adapter_call_method(adapter, "RemoveDevice", g_variant_new("(o)", device->path));
+    if (rc == EXIT_FAILURE)
+        g_print("Not able to remove %s\n", device->path);
+    return rc;
+}
+
 int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold) {
     int rc;
     GVariantBuilder *b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);

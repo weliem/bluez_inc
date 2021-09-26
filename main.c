@@ -8,8 +8,6 @@
  * gcc `pkg-config --cflags glib-2.0 gio-2.0` -Wall -Wextra -o bluez_adapter_scan ./bluez_adapter_scan.c `pkg-config --libs glib-2.0 gio-2.0`
  */
 #include <glib.h>
-#include <gio/gio.h>
-
 #include "adapter.h"
 #include "device.h"
 #include "logger.h"
