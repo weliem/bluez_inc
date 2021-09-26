@@ -26,7 +26,7 @@ static void bluez_agent_method_call(GDBusConnection *conn,
     char *opath = NULL;
     GVariant *p= g_dbus_method_invocation_get_parameters(invocation);
 
-    log_debug(TAG, "agent called: %s()", method);
+ //   log_debug(TAG, "agent called: %s()", method);
 
     Adapter *adapter = (Adapter *) userdata;
     g_assert(adapter != NULL);

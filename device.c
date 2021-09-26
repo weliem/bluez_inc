@@ -256,13 +256,13 @@ void binc_collect_gatt_tree(Device *device) {
     log_debug(TAG, "found %d services", g_hash_table_size(device->services));
 }
 
-void device_changed(GDBusConnection *conn,
-                    const gchar *sender,
-                    const gchar *path,
-                    const gchar *interface,
-                    const gchar *signal,
-                    GVariant *params,
-                    void *userdata) {
+void binc_device_changed(GDBusConnection *conn,
+                         const gchar *sender,
+                         const gchar *path,
+                         const gchar *interface,
+                         const gchar *signal,
+                         GVariant *params,
+                         void *userdata) {
 
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
@@ -290,10 +290,11 @@ void device_changed(GDBusConnection *conn,
         } else if (g_strcmp0(key, "ServicesResolved") == 0) {
             device->services_resolved = g_variant_get_boolean(value);
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
-            if (device->services_resolved_callback != NULL && device->services_resolved == TRUE &&
-                device->bondingState != BONDING) {
+            if (device->services_resolved == TRUE && device->bondingState != BONDING) {
                 binc_collect_gatt_tree(device);
-                device->services_resolved_callback(device);
+                if (device->services_resolved_callback != NULL) {
+                    device->services_resolved_callback(device);
+                }
             }
         } else if (g_strcmp0(key, "Paired") == 0) {
             device->paired = g_variant_get_boolean(value);
@@ -301,9 +302,11 @@ void device_changed(GDBusConnection *conn,
             log_debug(TAG, "Paired %s", device->paired ? "true" : "false");
 
             // If gatt-tree has not been built yet, start building it
-            if (device->services == NULL) {
+            if (device->services == NULL && device->services_resolved) {
                 binc_collect_gatt_tree(device);
-                device->services_resolved_callback(device);
+                if (device->services_resolved_callback != NULL) {
+                    device->services_resolved_callback(device);
+                }
             }
         }
     }
@@ -331,7 +334,7 @@ int binc_device_connect(Device *device) {
                                                                      NULL,
                                                                      "org.bluez.Device1",
                                                                      G_DBUS_SIGNAL_FLAGS_NONE,
-                                                                     device_changed,
+                                                                     binc_device_changed,
                                                                      device,
                                                                      NULL);
 
@@ -352,8 +355,7 @@ void binc_device_register_services_resolved_callback(Device *device, ConnectionS
     device->services_resolved_callback = callback;
 }
 
-Characteristic *
-binc_device_get_characteristic(Device *device, const char *service_uuid, const char *characteristic_uuid) {
+Characteristic *binc_device_get_characteristic(Device *device, const char *service_uuid, const char *characteristic_uuid) {
     Characteristic *result = NULL;
 
     if (device->characteristics != NULL && g_hash_table_size(device->characteristics) > 0) {

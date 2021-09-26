@@ -17,6 +17,8 @@ typedef enum WriteType {
 typedef void (*NotifyingStateChangedCallback)(Characteristic *characteristic);
 
 typedef void (*OnNotifyCallback)(Characteristic *characteristic, GByteArray *byteArray);
+typedef void (*OnReadCallback)(Characteristic *characteristic, GByteArray *byteArray, GError *error);
+typedef void (*OnWriteCallback)(Characteristic *characteristic, GError *error);
 
 typedef struct sCharacteristic {
     GDBusConnection *connection;
@@ -29,14 +31,17 @@ typedef struct sCharacteristic {
 
     guint notify_signal;
     NotifyingStateChangedCallback notify_state_callback;
+    OnReadCallback on_read_callback;
+    OnWriteCallback on_write_callback;
     OnNotifyCallback on_notify_callback;
 } Characteristic;
 
 Characteristic *binc_characteristic_create(GDBusConnection *connection, const char *path);
 
-GByteArray *binc_characteristic_read(Characteristic *characteristic, GError **error);
+void binc_characteristic_read(Characteristic *characteristic, OnReadCallback callback);
+GByteArray *binc_characteristic_read_sync(Characteristic *characteristic, GError **error);
 
-void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType);
+void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType, OnWriteCallback callback);
 
 void binc_characteristic_register_notifying_state_change_callback(Characteristic *characteristic,
                                                                   NotifyingStateChangedCallback callback);

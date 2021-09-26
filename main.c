@@ -24,6 +24,9 @@
 #define CONNECT_DELAY 100
 
 
+#define DIS_SERVICE "0000180a-0000-1000-8000-00805f9b34fb"
+#define MANUFACTURER_CHAR "00002a29-0000-1000-8000-00805f9b34fb"
+#define MODEL_CHAR "00002a24-0000-1000-8000-00805f9b34fb"
 
 void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
@@ -44,20 +47,40 @@ void on_notify_bpm(Characteristic *characteristic, GByteArray *byteArray) {
     log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
 }
 
+void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+    if (byteArray != NULL) {
+        if (g_str_equal(characteristic->uuid, MANUFACTURER_CHAR)) {
+            log_debug(TAG, "manufacturer = %s", byteArray->data);
+        } else if (g_str_equal(characteristic->uuid, MODEL_CHAR)) {
+            log_debug(TAG, "model = %s", byteArray->data);
+        }
+    }
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to read '%s' (error %d: %s)", characteristic->uuid, error->code, error->message);
+        g_clear_error(&error);
+    }
+}
+
+void on_write(Characteristic *characteristic, GError *error) {
+    if (error != NULL) {
+        log_debug(TAG, "failed to write '%s' (error %d: %s)", characteristic->uuid, error->code, error->message);
+        g_clear_error(&error);
+    } else {
+        log_debug(TAG, "writing succeeded");
+    }
+}
+
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", device->name);
-//    Characteristic* manufacturer = binc_device_get_characteristic(device, "0000180a-0000-1000-8000-00805f9b34fb", "00002a29-0000-1000-8000-00805f9b34fb");
-    Characteristic* manufacturer = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb", "00002a1c-0000-1000-8000-00805f9b34fb");
+    Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL) {
-        GError *error = NULL;
-        GByteArray *byteArray = binc_characteristic_read(manufacturer, &error);
-        if (byteArray != NULL) {
-            log_debug(TAG, "manufacturer = %s", byteArray->data);
-        }
-        if (error != NULL) {
-            log_debug(TAG, "error reading manufacturer");
-            g_clear_error(&error);
-        }
+        binc_characteristic_read(manufacturer, &on_read);
+    }
+
+    Characteristic *model = binc_device_get_characteristic(device, DIS_SERVICE, MODEL_CHAR);
+    if (model != NULL) {
+        binc_characteristic_read(model, &on_read);
     }
 
     Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
@@ -70,8 +93,9 @@ void on_services_resolved(Device *device) {
     if (current_time != NULL) {
         GByteArray *timeBytes = binc_get_current_time();
         log_debug(TAG, "writing current time" );
-        binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
+        binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE, &on_write);
     }
+
     Characteristic *bpm = binc_device_get_characteristic(device, "00001810-0000-1000-8000-00805f9b34fb", "00002a35-0000-1000-8000-00805f9b34fb");
     if (bpm != NULL) {
         binc_characteristic_start_notify(bpm, &on_notify_bpm);
@@ -79,7 +103,7 @@ void on_services_resolved(Device *device) {
 }
 
 gboolean delayed_connect(gpointer device) {
-    binc_device_connect((Device*) device);
+    binc_device_connect((Device *) device);
     return FALSE;
 }
 
@@ -88,19 +112,17 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (device->name != NULL && g_str_has_prefix(device->name, "Nonin")) {
+    if (device->name != NULL && g_str_has_prefix(device->name, "Philips")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
-        binc_device_connect(device);
-//        log_debug(TAG, "connecting delayed..");
-//        g_timeout_add(CONNECT_DELAY, delayed_connect, device);
+        g_timeout_add(CONNECT_DELAY, delayed_connect, device);
     }
 }
 
 
 void on_discovery_state_changed(Adapter *adapter) {
-    log_debug(TAG, "discovery '%s'", adapter->discovery_state? "on" : "off");
+    log_debug(TAG, "discovery '%s'", adapter->discovery_state ? "on" : "off");
 }
 
 void on_powered_state_changed(Adapter *adapter) {
@@ -113,7 +135,7 @@ gboolean callback(gpointer data) {
 }
 
 int main(void) {
-    Agent* agent = NULL;
+    Agent *agent = NULL;
 
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
