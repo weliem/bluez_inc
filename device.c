@@ -159,6 +159,31 @@ int device_call_method(const Device *device, const char *method, GVariant *param
     return EXIT_SUCCESS;
 }
 
+static guint binc_characteristic_flags_to_int(GList *flags) {
+    guint result = 0;
+    if (g_list_length(flags) > 0) {
+        for (GList *iterator = flags; iterator; iterator = iterator->next) {
+            char* property = (char*) iterator->data;
+            if (g_str_equal(property, "broadcast")) {
+                result += GATT_CHR_PROP_BROADCAST;
+            } else if (g_str_equal(property, "read")) {
+                result += GATT_CHR_PROP_READ;
+            } else if (g_str_equal(property, "write-without-response")) {
+                result += GATT_CHR_PROP_WRITE_WITHOUT_RESP;
+            } else if (g_str_equal(property, "write")) {
+                result += GATT_CHR_PROP_WRITE;
+            } else if (g_str_equal(property, "notify")) {
+                result += GATT_CHR_PROP_NOTIFY;
+            } else if (g_str_equal(property, "indicate")) {
+                result += GATT_CHR_PROP_INDICATE;
+            } else if (g_str_equal(property, "authenticated-signed-writes")) {
+                result += GATT_CHR_PROP_AUTH;
+            }
+        }
+    }
+    return result;
+}
+
 void binc_collect_gatt_tree(Device *device) {
     g_assert(device != NULL);
 
@@ -230,6 +255,7 @@ void binc_collect_gatt_tree(Device *device) {
                                 characteristic->service_path = g_strdup(g_variant_get_string(prop_val, NULL));
                             } else if (g_strcmp0(property_name, "Flags") == 0) {
                                 characteristic->flags = g_variant_string_array_to_list(prop_val);
+                                characteristic->flags_bitfield = binc_characteristic_flags_to_int(characteristic->flags);
                             }
                         }
                         g_variant_unref(prop_val);
@@ -240,7 +266,9 @@ void binc_collect_gatt_tree(Device *device) {
                             characteristic->service_uuid = g_strdup(service->uuid);
                             g_hash_table_insert(device->characteristics, g_strdup(object_path), characteristic);
 
-                            log_debug(TAG, binc_characteristic_to_string(characteristic));
+                            char *charString = binc_characteristic_to_string(characteristic);
+                            log_debug(TAG, charString);
+                            g_free(charString);
                         } else {
                             log_debug(TAG, "could not find service %s", characteristic->service_path);
                         }

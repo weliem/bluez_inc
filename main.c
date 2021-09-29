@@ -37,6 +37,7 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     parser->offset = 1;
     float value = parser_get_float(parser);
     log_debug(TAG, "temperature %.1f", value);
+    parser_free(parser);
 }
 
 void on_notify_bpm(Characteristic *characteristic, GByteArray *byteArray) {
@@ -45,6 +46,7 @@ void on_notify_bpm(Characteristic *characteristic, GByteArray *byteArray) {
     float systolic = parser_get_sfloat(parser);
     float diastolic = parser_get_sfloat(parser);
     log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
+    parser_free(parser);
 }
 
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {

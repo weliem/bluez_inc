@@ -6,7 +6,7 @@
 
 void btox(char *dest, const guint8 *src, int n)
 {
-    const char xx[]= "0123456789ABCDEF";
+    const char xx[]= "0123456789abcdef";
     while (--n >= 0) dest[n] = xx[(src[n >> 1] >> ((1 - (n & 1)) << 2)) & 0xF];
 }
 

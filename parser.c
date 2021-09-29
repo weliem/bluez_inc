@@ -24,6 +24,10 @@ Parser* parser_create(GByteArray *bytes, int byteOrder) {
     parser->byteOrder = byteOrder;
 }
 
+void parser_free(Parser *parser) {
+    parser->bytes = NULL;
+    g_free(parser);
+}
 guint8 parser_get_uint8(Parser *parser) {
     g_assert(parser->offset < parser->bytes->len);
 
