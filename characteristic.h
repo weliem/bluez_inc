@@ -7,6 +7,7 @@
 
 #include <gio/gio.h>
 #include "service.h"
+//#include "device.h"
 
 /*
  * GATT Characteristic Property bit field
@@ -26,6 +27,7 @@
 #define GATT_CHR_PROP_EXT_PROP                0x80
 
 typedef struct sCharacteristic Characteristic;
+typedef struct sDevice Device;
 
 typedef enum WriteType {
     WITH_RESPONSE = 0, WITHOUT_RESPONSE = 1
@@ -40,6 +42,7 @@ typedef void (*OnReadCallback)(Characteristic *characteristic, GByteArray *byteA
 typedef void (*OnWriteCallback)(Characteristic *characteristic, GError *error);
 
 typedef struct sCharacteristic {
+    Device *device;
     GDBusConnection *connection;
     const char *path;
     const char *uuid;
@@ -63,7 +66,7 @@ typedef struct sCharacteristic {
  * @param path the path of the object on the dbus
  * @return the newly create characteristic. Free by calling binc_characteristic_free()
  */
-Characteristic *binc_characteristic_create(GDBusConnection *connection, const char *path);
+Characteristic *binc_characteristic_create(Device *device, const char *path);
 
 /**
  * Free a characteristic object

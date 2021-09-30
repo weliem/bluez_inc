@@ -43,6 +43,10 @@ typedef struct sDevice {
     ConnectionStateChangedCallback services_resolved_callback;
     GHashTable* services;
     GHashTable* characteristics;
+
+    OnReadCallback on_read_callback;
+    OnWriteCallback on_write_callback;
+    OnNotifyCallback on_notify_callback;
 } Device;
 
 
@@ -52,6 +56,13 @@ void binc_init_device(Device *device);
 void binc_device_free(Device *device);
 char* binc_device_to_string(Device *device);
 int binc_device_connect(Device *device);
+
+void binc_device_set_read_char_callback(Device *device, OnReadCallback callback);
+
+void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback);
+
+void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback);
+
 void binc_device_register_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 void binc_device_register_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback);
 Characteristic* binc_device_get_characteristic(Device *device, const char* service_uuid, const char* characteristic_uuid);

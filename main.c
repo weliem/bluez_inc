@@ -28,6 +28,16 @@
 #define MANUFACTURER_CHAR "00002a29-0000-1000-8000-00805f9b34fb"
 #define MODEL_CHAR "00002a24-0000-1000-8000-00805f9b34fb"
 
+#define HTS_SERVICE "00001809-0000-1000-8000-00805f9b34fb"
+#define TEMPERATURE_CHAR "00002a1c-0000-1000-8000-00805f9b34fb"
+
+#define CTS_SERVICE "00001805-0000-1000-8000-00805f9b34fb"
+#define CURRENT_TIME_CHAR "00002a2b-0000-1000-8000-00805f9b34fb"
+
+#define BLP_SERVICE "00001810-0000-1000-8000-00805f9b34fb"
+
+#define BLOODPRESSURE_CHAR "00002a35-0000-1000-8000-00805f9b34fb"
+
 void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
 }
@@ -35,17 +45,14 @@ void on_connection_state_changed(Device *device) {
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser->offset = 1;
-    float value = parser_get_float(parser);
-    log_debug(TAG, "temperature %.1f", value);
-    parser_free(parser);
-}
-
-void on_notify_bpm(Characteristic *characteristic, GByteArray *byteArray) {
-    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-    parser->offset = 1;
-    float systolic = parser_get_sfloat(parser);
-    float diastolic = parser_get_sfloat(parser);
-    log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
+    if (g_str_equal(characteristic->uuid, TEMPERATURE_CHAR)) {
+        float value = parser_get_float(parser);
+        log_debug(TAG, "temperature %.1f", value);
+    } else if (g_str_equal(characteristic->uuid, CURRENT_TIME_CHAR)) {
+        float systolic = parser_get_sfloat(parser);
+        float diastolic = parser_get_sfloat(parser);
+        log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
+    }
     parser_free(parser);
 }
 
@@ -60,14 +67,12 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
 
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", characteristic->uuid, error->code, error->message);
-        g_clear_error(&error);
     }
 }
 
 void on_write(Characteristic *characteristic, GError *error) {
     if (error != NULL) {
         log_debug(TAG, "failed to write '%s' (error %d: %s)", characteristic->uuid, error->code, error->message);
-        g_clear_error(&error);
     } else {
         log_debug(TAG, "writing succeeded");
     }
@@ -77,34 +82,30 @@ void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", device->name);
     Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL) {
-        binc_characteristic_set_read_callback(manufacturer, &on_read);
         binc_characteristic_read(manufacturer);
     }
 
     Characteristic *model = binc_device_get_characteristic(device, DIS_SERVICE, MODEL_CHAR);
     if (model != NULL) {
-        binc_characteristic_set_read_callback(model, &on_read);
         binc_characteristic_read(model);
     }
 
-    Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
+    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE, TEMPERATURE_CHAR);
     if (temperature != NULL) {
         log_debug(TAG, "starting notify for temperature");
-        binc_characteristic_set_notify_callback(temperature,  &on_notify);
         binc_characteristic_start_notify(temperature);
     }
 
-    Characteristic *current_time = binc_device_get_characteristic(device, "00001805-0000-1000-8000-00805f9b34fb","00002a2b-0000-1000-8000-00805f9b34fb" );
+    Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
     if (current_time != NULL) {
         GByteArray *timeBytes = binc_get_current_time();
-        log_debug(TAG, "writing current time" );
-        binc_characteristic_set_write_callback(current_time, &on_write);
+        log_debug(TAG, "writing current time");
         binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
+        g_byte_array_free(timeBytes, TRUE);
     }
 
-    Characteristic *bpm = binc_device_get_characteristic(device, "00001810-0000-1000-8000-00805f9b34fb", "00002a35-0000-1000-8000-00805f9b34fb");
+    Characteristic *bpm = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
     if (bpm != NULL) {
-        binc_characteristic_set_notify_callback(bpm, &on_notify_bpm);
         binc_characteristic_start_notify(bpm);
     }
 }
@@ -123,10 +124,12 @@ void on_scan_result(Adapter *adapter, Device *device) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
+        binc_device_set_read_char_callback(device, &on_read);
+        binc_device_set_write_char_callback(device, &on_write);
+        binc_device_set_notify_char_callback(device, &on_notify);
         g_timeout_add(CONNECT_DELAY, delayed_connect, device);
     }
 }
-
 
 void on_discovery_state_changed(Adapter *adapter) {
     log_debug(TAG, "discovery '%s'", adapter->discovery_state ? "on" : "off");

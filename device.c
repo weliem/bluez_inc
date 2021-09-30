@@ -123,6 +123,18 @@ char *binc_device_to_string(Device *device) {
     );
 }
 
+static void binc_on_characteristic_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+    characteristic->device->on_read_callback(characteristic, byteArray, error);
+}
+
+static void binc_on_characteristic_write(Characteristic *characteristic, GError *error) {
+    characteristic->device->on_write_callback(characteristic, error);
+}
+
+static void binc_on_characteristic_notify(Characteristic *characteristic, GByteArray *byteArray) {
+    characteristic->device->on_notify_callback(characteristic, byteArray);
+}
+
 /**
  * Synchronous method call to a adapter on DBUS
  *
@@ -242,7 +254,10 @@ void binc_collect_gatt_tree(Device *device) {
                         g_variant_unref(prop_val);
                     } else if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "characteristic")) {
 
-                        Characteristic *characteristic = binc_characteristic_create(device->connection, object_path);
+                        Characteristic *characteristic = binc_characteristic_create(device, object_path);
+                        binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
+                        binc_characteristic_set_write_callback(characteristic, &binc_on_characteristic_write);
+                        binc_characteristic_set_notify_callback(characteristic, &binc_on_characteristic_notify);
 
                         const gchar *property_name;
                         GVariantIter iii;
@@ -400,4 +415,22 @@ Characteristic *binc_device_get_characteristic(Device *device, const char *servi
     }
 
     return result;
+}
+
+void binc_device_set_read_char_callback(Device *device, OnReadCallback callback) {
+    g_assert(device != NULL);
+    g_assert(callback != NULL);
+    device->on_read_callback = callback;
+}
+
+void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback) {
+    g_assert(device != NULL);
+    g_assert(callback != NULL);
+    device->on_write_callback = callback;
+}
+
+void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback) {
+    g_assert(device != NULL);
+    g_assert(callback != NULL);
+    device->on_notify_callback = callback;
 }
