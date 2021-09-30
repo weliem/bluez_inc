@@ -77,30 +77,35 @@ void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", device->name);
     Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL) {
-        binc_characteristic_read(manufacturer, &on_read);
+        binc_characteristic_set_read_callback(manufacturer, &on_read);
+        binc_characteristic_read(manufacturer);
     }
 
     Characteristic *model = binc_device_get_characteristic(device, DIS_SERVICE, MODEL_CHAR);
     if (model != NULL) {
-        binc_characteristic_read(model, &on_read);
+        binc_characteristic_set_read_callback(model, &on_read);
+        binc_characteristic_read(model);
     }
 
     Characteristic * temperature = binc_device_get_characteristic(device, "00001809-0000-1000-8000-00805f9b34fb","00002a1c-0000-1000-8000-00805f9b34fb" );
     if (temperature != NULL) {
         log_debug(TAG, "starting notify for temperature");
-        binc_characteristic_start_notify(temperature, &on_notify);
+        binc_characteristic_set_notify_callback(temperature,  &on_notify);
+        binc_characteristic_start_notify(temperature);
     }
 
     Characteristic *current_time = binc_device_get_characteristic(device, "00001805-0000-1000-8000-00805f9b34fb","00002a2b-0000-1000-8000-00805f9b34fb" );
     if (current_time != NULL) {
         GByteArray *timeBytes = binc_get_current_time();
         log_debug(TAG, "writing current time" );
-        binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE, &on_write);
+        binc_characteristic_set_write_callback(current_time, &on_write);
+        binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
     }
 
     Characteristic *bpm = binc_device_get_characteristic(device, "00001810-0000-1000-8000-00805f9b34fb", "00002a35-0000-1000-8000-00805f9b34fb");
     if (bpm != NULL) {
-        binc_characteristic_start_notify(bpm, &on_notify_bpm);
+        binc_characteristic_set_notify_callback(bpm, &on_notify_bpm);
+        binc_characteristic_start_notify(bpm);
     }
 }
 
