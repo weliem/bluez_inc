@@ -165,21 +165,12 @@ static guint binc_characteristic_flags_to_int(GList *flags) {
     return result;
 }
 
-static void binc_collect_gatt_tree(Device *device) {
+static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    GError *error = NULL;
+    Device *device = (Device *) user_data;
     g_assert(device != NULL);
 
-    GError *error = NULL;
-    GVariant *result = g_dbus_connection_call_sync(device->connection,
-                                                   "org.bluez",
-                                                   "/",
-                                                   "org.freedesktop.DBus.ObjectManager",
-                                                   "GetManagedObjects",
-                                                   NULL,
-                                                   G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
-                                                   G_DBUS_CALL_FLAGS_NONE,
-                                                   -1,
-                                                   NULL,
-                                                   &error);
+    GVariant *result = g_dbus_connection_call_finish(device->connection, res, &error);
 
     if (result == NULL) {
         g_print("Unable to get result for GetManagedObjects\n");
@@ -266,6 +257,27 @@ static void binc_collect_gatt_tree(Device *device) {
     }
 
     log_debug(TAG, "found %d services", g_hash_table_size(device->services));
+    if (device->services_resolved_callback != NULL) {
+        device->services_resolved_callback(device);
+    }
+}
+
+static void binc_collect_gatt_tree(Device *device) {
+    g_assert(device != NULL);
+
+    g_dbus_connection_call(device->connection,
+                                                   "org.bluez",
+                                                   "/",
+                                                   "org.freedesktop.DBus.ObjectManager",
+                                                   "GetManagedObjects",
+                                                   NULL,
+                                                   G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
+                                                   G_DBUS_CALL_FLAGS_NONE,
+                                                   -1,
+                                                   NULL,
+                                                   (GAsyncReadyCallback) binc_internal_gatt_tree,
+                                                   device);
+
 }
 
 static void binc_device_changed(GDBusConnection *conn,
@@ -304,9 +316,6 @@ static void binc_device_changed(GDBusConnection *conn,
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
             if (device->services_resolved == TRUE && device->bondingState != BONDING) {
                 binc_collect_gatt_tree(device);
-                if (device->services_resolved_callback != NULL) {
-                    device->services_resolved_callback(device);
-                }
             }
         } else if (g_strcmp0(key, "Paired") == 0) {
             device->paired = g_variant_get_boolean(value);
@@ -316,9 +325,6 @@ static void binc_device_changed(GDBusConnection *conn,
             // If gatt-tree has not been built yet, start building it
             if (device->services == NULL && device->services_resolved) {
                 binc_collect_gatt_tree(device);
-                if (device->services_resolved_callback != NULL) {
-                    device->services_resolved_callback(device);
-                }
             }
         }
     }
