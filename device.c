@@ -42,7 +42,7 @@ void binc_init_device(Device *device) {
 }
 
 Device *binc_create_device(const char *path, GDBusConnection *connection) {
-    Device *x = g_new(Device, 1);
+    Device *x = g_new0(Device, 1);
     binc_init_device(x);
     x->path = g_strdup(path);
     x->connection = connection;
@@ -108,7 +108,7 @@ char *binc_device_to_string(Device *device) {
     }
     g_string_append(service_data, "]");
 
-    return g_strdup_printf(
+    char* result = g_strdup_printf(
             "Device{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, manufacturer_data=%s, service_data=%s, paired=%d, txpower=%d path='%s' }",
             device->name,
             device->address,
@@ -121,6 +121,11 @@ char *binc_device_to_string(Device *device) {
             device->txpower,
             device->path
     );
+
+    g_string_free(uuids, TRUE);
+    g_string_free(manufacturer_data, TRUE);
+    g_string_free(service_data, TRUE);
+    return result;
 }
 
 static void binc_on_characteristic_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
@@ -133,42 +138,6 @@ static void binc_on_characteristic_write(Characteristic *characteristic, GError 
 
 static void binc_on_characteristic_notify(Characteristic *characteristic, GByteArray *byteArray) {
     characteristic->device->on_notify_callback(characteristic, byteArray);
-}
-
-/**
- * Synchronous method call to a adapter on DBUS
- *
- * @param adapter the adapter to use
- * @param method the method to call
- * @param param parameters for the method (can be NULL)
- * @return EXIT_SUCCESS or EXIT_FAILURE
- */
-int device_call_method(const Device *device, const char *method, GVariant *param) {
-    g_assert(device != NULL);
-    g_assert(method != NULL);
-
-    GError *error = NULL;
-    GVariant *result = g_dbus_connection_call_sync(device->connection,
-                                                   "org.bluez",
-                                                   device->path,
-                                                   "org.bluez.Device1",
-                                                   method,
-                                                   param,
-                                                   NULL,
-                                                   G_DBUS_CALL_FLAGS_NONE,
-                                                   -1,
-                                                   NULL,
-                                                   &error);
-    if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", method, error->code, error->message);
-        g_clear_error(&error);
-        return EXIT_FAILURE;
-    }
-
-    if (result != NULL) {
-        g_variant_unref(result);
-    }
-    return EXIT_SUCCESS;
 }
 
 static guint binc_characteristic_flags_to_int(GList *flags) {
@@ -196,7 +165,7 @@ static guint binc_characteristic_flags_to_int(GList *flags) {
     return result;
 }
 
-void binc_collect_gatt_tree(Device *device) {
+static void binc_collect_gatt_tree(Device *device) {
     g_assert(device != NULL);
 
     GError *error = NULL;
@@ -299,7 +268,7 @@ void binc_collect_gatt_tree(Device *device) {
     log_debug(TAG, "found %d services", g_hash_table_size(device->services));
 }
 
-void binc_device_changed(GDBusConnection *conn,
+static void binc_device_changed(GDBusConnection *conn,
                          const gchar *sender,
                          const gchar *path,
                          const gchar *interface,
@@ -361,11 +330,29 @@ void binc_device_changed(GDBusConnection *conn,
         g_variant_unref(value);
 }
 
+static void binc_internal_device_connect(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    GError *error = NULL;
+    Device *device = (Device *) user_data;
+    g_assert(device != NULL);
 
-int binc_device_connect(Device *device) {
+    GVariant *value = g_dbus_connection_call_finish(device->connection, res, &error);
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", "Connect", error->code, error->message);
+        g_clear_error(&error);
+    }
+
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+}
+
+void binc_device_connect(Device *device) {
     g_assert(device != NULL);
     g_assert(device->path != NULL);
-    if (device->connection_state != DISCONNECTED) return EXIT_FAILURE;
+
+    // Don't do anything if we are not disconnected
+    if (device->connection_state != DISCONNECTED) return;
 
     log_debug(TAG, "Connecting to '%s' (%s)", device->name, device->address);
 
@@ -381,7 +368,18 @@ int binc_device_connect(Device *device) {
                                                                      device,
                                                                      NULL);
 
-    device_call_method(device, "Connect", NULL);
+    g_dbus_connection_call(device->connection,
+                           "org.bluez",
+                           device->path,
+                           "org.bluez.Device1",
+                           "Connect",
+                           NULL,
+                           NULL,
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           (GAsyncReadyCallback) binc_internal_device_connect,
+                           device);
 }
 
 void binc_device_register_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback) {

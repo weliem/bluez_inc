@@ -55,7 +55,7 @@ Device* binc_create_device(const char* path, GDBusConnection *connection);
 void binc_init_device(Device *device);
 void binc_device_free(Device *device);
 char* binc_device_to_string(Device *device);
-int binc_device_connect(Device *device);
+void binc_device_connect(Device *device);
 
 void binc_device_set_read_char_callback(Device *device, OnReadCallback callback);
 

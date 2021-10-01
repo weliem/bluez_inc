@@ -48,7 +48,7 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     if (g_str_equal(characteristic->uuid, TEMPERATURE_CHAR)) {
         float value = parser_get_float(parser);
         log_debug(TAG, "temperature %.1f", value);
-    } else if (g_str_equal(characteristic->uuid, CURRENT_TIME_CHAR)) {
+    } else if (g_str_equal(characteristic->uuid, BLOODPRESSURE_CHAR)) {
         float systolic = parser_get_sfloat(parser);
         float diastolic = parser_get_sfloat(parser);
         log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
@@ -120,7 +120,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (device->name != NULL && g_str_has_prefix(device->name, "Philips")) {
+    if (device->name != NULL && g_str_has_prefix(device->name, "Systo")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);

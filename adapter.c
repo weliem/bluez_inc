@@ -132,22 +132,19 @@ static void bluez_device_disappeared(GDBusConnection *sig,
     GVariantIter *interfaces;
     const char *object;
     const gchar *interface_name;
-    char address[BT_ADDRESS_STRING_SIZE] = {'\0'};
+
+    Adapter *adapter = (Adapter *) user_data;
+    g_assert(adapter != NULL);
 
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
     while (g_variant_iter_next(interfaces, "s", &interface_name)) {
         if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
-            int i;
-            char *tmp = g_strstr_len(object, -1, "dev_") + 4;
-
-            for (i = 0; *tmp != '\0'; i++, tmp++) {
-                if (*tmp == '_') {
-                    address[i] = ':';
-                    continue;
-                }
-                address[i] = *tmp;
+            g_print("Device %s removed\n", object);
+            Device *device = g_hash_table_lookup(adapter->devices_cache, object);
+            if (device != NULL) {
+                binc_device_free(device);
+                g_hash_table_remove(adapter->devices_cache, object);
             }
-            g_print("\nDevice %s removed\n", address);
         }
     }
 }
