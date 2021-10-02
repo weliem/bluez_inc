@@ -138,7 +138,7 @@ static void bluez_device_disappeared(GDBusConnection *sig,
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
     while (g_variant_iter_next(interfaces, "s", &interface_name)) {
         if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
-            g_print("Device %s removed\n", object);
+            log_debug(TAG, "Device %s removed", object);
             Device *device = g_hash_table_lookup(adapter->devices_cache, object);
             if (device != NULL) {
                 g_hash_table_remove(adapter->devices_cache, object);
@@ -222,10 +222,6 @@ void binc_device_update_property(Device *device, const char *property_name, GVar
             int *keyCopy = g_new0 (gint, 1);
             *keyCopy = key;
             g_hash_table_insert(device->manufacturer_data, keyCopy, byteArray);
-
-//            GString *bytes = g_byte_array_as_hex(byteArray);
-//            log_debug(TAG, "bytes %s", bytes->str);
-//            g_string_free(bytes, TRUE);
         }
 
         g_variant_iter_free(iter);
@@ -288,7 +284,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
             }
 
             // Deliver Device to registered callback
-            g_hash_table_insert(adapter->devices_cache, (void *) device->path, device);
+            g_hash_table_insert(adapter->devices_cache, g_strdup(device->path), device);
             if (adapter->discoveryResultCallback != NULL) {
                 adapter->discoveryResultCallback(adapter, device);
             }
@@ -362,7 +358,7 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
     if (device == NULL) {
         device = device_getall_properties(adapter, path);
-        g_hash_table_insert(adapter->devices_cache, (char*) device->path, device);
+        g_hash_table_insert(adapter->devices_cache, g_strdup(device->path), device);
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
@@ -458,8 +454,7 @@ void binc_adapter_free(Adapter *adapter) {
         gpointer key, value;
         g_hash_table_iter_init(&iter, adapter->devices_cache);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
-            log_debug(TAG, "free %s", key);
-
+            g_free(key);
             Device *device = (Device *) value;
             binc_device_free(device);
         }

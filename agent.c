@@ -75,7 +75,7 @@ static const GDBusInterfaceVTable agent_method_table = {
         .method_call = bluez_agent_method_call,
 };
 
-int bluez_register_agent(Agent *agent)
+static int bluez_register_agent(Agent *agent)
 {
     GError *error = NULL;
     guint id = 0;
