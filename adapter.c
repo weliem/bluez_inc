@@ -549,7 +549,7 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
             GVariantIter ii;
             g_variant_iter_init(&ii, ifaces_and_properties);
             while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
-                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "default_adapter")) {
+                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter")) {
                     Adapter *adapter = create_adapter(dbusConnection, object_path);
                     const gchar *property_name;
                     GVariantIter iii;
@@ -581,6 +581,7 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
 }
 
 Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
+    g_assert(dbusConnection != NULL);
     Adapter *adapter = NULL;
     GPtrArray *adapters = binc_find_adapters(dbusConnection);
     if (adapters->len > 0) {
@@ -688,21 +689,21 @@ int binc_adapter_power_off(Adapter *adapter) {
     return adapter_set_property(adapter, "Powered", g_variant_new("b", FALSE));
 }
 
-void binc_adapter_register_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
+void binc_adapter_set_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
 
     adapter->discoveryResultCallback = callback;
 }
 
-void binc_adapter_register_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback) {
+void binc_adapter_set_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
 
     adapter->discoveryStateCallback = callback;
 }
 
-void binc_adapter_register_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback) {
+void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
 

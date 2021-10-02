@@ -167,13 +167,13 @@ int main(void) {
 
         agent = binc_agent_create(default_adapter, KEYBOARD_DISPLAY);
 
-        binc_adapter_register_powered_state_callback(default_adapter, &on_powered_state_changed);
+        binc_adapter_set_powered_state_callback(default_adapter, &on_powered_state_changed);
         binc_adapter_power_off(default_adapter);
         binc_adapter_power_on(default_adapter);
 
         // Start a scan
-        binc_adapter_register_discovery_callback(default_adapter, &on_scan_result);
-        binc_adapter_register_discovery_state_callback(default_adapter, &on_discovery_state_changed);
+        binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
+        binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(default_adapter, -100);
         binc_adapter_start_discovery(default_adapter);
     } else {

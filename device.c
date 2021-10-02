@@ -259,16 +259,17 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                 while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
                     if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "service")) {
                         //log_debug(TAG, "%s", object_path);
-                        Service *service = binc_service_create(device->connection, object_path);
+                        char *uuid = NULL;
                         const gchar *property_name;
                         GVariantIter iii;
                         GVariant *prop_val;
                         g_variant_iter_init(&iii, properties);
                         while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val)) {
                             if (g_strcmp0(property_name, "UUID") == 0) {
-                                service->uuid = g_strdup(g_variant_get_string(prop_val, NULL));
+                                uuid = g_strdup(g_variant_get_string(prop_val, NULL));
                             }
                         }
+                        Service *service = binc_service_create(g_strdup(object_path), uuid);
                         g_hash_table_insert(device->services, g_strdup(object_path), service);
                         g_variant_unref(prop_val);
                     } else if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "characteristic")) {

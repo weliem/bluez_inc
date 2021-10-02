@@ -8,11 +8,10 @@
 #include <gio/gio.h>
 
 typedef struct {
-    GDBusConnection *connection;
     const char *path;
     const char* uuid;
 } Service;
 
-Service* binc_service_create(GDBusConnection *connection, const char* path);
+Service* binc_service_create(const char* path, const char* uuid);
 void binc_service_free(Service *service);
 #endif //TEST_SERVICE_H

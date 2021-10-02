@@ -4,15 +4,13 @@
 
 #include "service.h"
 
-Service* binc_service_create(GDBusConnection *connection, const char* path) {
-    g_assert(connection != NULL);
+Service* binc_service_create(const char* path, const char* uuid) {
     g_assert(path != NULL);
-
+    g_assert(uuid != NULL);
 
     Service *result = g_new0(Service, 1);
-    result->connection = connection;
     result->path = path;
-    result->uuid = NULL;
+    result->uuid = uuid;
     return result;
 }
 

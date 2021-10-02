@@ -45,11 +45,11 @@ DiscoveryState binc_adapter_get_discovery_state(Adapter *adapter);
 
 gboolean binc_adapter_get_powered_state(Adapter *adapter);
 
-void binc_adapter_register_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback);
+void binc_adapter_set_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback);
 
-void binc_adapter_register_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback);
+void binc_adapter_set_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback);
 
-void binc_adapter_register_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
+void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
 
 GDBusConnection *binc_adapter_get_dbus_connection(Adapter *adapter);
 
