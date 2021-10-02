@@ -14,5 +14,5 @@ typedef struct {
 } Service;
 
 Service* binc_service_create(GDBusConnection *connection, const char* path);
-
+void binc_service_free(Service *service);
 #endif //TEST_SERVICE_H

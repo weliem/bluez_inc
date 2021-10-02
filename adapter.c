@@ -37,7 +37,6 @@ void init_adapter(Adapter *adapter) {
 }
 
 
-
 /**
  * Synchronous method call to a adapter on DBUS
  *
@@ -142,8 +141,8 @@ static void bluez_device_disappeared(GDBusConnection *sig,
             g_print("Device %s removed\n", object);
             Device *device = g_hash_table_lookup(adapter->devices_cache, object);
             if (device != NULL) {
-                binc_device_free(device);
                 g_hash_table_remove(adapter->devices_cache, object);
+                binc_device_free(device);
             }
         }
     }
@@ -363,7 +362,7 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
     if (device == NULL) {
         device = device_getall_properties(adapter, path);
-        g_hash_table_insert(adapter->devices_cache, (void *) device->path, device);
+        g_hash_table_insert(adapter->devices_cache, (char*) device->path, device);
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
@@ -452,6 +451,21 @@ void binc_adapter_free(Adapter *adapter) {
     g_assert(adapter != NULL);
 
     remove_signal_subscribers(adapter);
+
+    // Free devices cache
+    if (adapter->devices_cache != NULL) {
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, adapter->devices_cache);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            log_debug(TAG, "free %s", key);
+
+            Device *device = (Device *) value;
+            binc_device_free(device);
+        }
+        g_hash_table_destroy(adapter->devices_cache);
+    }
+
     g_free(adapter->path);
     g_free(adapter->address);
     g_free(adapter);
@@ -563,7 +577,7 @@ GPtrArray *binc_find_adapters() {
     return binc_adapters;
 }
 
-Adapter* binc_get_default_adapter() {
+Adapter *binc_get_default_adapter() {
     Adapter *adapter = NULL;
     GPtrArray *adapters = binc_find_adapters();
     if (adapters->len > 0) {
@@ -571,7 +585,7 @@ Adapter* binc_get_default_adapter() {
         adapter = g_ptr_array_index(adapters, 0);
 
         // Free any other adapters we are not going to use
-        for(int i=1; i<adapters->len; i++) {
+        for (int i = 1; i < adapters->len; i++) {
             binc_adapter_free(g_ptr_array_index(adapters, i));
         }
         g_ptr_array_free(adapters, FALSE);
@@ -611,6 +625,7 @@ int binc_adapter_remove_device(Adapter *adapter, Device *device) {
     g_assert(device != NULL);
     g_assert (adapter != NULL);
 
+    log_debug(TAG, "removing %s", device->name);
     int rc = adapter_call_method(adapter, "RemoveDevice", g_variant_new("(o)", device->path));
     if (rc == EXIT_FAILURE)
         g_print("Not able to remove %s\n", device->path);

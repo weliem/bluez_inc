@@ -23,7 +23,6 @@
 
 #define CONNECT_DELAY 100
 
-
 #define DIS_SERVICE "0000180a-0000-1000-8000-00805f9b34fb"
 #define MANUFACTURER_CHAR "00002a29-0000-1000-8000-00805f9b34fb"
 #define MODEL_CHAR "00002a24-0000-1000-8000-00805f9b34fb"
@@ -35,11 +34,15 @@
 #define CURRENT_TIME_CHAR "00002a2b-0000-1000-8000-00805f9b34fb"
 
 #define BLP_SERVICE "00001810-0000-1000-8000-00805f9b34fb"
-
 #define BLOODPRESSURE_CHAR "00002a35-0000-1000-8000-00805f9b34fb"
+
+Adapter *adapter = NULL;
 
 void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
+    if (device->connection_state == DISCONNECTED) {
+        binc_adapter_remove_device(adapter, device);
+    }
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
@@ -140,9 +143,12 @@ void on_powered_state_changed(Adapter *adapter) {
 }
 
 gboolean callback(gpointer data) {
+    binc_adapter_free(adapter);
     g_main_loop_quit((GMainLoop *) data);
     return FALSE;
 }
+
+
 
 int main(void) {
     Agent *agent = NULL;
@@ -151,7 +157,7 @@ int main(void) {
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
     // Get the default adapter
-    Adapter *adapter = binc_get_default_adapter();
+    adapter = binc_get_default_adapter();
 
     if (adapter != NULL) {
         log_debug(TAG, "using adapter '%s'", adapter->path);

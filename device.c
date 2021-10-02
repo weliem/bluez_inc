@@ -51,6 +51,8 @@ Device *binc_create_device(const char *path, GDBusConnection *connection) {
 void binc_device_free(Device *device) {
     g_assert(device != NULL);
 
+    log_debug(TAG, "freeing %s", device->path);
+
     // Free strings
     g_free((char *) device->path);
     g_free((char *) device->adapter_path);
@@ -59,8 +61,65 @@ void binc_device_free(Device *device) {
     g_free((char *) device->alias);
     g_free((char *) device->name);
 
-    // Free hash tables
+    // Free characteristics hash table
+    if (device->characteristics != NULL) {
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, device->characteristics);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            g_free(key);
+            Characteristic *characteristic = (Characteristic *) value;
+            binc_characteristic_free(characteristic);
+        }
+        g_hash_table_destroy(device->characteristics);
+    }
 
+    // Free services hash table
+    if (device->services != NULL) {
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, device->services);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            g_free(key);
+            Service *service = (Service *) value;
+            binc_service_free(service);
+        }
+        g_hash_table_destroy(device->services);
+    }
+
+    // Free manufacturer data hash table
+    if (device->manufacturer_data != NULL) {
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, device->manufacturer_data);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            g_free(key);
+            GByteArray *byteArray = (GByteArray *) value;
+            g_byte_array_free(byteArray, TRUE);
+        }
+        g_hash_table_destroy(device->manufacturer_data);
+    }
+
+    // Free manufacturer data hash table
+    if (device->service_data != NULL) {
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, device->service_data);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            g_free(key);
+            GByteArray *byteArray = (GByteArray *) value;
+            g_byte_array_free(byteArray, TRUE);
+        }
+        g_hash_table_destroy(device->service_data);
+    }
+
+    // Free uuids
+    if (device->uuids != NULL) {
+        for (GList *iterator = device->uuids; iterator; iterator = iterator->next) {
+            g_free((char *) iterator->data);
+        }
+        g_list_free(device->uuids);
+    }
     g_free(device);
 }
 
@@ -108,7 +167,7 @@ char *binc_device_to_string(Device *device) {
     }
     g_string_append(service_data, "]");
 
-    char* result = g_strdup_printf(
+    char *result = g_strdup_printf(
             "Device{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, manufacturer_data=%s, service_data=%s, paired=%d, txpower=%d path='%s' }",
             device->name,
             device->address,
@@ -144,7 +203,7 @@ static guint binc_characteristic_flags_to_int(GList *flags) {
     guint result = 0;
     if (g_list_length(flags) > 0) {
         for (GList *iterator = flags; iterator; iterator = iterator->next) {
-            char* property = (char*) iterator->data;
+            char *property = (char *) iterator->data;
             if (g_str_equal(property, "broadcast")) {
                 result += GATT_CHR_PROP_BROADCAST;
             } else if (g_str_equal(property, "read")) {
@@ -230,7 +289,8 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                                 characteristic->service_path = g_strdup(g_variant_get_string(prop_val, NULL));
                             } else if (g_strcmp0(property_name, "Flags") == 0) {
                                 characteristic->flags = g_variant_string_array_to_list(prop_val);
-                                characteristic->flags_bitfield = binc_characteristic_flags_to_int(characteristic->flags);
+                                characteristic->flags_bitfield = binc_characteristic_flags_to_int(
+                                        characteristic->flags);
                             }
                         }
                         g_variant_unref(prop_val);
@@ -266,27 +326,26 @@ static void binc_collect_gatt_tree(Device *device) {
     g_assert(device != NULL);
 
     g_dbus_connection_call(device->connection,
-                                                   "org.bluez",
-                                                   "/",
-                                                   "org.freedesktop.DBus.ObjectManager",
-                                                   "GetManagedObjects",
-                                                   NULL,
-                                                   G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
-                                                   G_DBUS_CALL_FLAGS_NONE,
-                                                   -1,
-                                                   NULL,
-                                                   (GAsyncReadyCallback) binc_internal_gatt_tree,
-                                                   device);
-
+                           "org.bluez",
+                           "/",
+                           "org.freedesktop.DBus.ObjectManager",
+                           "GetManagedObjects",
+                           NULL,
+                           G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           (GAsyncReadyCallback) binc_internal_gatt_tree,
+                           device);
 }
 
 static void binc_device_changed(GDBusConnection *conn,
-                         const gchar *sender,
-                         const gchar *path,
-                         const gchar *interface,
-                         const gchar *signal,
-                         GVariant *params,
-                         void *userdata) {
+                                const gchar *sender,
+                                const gchar *path,
+                                const gchar *interface,
+                                const gchar *signal,
+                                GVariant *params,
+                                void *userdata) {
 
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
@@ -402,7 +461,8 @@ void binc_device_register_services_resolved_callback(Device *device, ConnectionS
     device->services_resolved_callback = callback;
 }
 
-Characteristic *binc_device_get_characteristic(Device *device, const char *service_uuid, const char *characteristic_uuid) {
+Characteristic *
+binc_device_get_characteristic(Device *device, const char *service_uuid, const char *characteristic_uuid) {
     Characteristic *result = NULL;
 
     if (device->characteristics != NULL && g_hash_table_size(device->characteristics) > 0) {

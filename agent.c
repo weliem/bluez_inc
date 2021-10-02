@@ -23,7 +23,7 @@ static void bluez_agent_method_call(GDBusConnection *conn,
 {
     int pass;
     int entered;
-    char *opath = NULL;
+    char *object_path = NULL;
     GVariant *p= g_dbus_method_invocation_get_parameters(invocation);
 
  //   log_debug(TAG, "agent called: %s()", method);
@@ -45,17 +45,17 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(u)", pass));
     }
     else if(!strcmp(method, "DisplayPasskey")) {
-        g_variant_get(params, "(ouq)", &opath, &pass, &entered);
+        g_variant_get(params, "(ouq)", &object_path, &pass, &entered);
         g_dbus_method_invocation_return_value(invocation, NULL);
     }
     else if(!strcmp(method, "RequestConfirmation")) {
-        g_variant_get(params, "(ou)", &opath, &pass);
+        g_variant_get(params, "(ou)", &object_path, &pass);
         g_dbus_method_invocation_return_value(invocation, NULL);
     }
     else if(!strcmp(method, "RequestAuthorization")) {
-        g_variant_get(params, "(o)", &opath);
-        log_debug(TAG, "request for authorization %s", opath);
-        Device *device = g_hash_table_lookup(adapter->devices_cache, opath);
+        g_variant_get(params, "(o)", &object_path);
+        log_debug(TAG, "request for authorization %s", object_path);
+        Device *device = g_hash_table_lookup(adapter->devices_cache, object_path);
         if (device != NULL) {
             device->bondingState = BONDING;
         }

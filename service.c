@@ -15,3 +15,9 @@ Service* binc_service_create(GDBusConnection *connection, const char* path) {
     result->uuid = NULL;
     return result;
 }
+
+void binc_service_free(Service *service) {
+    g_free((char*) service->path);
+    g_free((char*) service->uuid);
+    g_free(service);
+}

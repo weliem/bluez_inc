@@ -32,7 +32,16 @@ void binc_characteristic_free(Characteristic *characteristic) {
     g_free((char *) characteristic->path);
     g_free((char *) characteristic->service_path);
     g_free((char *) characteristic->service_uuid);
-    g_list_free(characteristic->flags);
+
+    // Free flags
+    if (characteristic->flags != NULL) {
+        if (g_list_length(characteristic->flags) > 0) {
+            for (GList *iterator = characteristic->flags; iterator; iterator = iterator->next) {
+                g_free((char *) iterator->data);
+            }
+        }
+        g_list_free(characteristic->flags);
+    }
     g_free(characteristic);
 }
 
