@@ -1,6 +1,6 @@
 /*
  * bluez_adapter_scan.c - Scan for bluetooth devices
- * 	- This example scans for new devices after powering the adapter, if any devices
+ * 	- This example scans for new devices after powering the default_adapter, if any devices
  * 	  appeared in /org/hciX/dev_XX_YY_ZZ_AA_BB_CC, it is monitered using "Device"
  *	  signal and all the properties of the device is printed
  *	- Scanning continues to run until any device is disappered, this happens after 180 seconds
@@ -36,19 +36,19 @@
 #define BLP_SERVICE "00001810-0000-1000-8000-00805f9b34fb"
 #define BLOODPRESSURE_CHAR "00002a35-0000-1000-8000-00805f9b34fb"
 
-Adapter *adapter = NULL;
+Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 
 void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
     if (device->connection_state == DISCONNECTED) {
-        binc_adapter_remove_device(adapter, device);
+        binc_adapter_remove_device(default_adapter, device);
     }
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-    parser->offset = 1;
+    parser_set_offset(parser, 1);
     if (g_str_equal(characteristic->uuid, TEMPERATURE_CHAR)) {
         float value = parser_get_float(parser);
         log_debug(TAG, "temperature %.1f", value);
@@ -136,49 +136,48 @@ void on_scan_result(Adapter *adapter, Device *device) {
 }
 
 void on_discovery_state_changed(Adapter *adapter) {
-    log_debug(TAG, "discovery '%s'", adapter->discovery_state ? "on" : "off");
+    log_debug(TAG, "discovery '%s'", binc_adapter_get_discovery_state(adapter) ? "on" : "off");
 }
 
 void on_powered_state_changed(Adapter *adapter) {
-    log_debug(TAG, "powered '%s'", adapter->powered ? "on" : "off");
+    log_debug(TAG, "powered '%s'", binc_adapter_get_powered_state(adapter) ? "on" : "off");
 }
 
 gboolean callback(gpointer data) {
     binc_agent_free(agent);
     agent = NULL;
-    binc_adapter_free(adapter);
-    adapter = NULL;
+    binc_adapter_free(default_adapter);
+    default_adapter = NULL;
     g_main_loop_quit((GMainLoop *) data);
     return FALSE;
 }
 
-
-
 int main(void) {
-
+    // Get a DBus connection
+    GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
 
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-    // Get the default adapter
-    adapter = binc_get_default_adapter();
+    // Get the default default_adapter
+    default_adapter = binc_get_default_adapter(dbusConnection);
 
-    if (adapter != NULL) {
-        log_debug(TAG, "using adapter '%s'", adapter->path);
+    if (default_adapter != NULL) {
+        log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
 
-        agent = binc_agent_create(adapter, KEYBOARD_DISPLAY);
+        agent = binc_agent_create(default_adapter, KEYBOARD_DISPLAY);
 
-        binc_adapter_register_powered_state_callback(adapter, &on_powered_state_changed);
-        binc_adapter_power_off(adapter);
-        binc_adapter_power_on(adapter);
+        binc_adapter_register_powered_state_callback(default_adapter, &on_powered_state_changed);
+        binc_adapter_power_off(default_adapter);
+        binc_adapter_power_on(default_adapter);
 
         // Start a scan
-        binc_adapter_register_discovery_callback(adapter, &on_scan_result);
-        binc_adapter_register_discovery_state_callback(adapter, &on_discovery_state_changed);
-        binc_adapter_set_discovery_filter(adapter, -100);
-        binc_adapter_start_discovery(adapter);
+        binc_adapter_register_discovery_callback(default_adapter, &on_scan_result);
+        binc_adapter_register_discovery_state_callback(default_adapter, &on_discovery_state_changed);
+        binc_adapter_set_discovery_filter(default_adapter, -100);
+        binc_adapter_start_discovery(default_adapter);
     } else {
-        log_debug("MAIN", "No adapter found");
+        log_debug("MAIN", "No default_adapter found");
     }
 
     // Bail out after 10 seconds
@@ -187,8 +186,7 @@ int main(void) {
     // Start the mainloop
     g_main_loop_run(loop);
 
-    // Stop the scan
-//    binc_adapter_stop_discovery(adapter);
-
+    // Disconnect from DBus
+    g_object_unref(dbusConnection);
     return 0;
 }

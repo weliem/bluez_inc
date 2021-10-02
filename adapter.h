@@ -8,7 +8,7 @@
 #include <gio/gio.h>
 #include "device.h"
 
-typedef struct sAdapter Adapter;
+typedef struct binc_adapter Adapter;
 
 typedef enum DiscoveryState {
     STOPPED = 0, STARTED = 1, STARTING = 2, STOPPING = 3
@@ -20,36 +20,8 @@ typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter);
 
 typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter);
 
-typedef struct sAdapter {
-    // Public stuff
-    char *path;
-    char *address;
-    gboolean powered;
-    gboolean discoverable;
-    DiscoveryState discovery_state;
 
-    // Internal stuff
-    GDBusConnection *connection;
-    guint device_prop_changed;
-    guint adapter_prop_changed;
-    guint iface_added;
-    guint iface_removed;
-
-    AdapterDiscoveryResultCallback discoveryResultCallback;
-    AdapterDiscoveryStateChangeCallback discoveryStateCallback;
-    AdapterPoweredStateChangeCallback poweredStateCallback;
-
-    GHashTable *devices_cache;
-} Adapter;
-
-/**
- * Get the default adapter
- *
- * @return the default adapter or NULL if no adapter was found. Caller owns adapter.
- */
-Adapter *binc_get_default_adapter();
-
-GPtrArray *binc_find_adapters();
+Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection);
 
 void binc_adapter_free(Adapter *adapter);
 
@@ -61,14 +33,24 @@ int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
 
 int binc_adapter_remove_device(Adapter *adapter, Device *device);
 
+Device* binc_adapter_get_device_by_path(Adapter *adapter, const char* path);
+
 int binc_adapter_power_on(Adapter *adapter);
 
 int binc_adapter_power_off(Adapter *adapter);
+
+char* binc_adapter_get_path(Adapter *adapter);
+
+DiscoveryState binc_adapter_get_discovery_state(Adapter *adapter);
+
+gboolean binc_adapter_get_powered_state(Adapter *adapter);
 
 void binc_adapter_register_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback);
 
 void binc_adapter_register_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback);
 
 void binc_adapter_register_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
+
+GDBusConnection *binc_adapter_get_dbus_connection(Adapter *adapter);
 
 #endif //TEST_ADAPTER_H

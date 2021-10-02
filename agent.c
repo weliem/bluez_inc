@@ -46,7 +46,7 @@ static void bluez_agent_method_call(GDBusConnection *conn,
     } else if (!strcmp(method, "RequestAuthorization")) {
         g_variant_get(params, "(o)", &object_path);
         log_debug(TAG, "request for authorization %s", object_path);
-        Device *device = g_hash_table_lookup(adapter->devices_cache, object_path);
+        Device *device = binc_adapter_get_device_by_path(adapter, object_path);
         if (device != NULL) {
             device->bondingState = BONDING;
         }
@@ -196,7 +196,7 @@ void binc_agent_free(Agent *agent) {
 Agent *binc_agent_create(Adapter *adapter, IoCapability io_capability) {
     Agent *agent = g_new0(Agent, 1);
     agent->path = AGENT_PATH;
-    agent->connection = adapter->connection;
+    agent->connection = binc_adapter_get_dbus_connection(adapter);
     agent->adapter = adapter;
     agent->io_capability = io_capability;
     bluez_register_agent(agent);

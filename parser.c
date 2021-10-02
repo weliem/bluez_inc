@@ -15,6 +15,12 @@ typedef enum {
     MDER_NEGATIVE_INFINITY = 0x00800002
 } ReservedFloatValues;
 
+struct parser_instance {
+    GByteArray *bytes;
+    guint offset;
+    int byteOrder;
+};
+
 static const double reserved_float_values[5] = {MDER_POSITIVE_INFINITY, MDER_NaN, MDER_NaN, MDER_NaN, MDER_NEGATIVE_INFINITY};
 
 Parser* parser_create(GByteArray *bytes, int byteOrder) {
@@ -25,10 +31,18 @@ Parser* parser_create(GByteArray *bytes, int byteOrder) {
 }
 
 void parser_free(Parser *parser) {
+    g_assert(parser != NULL);
     parser->bytes = NULL;
     g_free(parser);
 }
+
+void parser_set_offset(Parser *parser, guint offset) {
+    g_assert(parser != NULL);
+    parser->offset = offset;
+}
+
 guint8 parser_get_uint8(Parser *parser) {
+    g_assert(parser != NULL);
     g_assert(parser->offset < parser->bytes->len);
 
     guint8 result = parser->bytes->data[parser->offset];
@@ -37,6 +51,7 @@ guint8 parser_get_uint8(Parser *parser) {
 }
 
 guint16 parser_get_uint16(Parser *parser) {
+    g_assert(parser != NULL);
     g_assert((parser->offset+1) < parser->bytes->len);
 
     guint8 byte1, byte2;
@@ -51,6 +66,7 @@ guint16 parser_get_uint16(Parser *parser) {
 }
 
 guint32 parser_get_uint32(Parser *parser) {
+    g_assert(parser != NULL);
     g_assert((parser->offset + 3) < parser->bytes->len);
 
     guint8 byte1, byte2, byte3, byte4;
@@ -67,6 +83,7 @@ guint32 parser_get_uint32(Parser *parser) {
 }
 
 float parser_get_sfloat(Parser *parser) {
+    g_assert(parser != NULL);
     g_assert(parser->offset < parser->bytes->len);
 
     guint16 sfloat = parser_get_uint16(parser);
@@ -92,6 +109,7 @@ float fround(float n, int d)
 
 float parser_get_float(Parser *parser)
 {
+    g_assert(parser != NULL);
     guint32 int_data = parser_get_uint32(parser);
 
     guint32 mantissa = int_data & 0xFFFFFF;

@@ -9,19 +9,29 @@
 #include "logger.h"
 #include "utility.h"
 
-#define BT_ADDRESS_STRING_SIZE 18
 #define TAG "Adapter"
 
-/**
- * Array of all found adapters
- */
-//GPtrArray *binc_adapters = NULL;
+struct binc_adapter {
+    // Public stuff
+    char *path;
+    char *address;
+    gboolean powered;
+    gboolean discoverable;
+    DiscoveryState discovery_state;
 
-/**
- * Global dbusconnection used in all adapters.
- */
-GDBusConnection *binc_dbus_connection = NULL;
+    // Internal stuff
+    GDBusConnection *connection;
+    guint device_prop_changed;
+    guint adapter_prop_changed;
+    guint iface_added;
+    guint iface_removed;
 
+    AdapterDiscoveryResultCallback discoveryResultCallback;
+    AdapterDiscoveryStateChangeCallback discoveryStateCallback;
+    AdapterPoweredStateChangeCallback poweredStateCallback;
+
+    GHashTable *devices_cache;
+};
 
 void init_adapter(Adapter *adapter) {
     g_assert(adapter != NULL);
@@ -38,9 +48,9 @@ void init_adapter(Adapter *adapter) {
 
 
 /**
- * Synchronous method call to a adapter on DBUS
+ * Synchronous method call to a default_adapter on DBUS
  *
- * @param adapter the adapter to use
+ * @param adapter the default_adapter to use
  * @param method the method to call
  * @param param parameters for the method (can be NULL)
  * @return EXIT_SUCCESS or EXIT_FAILURE
@@ -505,15 +515,13 @@ int adapter_getall_properties(Adapter *adapter) {
                            NULL);
 }
 
-GPtrArray *binc_find_adapters() {
-    if (binc_dbus_connection == NULL) {
-        binc_dbus_connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    }
+GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
+    g_assert(dbusConnection != NULL);
 
     GPtrArray *binc_adapters = g_ptr_array_new();
     log_debug(TAG, "finding adapters");
 
-    GVariant *result = g_dbus_connection_call_sync(binc_dbus_connection,
+    GVariant *result = g_dbus_connection_call_sync(dbusConnection,
                                                    "org.bluez",
                                                    "/",
                                                    "org.freedesktop.DBus.ObjectManager",
@@ -541,8 +549,8 @@ GPtrArray *binc_find_adapters() {
             GVariantIter ii;
             g_variant_iter_init(&ii, ifaces_and_properties);
             while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
-                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter")) {
-                    Adapter *adapter = create_adapter(binc_dbus_connection, object_path);
+                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "default_adapter")) {
+                    Adapter *adapter = create_adapter(dbusConnection, object_path);
                     const gchar *property_name;
                     GVariantIter iii;
                     GVariant *prop_val;
@@ -572,9 +580,9 @@ GPtrArray *binc_find_adapters() {
     return binc_adapters;
 }
 
-Adapter *binc_get_default_adapter() {
+Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
     Adapter *adapter = NULL;
-    GPtrArray *adapters = binc_find_adapters();
+    GPtrArray *adapters = binc_find_adapters(dbusConnection);
     if (adapters->len > 0) {
         // Choose the first one in the array, typically the 'hciX' with the highest X
         adapter = g_ptr_array_index(adapters, 0);
@@ -699,4 +707,29 @@ void binc_adapter_register_powered_state_callback(Adapter *adapter, AdapterPower
     g_assert(callback != NULL);
 
     adapter->poweredStateCallback = callback;
+}
+
+char* binc_adapter_get_path(Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->path;
+}
+
+DiscoveryState binc_adapter_get_discovery_state(Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->discovery_state;
+}
+
+gboolean binc_adapter_get_powered_state(Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->powered;
+}
+
+Device* binc_adapter_get_device_by_path(Adapter *adapter, const char* path) {
+    g_assert(adapter != NULL);
+    return g_hash_table_lookup(adapter->devices_cache, path);
+}
+
+GDBusConnection *binc_adapter_get_dbus_connection(Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->connection;
 }
