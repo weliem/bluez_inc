@@ -289,7 +289,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                                 characteristic->service_path = g_strdup(g_variant_get_string(prop_val, NULL));
                             } else if (g_strcmp0(property_name, "Flags") == 0) {
                                 characteristic->flags = g_variant_string_array_to_list(prop_val);
-                                characteristic->flags_bitfield = binc_characteristic_flags_to_int(
+                                characteristic->properties = binc_characteristic_flags_to_int(
                                         characteristic->flags);
                             }
                         }

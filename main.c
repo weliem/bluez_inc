@@ -37,6 +37,7 @@
 #define BLOODPRESSURE_CHAR "00002a35-0000-1000-8000-00805f9b34fb"
 
 Adapter *adapter = NULL;
+Agent *agent = NULL;
 
 void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
@@ -143,7 +144,10 @@ void on_powered_state_changed(Adapter *adapter) {
 }
 
 gboolean callback(gpointer data) {
+    binc_agent_free(agent);
+    agent = NULL;
     binc_adapter_free(adapter);
+    adapter = NULL;
     g_main_loop_quit((GMainLoop *) data);
     return FALSE;
 }
@@ -151,7 +155,7 @@ gboolean callback(gpointer data) {
 
 
 int main(void) {
-    Agent *agent = NULL;
+
 
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
@@ -184,12 +188,7 @@ int main(void) {
     g_main_loop_run(loop);
 
     // Stop the scan
-    binc_adapter_stop_discovery(adapter);
-
-    // Clean up
-    if (agent != NULL) {
-        binc_agent_free(agent);
-    }
+//    binc_adapter_stop_discovery(adapter);
 
     return 0;
 }

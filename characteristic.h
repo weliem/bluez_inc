@@ -50,7 +50,7 @@ typedef struct sCharacteristic {
     const char *service_uuid;
     gboolean notifying;
     GList *flags;
-    guint flags_bitfield;
+    guint properties;
 
     guint notify_signal;
     NotifyingStateChangedCallback notify_state_callback;

@@ -59,10 +59,10 @@ char *binc_characteristic_to_string(Characteristic *characteristic) {
     g_string_append(flags, "]");
 
     char *result = g_strdup_printf(
-            "Characteristic{uuid='%s', flags='%s', flags_bitfield=%d, service_uuid='%s'}",
+            "Characteristic{uuid='%s', flags='%s', properties=%d, service_uuid='%s'}",
             characteristic->uuid,
             flags->str,
-            characteristic->flags_bitfield,
+            characteristic->properties,
             characteristic->service_uuid);
 
     g_string_free(flags, TRUE);
@@ -113,7 +113,7 @@ static void binc_internal_char_read(GObject *source_object, GAsyncResult *res, g
 
 void binc_characteristic_read(Characteristic *characteristic) {
     g_assert(characteristic != NULL);
-    g_assert((characteristic->flags_bitfield & GATT_CHR_PROP_READ) > 0);
+    g_assert((characteristic->properties & GATT_CHR_PROP_READ) > 0);
 
     log_debug(TAG, "reading <%s>", characteristic->uuid);
 
@@ -161,9 +161,9 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
     g_assert(byteArray != NULL);
 
     if (writeType == WITH_RESPONSE) {
-        g_assert((characteristic->flags_bitfield & GATT_CHR_PROP_WRITE) > 0);
+        g_assert((characteristic->properties & GATT_CHR_PROP_WRITE) > 0);
     } else {
-        g_assert((characteristic->flags_bitfield & GATT_CHR_PROP_WRITE_WITHOUT_RESP) > 0);
+        g_assert((characteristic->properties & GATT_CHR_PROP_WRITE_WITHOUT_RESP) > 0);
     }
 
     GString *byteArrayStr = g_byte_array_as_hex(byteArray);
@@ -280,8 +280,8 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
 static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Characteristic *characteristic = (Characteristic *) user_data;
     g_assert(characteristic != NULL);
-    g_assert((characteristic->flags_bitfield & GATT_CHR_PROP_INDICATE) > 0 ||
-             (characteristic->flags_bitfield & GATT_CHR_PROP_NOTIFY) > 0);
+    g_assert((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
+             (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 
     GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
@@ -301,8 +301,8 @@ static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult
 
 void binc_characteristic_start_notify(Characteristic *characteristic) {
     g_assert(characteristic != NULL);
-    g_assert((characteristic->flags_bitfield & GATT_CHR_PROP_INDICATE) > 0 ||
-             (characteristic->flags_bitfield & GATT_CHR_PROP_NOTIFY) > 0);
+    g_assert((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
+             (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 
     characteristic->notify_signal = g_dbus_connection_signal_subscribe(characteristic->connection,
                                                                        "org.bluez",
@@ -352,8 +352,8 @@ static void binc_internal_char_stop_notify(GObject *source_object, GAsyncResult 
 
 void binc_characteristic_stop_notify(Characteristic *characteristic) {
     g_assert(characteristic != NULL);
-    g_assert((characteristic->flags_bitfield & GATT_CHR_PROP_INDICATE) > 0 ||
-             (characteristic->flags_bitfield & GATT_CHR_PROP_NOTIFY) > 0);
+    g_assert((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
+             (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 
     g_dbus_connection_call(characteristic->connection,
                            "org.bluez",

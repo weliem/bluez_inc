@@ -11,7 +11,6 @@
 #define AGENT_PATH "/org/bluez/BincAgent"
 
 
-
 static void bluez_agent_method_call(GDBusConnection *conn,
                                     const gchar *sender,
                                     const gchar *path,
@@ -19,40 +18,32 @@ static void bluez_agent_method_call(GDBusConnection *conn,
                                     const gchar *method,
                                     GVariant *params,
                                     GDBusMethodInvocation *invocation,
-                                    void *userdata)
-{
+                                    void *userdata) {
     int pass;
     int entered;
     char *object_path = NULL;
-    GVariant *p= g_dbus_method_invocation_get_parameters(invocation);
+    GVariant *p = g_dbus_method_invocation_get_parameters(invocation);
 
- //   log_debug(TAG, "agent called: %s()", method);
+    //   log_debug(TAG, "agent called: %s()", method);
 
     Adapter *adapter = (Adapter *) userdata;
     g_assert(adapter != NULL);
 
-    if(!strcmp(method, "RequestPinCode")) {
-        ;
-    }
-    else if(!strcmp(method, "DisplayPinCode")) {
-        ;
-    }
-    else if(!strcmp(method, "RequestPasskey")) {
+    if (!strcmp(method, "RequestPinCode")) { ;
+    } else if (!strcmp(method, "DisplayPinCode")) { ;
+    } else if (!strcmp(method, "RequestPasskey")) {
 
         log_debug(TAG, "Getting the Pin from user: ");
- //       fscanf(stdin, "%d", &pass);
+        //       fscanf(stdin, "%d", &pass);
         g_print("\n");
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(u)", pass));
-    }
-    else if(!strcmp(method, "DisplayPasskey")) {
+    } else if (!strcmp(method, "DisplayPasskey")) {
         g_variant_get(params, "(ouq)", &object_path, &pass, &entered);
         g_dbus_method_invocation_return_value(invocation, NULL);
-    }
-    else if(!strcmp(method, "RequestConfirmation")) {
+    } else if (!strcmp(method, "RequestConfirmation")) {
         g_variant_get(params, "(ou)", &object_path, &pass);
         g_dbus_method_invocation_return_value(invocation, NULL);
-    }
-    else if(!strcmp(method, "RequestAuthorization")) {
+    } else if (!strcmp(method, "RequestAuthorization")) {
         g_variant_get(params, "(o)", &object_path);
         log_debug(TAG, "request for authorization %s", object_path);
         Device *device = g_hash_table_lookup(adapter->devices_cache, object_path);
@@ -60,14 +51,11 @@ static void bluez_agent_method_call(GDBusConnection *conn,
             device->bondingState = BONDING;
         }
         g_dbus_method_invocation_return_value(invocation, NULL);
-    }
-    else if(!strcmp(method, "AuthorizeService")) {
+    } else if (!strcmp(method, "AuthorizeService")) {
         log_debug(TAG, "authorize service");
-    }
-    else if(!strcmp(method, "Cancel")) {
+    } else if (!strcmp(method, "Cancel")) {
         log_debug(TAG, "cancelling pairing");
-    }
-    else
+    } else
         g_print("We should not come here, unknown method\n");
 }
 
@@ -75,8 +63,7 @@ static const GDBusInterfaceVTable agent_method_table = {
         .method_call = bluez_agent_method_call,
 };
 
-static int bluez_register_agent(Agent *agent)
-{
+static int bluez_register_agent(Agent *agent) {
     GError *error = NULL;
     guint id = 0;
     GDBusNodeInfo *info = NULL;
@@ -120,25 +107,24 @@ static int bluez_register_agent(Agent *agent)
             "</node>";
 
     info = g_dbus_node_info_new_for_xml(bluez_agent_introspection_xml, &error);
-    if(error) {
+    if (error) {
         g_printerr("Unable to create node: %s\n", error->message);
         g_clear_error(&error);
         return 0;
     }
 
-    id = g_dbus_connection_register_object(agent->connection,
-                                           AGENT_PATH,
-                                           info->interfaces[0],
-                                           &agent_method_table,
-                                           agent->adapter, NULL, &error);
+    agent->registration_id = g_dbus_connection_register_object(agent->connection,
+                                                               AGENT_PATH,
+                                                               info->interfaces[0],
+                                                               &agent_method_table,
+                                                               agent->adapter, NULL, &error);
     g_dbus_node_info_unref(info);
     //g_dbus_connection_unregister_object(con, id);
     /* call register method in AgentManager1 interface */
     return id;
 }
 
-static int binc_agentmanager_call_method(GDBusConnection *connection, const gchar *method, GVariant *param)
-{
+static int binc_agentmanager_call_method(GDBusConnection *connection, const gchar *method, GVariant *param) {
     g_assert(connection != NULL);
     g_assert(method != NULL);
 
@@ -156,7 +142,7 @@ static int binc_agentmanager_call_method(GDBusConnection *connection, const gcha
                                          -1,
                                          NULL,
                                          &error);
-    if(error != NULL) {
+    if (error != NULL) {
         g_print("Register %s: %s\n", AGENT_PATH, error->message);
         return 1;
     }
@@ -186,7 +172,8 @@ int binc_agentmanager_register_agent(Agent *agent) {
             capability = "KeyboardDisplay";
             break;
     }
-    int result = binc_agentmanager_call_method(agent->connection, "RegisterAgent", g_variant_new("(os)", agent->path, capability));
+    int result = binc_agentmanager_call_method(agent->connection, "RegisterAgent",
+                                               g_variant_new("(os)", agent->path, capability));
     if (result == EXIT_FAILURE) {
         log_debug(TAG, "failed to register agent");
     }
@@ -199,11 +186,15 @@ int binc_agentmanager_register_agent(Agent *agent) {
 
 void binc_agent_free(Agent *agent) {
     g_assert (agent != NULL);
+    gboolean result = g_dbus_connection_unregister_object(agent->connection, agent->registration_id);
+    if (!result) {
+        log_debug(TAG, "could not unregister agent");
+    }
     g_free(agent);
 }
 
-Agent* binc_agent_create(Adapter *adapter, IoCapability io_capability) {
-    Agent* agent = g_new0(Agent, 1);
+Agent *binc_agent_create(Adapter *adapter, IoCapability io_capability) {
+    Agent *agent = g_new0(Agent, 1);
     agent->path = AGENT_PATH;
     agent->connection = adapter->connection;
     agent->adapter = adapter;
