@@ -22,16 +22,25 @@ In order to discover devices, you first need to get hold of a Bluetooth *adapter
 You do this by calling `binc_get_default_adapter()` with your DBus connection as an argument:
 
 ```c
-GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-Adapter *adapter = binc_get_default_adapter(dbusConnection);
+int main(void) {
+    GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+    Adapter *adapter = binc_get_default_adapter(dbusConnection);
+    
+    //...
+}
 ```
 
 The next step is to set any scanfilters and set the callback you want to receive the found devices on:
 
 ```c
-binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
-binc_adapter_set_discovery_filter(default_adapter, -100);
-binc_adapter_start_discovery(default_adapter);
+int main(void) {
+    
+    // ...
+    
+    binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
+    binc_adapter_set_discovery_filter(default_adapter, -100);
+    binc_adapter_start_discovery(default_adapter);
+}
 ```
 
 The discovery will deliver all found devices on the callback you provided. You typically check if it is the device you are looking for, stop the discovery and then connect to it:
