@@ -529,4 +529,20 @@ gboolean binc_characteristic_is_notifying(Characteristic *characteristic) {
     return characteristic->notifying;
 }
 
+gboolean binc_characteristic_supports_write(Characteristic *characteristic, WriteType writeType) {
+    if (writeType == WITH_RESPONSE) {
+        return (characteristic->properties & GATT_CHR_PROP_WRITE) > 0;
+    } else {
+        return (characteristic->properties & GATT_CHR_PROP_WRITE_WITHOUT_RESP) > 0;
+    }
+}
+
+gboolean binc_characteristic_supports_read(Characteristic *characteristic) {
+    return (characteristic->properties & GATT_CHR_PROP_READ) > 0;
+}
+
+gboolean binc_characteristic_supports_notify(Characteristic *characteristic) {
+    return ((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
+            (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
+}
 

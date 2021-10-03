@@ -98,6 +98,13 @@ void binc_characteristic_set_properties(Characteristic *characteristic, guint pr
 
 gboolean binc_characteristic_is_notifying(Characteristic *characteristic);
 
+gboolean binc_characteristic_supports_write(Characteristic *characteristic, WriteType writeType);
+
+gboolean binc_characteristic_supports_read(Characteristic *characteristic);
+
+gboolean binc_characteristic_supports_notify(Characteristic *characteristic);
+
+
 /**
  * Get a string representation of the characteristic
  * @param characteristic

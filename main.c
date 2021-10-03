@@ -100,10 +100,12 @@ void on_services_resolved(Device *device) {
 
     Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
     if (current_time != NULL) {
-        GByteArray *timeBytes = binc_get_current_time();
-        log_debug(TAG, "writing current time");
-        binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
-        g_byte_array_free(timeBytes, TRUE);
+        if (binc_characteristic_supports_write(current_time,WITH_RESPONSE)) {
+            GByteArray *timeBytes = binc_get_current_time();
+            log_debug(TAG, "writing current time");
+            binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
+            g_byte_array_free(timeBytes, TRUE);
+        }
     }
 
     Characteristic *bpm = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
