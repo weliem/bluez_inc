@@ -10,6 +10,13 @@
 #define TAG "Agent"
 #define AGENT_PATH "/org/bluez/BincAgent"
 
+struct binc_agent {
+    char *path;
+    IoCapability io_capability;
+    GDBusConnection *connection;
+    Adapter *adapter;
+    guint registration_id;
+};
 
 static void bluez_agent_method_call(GDBusConnection *conn,
                                     const gchar *sender,

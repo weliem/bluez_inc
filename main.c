@@ -125,7 +125,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char* name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "Systo")) {
+    if (name != NULL && g_str_has_prefix(name, "Philips")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
@@ -182,7 +182,7 @@ int main(void) {
     }
 
     // Bail out after 10 seconds
-    g_timeout_add_seconds(30, callback, loop);
+    g_timeout_add_seconds(60, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);

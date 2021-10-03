@@ -8,17 +8,14 @@
 #include <gio/gio.h>
 #include "adapter.h"
 
-typedef enum { DISPLAY_ONLY, DISPLAY_YES_NO, KEYBOARD_ONLY, NO_INPUT_NO_OUTPUT, KEYBOARD_DISPLAY } IoCapability;
+typedef enum {
+    DISPLAY_ONLY, DISPLAY_YES_NO, KEYBOARD_ONLY, NO_INPUT_NO_OUTPUT, KEYBOARD_DISPLAY
+} IoCapability;
 
-typedef struct {
-    char *path;
-    IoCapability io_capability;
-    GDBusConnection *connection;
-    Adapter *adapter;
-    guint registration_id;
-} Agent;
+typedef struct binc_agent Agent;
 
-Agent* binc_agent_create(Adapter *adapter, IoCapability io_capability);
+Agent *binc_agent_create(Adapter *adapter, IoCapability io_capability);
+
 void binc_agent_free(Agent *agent);
 
 #endif //TEST_AGENT_H
