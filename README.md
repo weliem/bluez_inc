@@ -10,3 +10,5 @@ Todo
 * Implement Pair and CancelPairing on Device
 * Add more device property functions
 * Check for memory leaks with valgrind
+* Use 'src' and 'include' folders in project
+* Make it a library
