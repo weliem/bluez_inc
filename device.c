@@ -202,30 +202,7 @@ static void binc_on_characteristic_notify(Characteristic *characteristic, GByteA
     device->on_notify_callback(characteristic, byteArray);
 }
 
-static guint binc_characteristic_flags_to_int(GList *flags) {
-    guint result = 0;
-    if (g_list_length(flags) > 0) {
-        for (GList *iterator = flags; iterator; iterator = iterator->next) {
-            char *property = (char *) iterator->data;
-            if (g_str_equal(property, "broadcast")) {
-                result += GATT_CHR_PROP_BROADCAST;
-            } else if (g_str_equal(property, "read")) {
-                result += GATT_CHR_PROP_READ;
-            } else if (g_str_equal(property, "write-without-response")) {
-                result += GATT_CHR_PROP_WRITE_WITHOUT_RESP;
-            } else if (g_str_equal(property, "write")) {
-                result += GATT_CHR_PROP_WRITE;
-            } else if (g_str_equal(property, "notify")) {
-                result += GATT_CHR_PROP_NOTIFY;
-            } else if (g_str_equal(property, "indicate")) {
-                result += GATT_CHR_PROP_INDICATE;
-            } else if (g_str_equal(property, "authenticated-signed-writes")) {
-                result += GATT_CHR_PROP_AUTH;
-            }
-        }
-    }
-    return result;
-}
+
 
 static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
@@ -292,10 +269,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                             } else if (g_strcmp0(property_name, "Service") == 0) {
                                 binc_characteristic_set_service_path(characteristic, g_variant_get_string(prop_val, NULL));
                             } else if (g_strcmp0(property_name, "Flags") == 0) {
-                                GList* flags = g_variant_string_array_to_list(prop_val);
-                                binc_characteristic_set_flags(characteristic, flags);
-                                guint char_properties = binc_characteristic_flags_to_int(flags);
-                                binc_characteristic_set_properties(characteristic, char_properties);
+                                binc_characteristic_set_flags(characteristic, g_variant_string_array_to_list(prop_val));
                             }
                         }
                         g_variant_unref(prop_val);

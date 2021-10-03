@@ -478,6 +478,31 @@ GList* binc_characteristic_get_flags(Characteristic *characteristic) {
     return characteristic->flags;
 }
 
+static guint binc_characteristic_flags_to_int(GList *flags) {
+    guint result = 0;
+    if (g_list_length(flags) > 0) {
+        for (GList *iterator = flags; iterator; iterator = iterator->next) {
+            char *property = (char *) iterator->data;
+            if (g_str_equal(property, "broadcast")) {
+                result += GATT_CHR_PROP_BROADCAST;
+            } else if (g_str_equal(property, "read")) {
+                result += GATT_CHR_PROP_READ;
+            } else if (g_str_equal(property, "write-without-response")) {
+                result += GATT_CHR_PROP_WRITE_WITHOUT_RESP;
+            } else if (g_str_equal(property, "write")) {
+                result += GATT_CHR_PROP_WRITE;
+            } else if (g_str_equal(property, "notify")) {
+                result += GATT_CHR_PROP_NOTIFY;
+            } else if (g_str_equal(property, "indicate")) {
+                result += GATT_CHR_PROP_INDICATE;
+            } else if (g_str_equal(property, "authenticated-signed-writes")) {
+                result += GATT_CHR_PROP_AUTH;
+            }
+        }
+    }
+    return result;
+}
+
 void binc_characteristic_set_flags(Characteristic *characteristic, GList* flags) {
     g_assert(characteristic != NULL);
     g_assert(flags != NULL);
@@ -486,6 +511,7 @@ void binc_characteristic_set_flags(Characteristic *characteristic, GList* flags)
         binc_characteristic_free_flags(characteristic);
     }
     characteristic->flags = flags;
+    characteristic->properties = binc_characteristic_flags_to_int(flags);
 }
 
 guint binc_characteristic_get_properties(Characteristic *characteristic) {
