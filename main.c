@@ -47,12 +47,13 @@ void on_connection_state_changed(Device *device) {
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
+    const char* uuid = binc_characteristic_get_uuid(characteristic);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser_set_offset(parser, 1);
-    if (g_str_equal(characteristic->uuid, TEMPERATURE_CHAR)) {
+    if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
         float value = parser_get_float(parser);
         log_debug(TAG, "temperature %.1f", value);
-    } else if (g_str_equal(characteristic->uuid, BLOODPRESSURE_CHAR)) {
+    } else if (g_str_equal(uuid, BLOODPRESSURE_CHAR)) {
         float systolic = parser_get_sfloat(parser);
         float diastolic = parser_get_sfloat(parser);
         log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
@@ -61,22 +62,24 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
 }
 
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+    const char* uuid = binc_characteristic_get_uuid(characteristic);
     if (byteArray != NULL) {
-        if (g_str_equal(characteristic->uuid, MANUFACTURER_CHAR)) {
+        if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
             log_debug(TAG, "manufacturer = %s", byteArray->data);
-        } else if (g_str_equal(characteristic->uuid, MODEL_CHAR)) {
+        } else if (g_str_equal(uuid, MODEL_CHAR)) {
             log_debug(TAG, "model = %s", byteArray->data);
         }
     }
 
     if (error != NULL) {
-        log_debug(TAG, "failed to read '%s' (error %d: %s)", characteristic->uuid, error->code, error->message);
+        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
     }
 }
 
 void on_write(Characteristic *characteristic, GError *error) {
+    const char* uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
-        log_debug(TAG, "failed to write '%s' (error %d: %s)", characteristic->uuid, error->code, error->message);
+        log_debug(TAG, "failed to write '%s' (error %d: %s)", uuid, error->code, error->message);
     } else {
         log_debug(TAG, "writing succeeded");
     }

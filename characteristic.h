@@ -26,7 +26,7 @@
 #define GATT_CHR_PROP_AUTH                    0x40
 #define GATT_CHR_PROP_EXT_PROP                0x80
 
-typedef struct sCharacteristic Characteristic;
+typedef struct binc_characteristic Characteristic;
 typedef struct sDevice Device;
 
 typedef enum WriteType {
@@ -41,23 +41,6 @@ typedef void (*OnReadCallback)(Characteristic *characteristic, GByteArray *byteA
 
 typedef void (*OnWriteCallback)(Characteristic *characteristic, GError *error);
 
-typedef struct sCharacteristic {
-    Device *device;
-    GDBusConnection *connection;
-    const char *path;
-    const char *uuid;
-    const char *service_path;
-    const char *service_uuid;
-    gboolean notifying;
-    GList *flags;
-    guint properties;
-
-    guint notify_signal;
-    NotifyingStateChangedCallback notify_state_callback;
-    OnReadCallback on_read_callback;
-    OnWriteCallback on_write_callback;
-    OnNotifyCallback on_notify_callback;
-} Characteristic;
 
 /**
  * Create a characteristic
@@ -90,6 +73,30 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
 void binc_characteristic_start_notify(Characteristic *characteristic);
 
 void binc_characteristic_stop_notify(Characteristic *characteristic);
+
+Device* binc_characteristic_get_device(Characteristic *characteristic);
+
+const char* binc_characteristic_get_uuid(Characteristic *characteristic);
+
+void binc_characteristic_set_uuid(Characteristic *characteristic, const char* uuid);
+
+const char* binc_characteristic_get_service_uuid(Characteristic *characteristic);
+
+void binc_characteristic_set_service_uuid(Characteristic *characteristic, const char* service_uuid);
+
+const char* binc_characteristic_get_service_path(Characteristic *characteristic);
+
+void binc_characteristic_set_service_path(Characteristic *characteristic, const char* service_path);
+
+GList* binc_characteristic_get_flags(Characteristic *characteristic);
+
+void binc_characteristic_set_flags(Characteristic *characteristic, GList* flags);
+
+guint binc_characteristic_get_properties(Characteristic *characteristic);
+
+void binc_characteristic_set_properties(Characteristic *characteristic, guint properties);
+
+gboolean binc_characteristic_is_notifying(Characteristic *characteristic);
 
 /**
  * Get a string representation of the characteristic

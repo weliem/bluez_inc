@@ -188,15 +188,18 @@ char *binc_device_to_string(Device *device) {
 }
 
 static void binc_on_characteristic_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
-    characteristic->device->on_read_callback(characteristic, byteArray, error);
+    Device* device = binc_characteristic_get_device(characteristic);
+    device->on_read_callback(characteristic, byteArray, error);
 }
 
 static void binc_on_characteristic_write(Characteristic *characteristic, GError *error) {
-    characteristic->device->on_write_callback(characteristic, error);
+    Device* device = binc_characteristic_get_device(characteristic);
+    device->on_write_callback(characteristic, error);
 }
 
 static void binc_on_characteristic_notify(Characteristic *characteristic, GByteArray *byteArray) {
-    characteristic->device->on_notify_callback(characteristic, byteArray);
+    Device* device = binc_characteristic_get_device(characteristic);
+    device->on_notify_callback(characteristic, byteArray);
 }
 
 static guint binc_characteristic_flags_to_int(GList *flags) {
@@ -285,28 +288,29 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                         g_variant_iter_init(&iii, properties);
                         while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val)) {
                             if (g_strcmp0(property_name, "UUID") == 0) {
-                                characteristic->uuid = g_strdup(g_variant_get_string(prop_val, NULL));
+                                binc_characteristic_set_uuid(characteristic, g_variant_get_string(prop_val, NULL));
                             } else if (g_strcmp0(property_name, "Service") == 0) {
-                                characteristic->service_path = g_strdup(g_variant_get_string(prop_val, NULL));
+                                binc_characteristic_set_service_path(characteristic, g_variant_get_string(prop_val, NULL));
                             } else if (g_strcmp0(property_name, "Flags") == 0) {
-                                characteristic->flags = g_variant_string_array_to_list(prop_val);
-                                characteristic->properties = binc_characteristic_flags_to_int(
-                                        characteristic->flags);
+                                GList* flags = g_variant_string_array_to_list(prop_val);
+                                binc_characteristic_set_flags(characteristic, flags);
+                                guint char_properties = binc_characteristic_flags_to_int(flags);
+                                binc_characteristic_set_properties(characteristic, char_properties);
                             }
                         }
                         g_variant_unref(prop_val);
 
                         // Get service and link the characteristic to the service
-                        Service *service = g_hash_table_lookup(device->services, characteristic->service_path);
+                        Service *service = g_hash_table_lookup(device->services, binc_characteristic_get_service_path(characteristic));
                         if (service != NULL) {
-                            characteristic->service_uuid = g_strdup(service->uuid);
+                            binc_characteristic_set_service_uuid(characteristic ,service->uuid);
                             g_hash_table_insert(device->characteristics, g_strdup(object_path), characteristic);
 
                             char *charString = binc_characteristic_to_string(characteristic);
                             log_debug(TAG, charString);
                             g_free(charString);
                         } else {
-                            log_debug(TAG, "could not find service %s", characteristic->service_path);
+                            log_debug(TAG, "could not find service %s", binc_characteristic_get_service_path(characteristic));
                         }
                     }
                     g_variant_unref(properties);
@@ -472,8 +476,8 @@ binc_device_get_characteristic(Device *device, const char *service_uuid, const c
         g_hash_table_iter_init(&iter, device->characteristics);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
             Characteristic *characteristic = (Characteristic *) value;
-            if (g_strcmp0(characteristic->service_uuid, service_uuid) == 0 &&
-                g_strcmp0(characteristic->uuid, characteristic_uuid) == 0) {
+            if (g_strcmp0(binc_characteristic_get_service_uuid(characteristic), service_uuid) == 0 &&
+                g_strcmp0(binc_characteristic_get_uuid(characteristic), characteristic_uuid) == 0) {
                 return characteristic;
             }
         }
