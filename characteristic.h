@@ -7,7 +7,7 @@
 
 #include <gio/gio.h>
 #include "service.h"
-//#include "device.h"
+#include "forward_decl.h"
 
 /*
  * GATT Characteristic Property bit field
@@ -27,7 +27,7 @@
 #define GATT_CHR_PROP_EXT_PROP                0x80
 
 typedef struct binc_characteristic Characteristic;
-typedef struct sDevice Device;
+
 
 typedef enum WriteType {
     WITH_RESPONSE = 0, WITHOUT_RESPONSE = 1

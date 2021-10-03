@@ -11,16 +11,10 @@
 #include "adapter.h"
 #include "device.h"
 #include "logger.h"
-#include "utility.h"
 #include "parser.h"
 #include "agent.h"
 
 #define TAG "Main"
-
-#define NONIN "Nonin3230_502644076"
-#define SOEHNLE "Systo MC 400"
-#define TAIDOC "TAIDOC TD1241"
-
 #define CONNECT_DELAY 100
 
 #define DIS_SERVICE "0000180a-0000-1000-8000-00805f9b34fb"
@@ -40,8 +34,9 @@ Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 
 void on_connection_state_changed(Device *device) {
-    log_debug(TAG, "'%s' %s", device->name, device->connection_state ? "connected" : "disconnected");
-    if (device->connection_state == DISCONNECTED) {
+    ConnectionState state = binc_device_get_connection_state(device);
+    log_debug(TAG, "'%s' %s", binc_device_get_name(device), state ? "connected" : "disconnected");
+    if (state == DISCONNECTED) {
         binc_adapter_remove_device(default_adapter, device);
     }
 }
@@ -86,7 +81,7 @@ void on_write(Characteristic *characteristic, GError *error) {
 }
 
 void on_services_resolved(Device *device) {
-    log_debug(TAG, "'%s' services resolved", device->name);
+    log_debug(TAG, "'%s' services resolved", binc_device_get_name(device));
     Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL) {
         binc_characteristic_read(manufacturer);
@@ -127,7 +122,8 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    if (device->name != NULL && g_str_has_prefix(device->name, "Systo")) {
+    const char* name = binc_device_get_name(device);
+    if (name != NULL && g_str_has_prefix(name, "Systo")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);

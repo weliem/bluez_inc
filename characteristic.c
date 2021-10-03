@@ -31,7 +31,7 @@ struct binc_characteristic {
 Characteristic *binc_characteristic_create(Device *device, const char *path) {
     Characteristic *characteristic = g_new0(Characteristic, 1);
     characteristic->device = device;
-    characteristic->connection = device->connection;
+    characteristic->connection = binc_device_get_dbus_connection(device);
     characteristic->path = path;
     characteristic->uuid = NULL;
     characteristic->service_path = NULL;

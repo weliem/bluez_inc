@@ -195,25 +195,25 @@ static void bluez_property_value(const gchar *key, GVariant *value) {
 
 void binc_device_update_property(Device *device, const char *property_name, GVariant *property_value) {
     if (g_str_equal(property_name, "Address")) {
-        device->address = g_strdup(g_variant_get_string(property_value, NULL));
+        binc_device_set_address(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, "AddressType")) {
-        device->address_type = g_strdup(g_variant_get_string(property_value, NULL));
+        binc_device_set_address_type(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, "Alias")) {
-        device->alias = g_strdup(g_variant_get_string(property_value, NULL));
+        binc_device_set_alias(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, "Adapter")) {
-        device->adapter_path = g_strdup(g_variant_get_string(property_value, NULL));
+        binc_device_set_adapter_path(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, "Name")) {
-        device->name = g_strdup(g_variant_get_string(property_value, NULL));
+        binc_device_set_name(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, "Paired")) {
-        device->paired = g_variant_get_boolean(property_value);
+        binc_device_set_paired(device, g_variant_get_boolean(property_value));
     } else if (g_str_equal(property_name, "RSSI")) {
-        device->rssi = g_variant_get_int16(property_value);
+        binc_device_set_rssi(device, g_variant_get_int16(property_value));
     } else if (g_str_equal(property_name, "Trusted")) {
-        device->trusted = g_variant_get_boolean(property_value);
+        binc_device_set_trusted(device, g_variant_get_boolean(property_value));
     } else if (g_str_equal(property_name, "TxPower")) {
-        device->txpower = g_variant_get_int16(property_value);
+        binc_device_set_txpower(device, g_variant_get_int16(property_value));
     } else if (g_str_equal(property_name, "UUIDs")) {
-        device->uuids = g_variant_string_array_to_list(property_value);
+        binc_device_set_uuids(device,g_variant_string_array_to_list(property_value));
     } else if (g_str_equal(property_name, "ManufacturerData")) {
         GVariantIter *iter;
         g_variant_get(property_value, "a{qv}", &iter);
@@ -221,7 +221,7 @@ void binc_device_update_property(Device *device, const char *property_name, GVar
         GVariant *array;
         uint16_t key;
         uint8_t val;
-        device->manufacturer_data = g_hash_table_new(g_int_hash, g_int_equal);
+        GHashTable *manufacturer_data = g_hash_table_new(g_int_hash, g_int_equal);
         while (g_variant_iter_loop(iter, "{qv}", &key, &array)) {
             GByteArray *byteArray = g_byte_array_new();
             GVariantIter it_array;
@@ -231,9 +231,9 @@ void binc_device_update_property(Device *device, const char *property_name, GVar
             }
             int *keyCopy = g_new0 (gint, 1);
             *keyCopy = key;
-            g_hash_table_insert(device->manufacturer_data, keyCopy, byteArray);
+            g_hash_table_insert(manufacturer_data, keyCopy, byteArray);
         }
-
+        binc_device_set_manufacturer_data(device, manufacturer_data);
         g_variant_iter_free(iter);
     } else if (g_str_equal(property_name, "ServiceData")) {
         GVariantIter *iter;
@@ -243,7 +243,7 @@ void binc_device_update_property(Device *device, const char *property_name, GVar
         char *key;
         uint8_t val;
 
-        device->service_data = g_hash_table_new(g_str_hash, g_str_equal);
+        GHashTable *service_data = g_hash_table_new(g_str_hash, g_str_equal);
         while (g_variant_iter_loop(iter, "{sv}", &key, &array)) {
             GByteArray *byteArray = g_byte_array_new();
             GVariantIter it_array;
@@ -252,12 +252,9 @@ void binc_device_update_property(Device *device, const char *property_name, GVar
                 byteArray = g_byte_array_append(byteArray, &val, 1);
             }
             gchar *keyCopy = g_strdup(key);
-            g_hash_table_insert(device->service_data, keyCopy, byteArray);
-
-//            GString *bytes = g_byte_array_as_hex(byteArray);
-//            log_debug(TAG, "service data %s %s", key, bytes->str);
-//            g_string_free(bytes, TRUE);
+            g_hash_table_insert(service_data, keyCopy, byteArray);
         }
+        binc_device_set_service_data(device, service_data);
         g_variant_iter_free(iter);
     }
 }
@@ -293,8 +290,8 @@ static void bluez_device_appeared(GDBusConnection *sig,
                 binc_device_update_property(device, property_name, prop_val);
             }
 
-            // Deliver Device to registered callback
-            g_hash_table_insert(adapter->devices_cache, g_strdup(device->path), device);
+            // Update cache and deliver Device to registered callback
+            g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
             if (adapter->discoveryResultCallback != NULL) {
                 adapter->discoveryResultCallback(adapter, device);
             }
@@ -364,11 +361,11 @@ void bluez_signal_device_changed(GDBusConnection *conn,
         goto done;
     }
 
-    // Look up scanresult for this
+    // Look up device
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
     if (device == NULL) {
         device = device_getall_properties(adapter, path);
-        g_hash_table_insert(adapter->devices_cache, g_strdup(device->path), device);
+        g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
@@ -629,10 +626,10 @@ int binc_adapter_remove_device(Adapter *adapter, Device *device) {
     g_assert(device != NULL);
     g_assert (adapter != NULL);
 
-    log_debug(TAG, "removing %s", device->name);
-    int rc = adapter_call_method(adapter, "RemoveDevice", g_variant_new("(o)", device->path));
+    log_debug(TAG, "removing %s", binc_device_get_name(device));
+    int rc = adapter_call_method(adapter, "RemoveDevice", g_variant_new("(o)", binc_device_get_path(device)));
     if (rc == EXIT_FAILURE)
-        g_print("Not able to remove %s\n", device->path);
+        g_print("Not able to remove %s\n", binc_device_get_path(device));
     return rc;
 }
 
@@ -710,7 +707,7 @@ void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredSta
     adapter->poweredStateCallback = callback;
 }
 
-char* binc_adapter_get_path(Adapter *adapter) {
+char *binc_adapter_get_path(Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->path;
 }
@@ -725,7 +722,7 @@ gboolean binc_adapter_get_powered_state(Adapter *adapter) {
     return adapter->powered;
 }
 
-Device* binc_adapter_get_device_by_path(Adapter *adapter, const char* path) {
+Device *binc_adapter_get_device_by_path(Adapter *adapter, const char *path) {
     g_assert(adapter != NULL);
     return g_hash_table_lookup(adapter->devices_cache, path);
 }

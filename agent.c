@@ -48,7 +48,7 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         log_debug(TAG, "request for authorization %s", object_path);
         Device *device = binc_adapter_get_device_by_path(adapter, object_path);
         if (device != NULL) {
-            device->bondingState = BONDING;
+            binc_device_set_bonding_state(device, BONDING);
         }
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (!strcmp(method, "AuthorizeService")) {
