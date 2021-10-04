@@ -11,6 +11,7 @@ Todo
 * Provide callbacks for pincode and passcodes
 * Make agent path configurable
 * Implement Pair and CancelPairing on Device
+* Introduce filter object for more discovery filtering options
 * Add more device property functions
 * Check for memory leaks with valgrind
 * Use 'src' and 'include' folders in project
