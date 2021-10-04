@@ -594,31 +594,77 @@ Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
     return adapter;
 }
 
-/*
- * Adapter: StartDiscovery
- */
-int binc_adapter_start_discovery(Adapter *adapter) {
+static void binc_internal_start_discovery_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    Adapter *adapter = (Adapter *) user_data;
+    g_assert(adapter != NULL);
+
+    GError *error = NULL;
+    GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartDiscovery", error->code, error->message);
+        g_clear_error(&error);
+    }
+
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+}
+
+void binc_adapter_start_discovery(Adapter *adapter) {
     g_assert (adapter != NULL);
 
     if (adapter->discovery_state == STOPPED) {
         adapter->discovery_state = STARTING;
-        return adapter_call_method(adapter, "StartDiscovery", NULL);
-    } else {
-        return EXIT_SUCCESS;
+        g_dbus_connection_call(adapter->connection,
+                               "org.bluez",
+                               adapter->path,
+                               "org.bluez.Adapter1",
+                               "StartDiscovery",
+                               NULL,
+                               NULL,
+                               G_DBUS_CALL_FLAGS_NONE,
+                               -1,
+                               NULL,
+                               (GAsyncReadyCallback) binc_internal_start_discovery_callback,
+                               adapter);
     }
 }
 
-/*
- * Adapter: StopDiscovery
- */
-int binc_adapter_stop_discovery(Adapter *adapter) {
+static void binc_internal_stop_discovery_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    Adapter *adapter = (Adapter *) user_data;
+    g_assert(adapter != NULL);
+
+    GError *error = NULL;
+    GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", "StopDiscovery", error->code, error->message);
+        g_clear_error(&error);
+    }
+
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+}
+
+void binc_adapter_stop_discovery(Adapter *adapter) {
     g_assert (adapter != NULL);
 
     if (adapter->discovery_state == STARTED) {
         adapter->discovery_state = STOPPING;
-        return adapter_call_method(adapter, "StopDiscovery", NULL);
-    } else {
-        return EXIT_SUCCESS;
+        g_dbus_connection_call(adapter->connection,
+                               "org.bluez",
+                               adapter->path,
+                               "org.bluez.Adapter1",
+                               "StopDiscovery",
+                               NULL,
+                               NULL,
+                               G_DBUS_CALL_FLAGS_NONE,
+                               -1,
+                               NULL,
+                               (GAsyncReadyCallback) binc_internal_stop_discovery_callback,
+                               adapter);
     }
 }
 

@@ -25,9 +25,9 @@ Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection);
 
 void binc_adapter_free(Adapter *adapter);
 
-int binc_adapter_start_discovery(Adapter *adapter);
+void binc_adapter_start_discovery(Adapter *adapter);
 
-int binc_adapter_stop_discovery(Adapter *adapter);
+void binc_adapter_stop_discovery(Adapter *adapter);
 
 int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
 

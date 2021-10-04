@@ -125,7 +125,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char* name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "Philips")) {
+    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);

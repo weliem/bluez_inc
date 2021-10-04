@@ -5,7 +5,6 @@ The goal of this library is to provide a clean C interface to Bluez, without nee
 As a result, it looks like a 'normal' C library for Bluetooth.
 
 Todo
-* Make StartDiscovery and StopDiscovery async
 * Make power on/off async
 * Allow for fixed pin code to be registered for pairing
 * Provide callbacks for pincode and passcodes
