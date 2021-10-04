@@ -1,8 +1,8 @@
 # Bluez in C
 
 
-The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky and this library does all the hard work under the hood. 
-As a result, it looks like a 'normal' C library for Bluetooth.
+The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood. 
+As a result, it looks like a 'normal' C library for Bluetooth!
 
 Todo
 * Make StartDiscovery and StopDiscovery async
