@@ -38,6 +38,8 @@ void binc_device_set_write_char_callback(Device *device, OnWriteCallback callbac
 
 void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback);
 
+void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChangedCallback callback);
+
 void binc_device_register_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 
 void binc_device_register_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback);

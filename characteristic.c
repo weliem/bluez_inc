@@ -22,7 +22,7 @@ struct binc_characteristic {
     guint properties;
 
     guint notify_signal;
-    NotifyingStateChangedCallback notify_state_callback;
+    OnNotifyingStateChangedCallback notify_state_callback;
     OnReadCallback on_read_callback;
     OnWriteCallback on_write_callback;
     OnNotifyCallback on_notify_callback;
@@ -118,24 +118,27 @@ static GByteArray *g_variant_get_byte_array_for_read(GVariant *variant) {
 
 static void binc_internal_char_read_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
+    GByteArray *byteArray = NULL;
     Characteristic *characteristic = (Characteristic *) user_data;
     g_assert(characteristic != NULL);
 
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
+    if (value != NULL) {
+        byteArray = g_variant_get_byte_array_for_read(value);
+        g_variant_unref(value);
+    }
+
+    if (characteristic->on_read_callback != NULL) {
+        characteristic->on_read_callback(characteristic, byteArray, error);
+    }
+
+    if (byteArray != NULL) {
+        g_byte_array_free(byteArray, TRUE);
+    }
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "ReadValue", error->code, error->message);
         g_clear_error(&error);
-    }
-
-    GByteArray *byteArray = NULL;
-    if (value != NULL) {
-        byteArray = g_variant_get_byte_array_for_read(value);
-        if (characteristic->on_read_callback != NULL) {
-            characteristic->on_read_callback(characteristic, byteArray, error);
-        }
-        g_byte_array_free(byteArray, TRUE);
-        g_variant_unref(value);
     }
 }
 
@@ -170,17 +173,17 @@ static void binc_internal_char_write_callback(GObject *source_object, GAsyncResu
     g_assert(characteristic != NULL);
 
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+
+    if (characteristic->on_write_callback != NULL) {
+        characteristic->on_write_callback(characteristic, error);
+    }
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "WriteValue", error->code, error->message);
-    }
-
-    GByteArray *byteArray = NULL;
-    if (value != NULL) {
-        if (characteristic->on_write_callback != NULL) {
-            characteristic->on_write_callback(characteristic, error);
-        }
-        g_variant_unref(value);
+        g_clear_error(&error);
     }
 }
 
@@ -313,17 +316,17 @@ static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult
 
     GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+
+    if (error != NULL && characteristic->notify_state_callback != NULL) {
+        characteristic->notify_state_callback(characteristic, error);
+    }
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartNotify", error->code, error->message);
-        if (characteristic->notify_state_callback != NULL) {
-            characteristic->notify_state_callback(characteristic, error);
-        }
         g_clear_error(&error);
-    }
-
-    if (value != NULL) {
-        g_variant_unref(value);
     }
 }
 
@@ -416,7 +419,7 @@ void binc_characteristic_set_notify_callback(Characteristic *characteristic, OnN
 }
 
 void binc_characteristic_set_notifying_state_change_callback(Characteristic *characteristic,
-                                                             NotifyingStateChangedCallback callback) {
+                                                             OnNotifyingStateChangedCallback callback) {
     g_assert(characteristic != NULL);
     g_assert(callback != NULL);
 

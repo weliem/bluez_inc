@@ -8,7 +8,6 @@ Todo
 * Make power on/off async
 * Allow for fixed pin code to be registered for pairing
 * Provide callbacks for pincode and passcodes
-* Make agent path configurable
 * Implement Pair and CancelPairing on Device
 * Add more device property functions
 * Check for memory leaks with valgrind

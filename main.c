@@ -38,7 +38,20 @@ void on_connection_state_changed(Device *device) {
     log_debug(TAG, "'%s' %s", binc_device_get_name(device), state ? "connected" : "disconnected");
     if (state == DISCONNECTED) {
         binc_adapter_remove_device(default_adapter, device);
+    } else if (state == CONNECTED) {
+        binc_adapter_stop_discovery(default_adapter);
     }
+}
+
+void on_notification_state_changed(Characteristic *characteristic, GError *error) {
+    const char* uuid = binc_characteristic_get_uuid(characteristic);
+    if (error != NULL) {
+        log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
+        return;
+    }
+
+    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
+    log_debug(TAG, "notification state <%s> : %s", binc_characteristic_get_uuid(characteristic), is_notifying ? "true" : "false");
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
@@ -58,16 +71,17 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
 
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
     const char* uuid = binc_characteristic_get_uuid(characteristic);
+    if (error != NULL) {
+        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
+        return;
+    }
+
     if (byteArray != NULL) {
         if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
             log_debug(TAG, "manufacturer = %s", byteArray->data);
         } else if (g_str_equal(uuid, MODEL_CHAR)) {
             log_debug(TAG, "model = %s", byteArray->data);
         }
-    }
-
-    if (error != NULL) {
-        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
     }
 }
 
@@ -114,6 +128,11 @@ void on_services_resolved(Device *device) {
     }
 }
 
+gboolean on_request_authorization(Device *device) {
+    log_debug(TAG, "requesting authorization for '%s", binc_device_get_name(device));
+    return TRUE;
+}
+
 gboolean delayed_connect(gpointer device) {
     binc_device_connect((Device *) device);
     return FALSE;
@@ -125,13 +144,14 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char* name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
+    if (name != NULL && g_str_has_prefix(name, "Philips")) {
         binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
         binc_device_set_read_char_callback(device, &on_read);
         binc_device_set_write_char_callback(device, &on_write);
         binc_device_set_notify_char_callback(device, &on_notify);
+        binc_device_set_notify_state_callback(device, &on_notification_state_changed);
         g_timeout_add(CONNECT_DELAY, delayed_connect, device);
     }
 }
@@ -166,7 +186,8 @@ int main(void) {
     if (default_adapter != NULL) {
         log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
 
-        agent = binc_agent_create(default_adapter, KEYBOARD_DISPLAY);
+        agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
+        binc_agent_set_request_authorization_callback(agent, &on_request_authorization);
 
         binc_adapter_set_powered_state_callback(default_adapter, &on_powered_state_changed);
         binc_adapter_power_off(default_adapter);

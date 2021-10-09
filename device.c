@@ -49,6 +49,7 @@ struct binc_device {
     OnReadCallback on_read_callback;
     OnWriteCallback on_write_callback;
     OnNotifyCallback on_notify_callback;
+    OnNotifyingStateChangedCallback on_notify_state_callback;
 };
 
 void binc_init_device(Device *device) {
@@ -71,6 +72,10 @@ void binc_init_device(Device *device) {
     device->txpower = 0;
     device->uuids = NULL;
     device->services = NULL;
+    device->on_notify_state_callback = NULL;
+    device->on_notify_callback = NULL;
+    device->on_read_callback = NULL;
+    device->on_write_callback = NULL;
 }
 
 Device *binc_create_device(const char *path, GDBusConnection *connection) {
@@ -129,11 +134,17 @@ void binc_device_free(Device *device) {
 
     // Free strings
     g_free((char *) device->path);
+    device->path = NULL;
     g_free((char *) device->adapter_path);
+    device->adapter_path = NULL;
     g_free((char *) device->address_type);
+    device->address_type = NULL;
     g_free((char *) device->address);
+    device->address = NULL;
     g_free((char *) device->alias);
+    device->alias = NULL;
     g_free((char *) device->name);
+    device->name = NULL;
 
     // Free characteristics hash table
     if (device->characteristics != NULL) {
@@ -238,19 +249,31 @@ char *binc_device_to_string(Device *device) {
 
 static void binc_on_characteristic_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
     Device *device = binc_characteristic_get_device(characteristic);
-    device->on_read_callback(characteristic, byteArray, error);
+    if (device->on_read_callback != NULL) {
+        device->on_read_callback(characteristic, byteArray, error);
+    }
 }
 
 static void binc_on_characteristic_write(Characteristic *characteristic, GError *error) {
     Device *device = binc_characteristic_get_device(characteristic);
-    device->on_write_callback(characteristic, error);
+    if (device->on_write_callback != NULL) {
+        device->on_write_callback(characteristic, error);
+    }
 }
 
 static void binc_on_characteristic_notify(Characteristic *characteristic, GByteArray *byteArray) {
     Device *device = binc_characteristic_get_device(characteristic);
-    device->on_notify_callback(characteristic, byteArray);
+    if (device->on_notify_callback != NULL) {
+        device->on_notify_callback(characteristic, byteArray);
+    }
 }
 
+static void binc_on_characteristic_notification_state_changed(Characteristic *characteristic, GError *error) {
+    Device *device = binc_characteristic_get_device(characteristic);
+    if (device->on_notify_state_callback != NULL) {
+        device->on_notify_state_callback(characteristic, error);
+    }
+}
 
 static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
@@ -306,6 +329,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                         binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
                         binc_characteristic_set_write_callback(characteristic, &binc_on_characteristic_write);
                         binc_characteristic_set_notify_callback(characteristic, &binc_on_characteristic_notify);
+                        binc_characteristic_set_notifying_state_change_callback(characteristic, &binc_on_characteristic_notification_state_changed);
 
                         const gchar *property_name;
                         GVariantIter iii;
@@ -573,6 +597,12 @@ void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callb
     g_assert(device != NULL);
     g_assert(callback != NULL);
     device->on_notify_callback = callback;
+}
+
+void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChangedCallback callback) {
+    g_assert(device != NULL);
+    g_assert(callback != NULL);
+    device->on_notify_state_callback = callback;
 }
 
 ConnectionState binc_device_get_connection_state(Device *device) {
