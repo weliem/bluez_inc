@@ -19,6 +19,7 @@ struct binc_agent {
     Adapter *adapter;
     guint registration_id;
     AgentRequestAuthorizationCallback request_authorization_callback;
+    AgentRequestPasskeyCallback request_passkey_callback;
 };
 
 static void bluez_agent_method_call(GDBusConnection *conn,
@@ -62,11 +63,13 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         if (device != NULL) {
             binc_device_set_bonding_state(device, BONDING);
         }
-        // This is the regular BLE 6 digit pin code one
-        log_debug(TAG, "Getting the Pin from user: ");
-        fscanf(stdin, "%d", &pass);
-        log_debug(TAG, "got ping: %d", pass);
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("(u)", pass));
+
+        if (agent->request_passkey_callback != NULL) {
+            pass = agent->request_passkey_callback(device);
+            g_dbus_method_invocation_return_value(invocation, g_variant_new("(u)", pass));
+        } else {
+            g_dbus_method_invocation_return_dbus_error(invocation, "org.bluez.Error.Rejected", "No passkey inputted");
+        }
     } else if (!strcmp(method, "DisplayPasskey")) {
         g_variant_get(params, "(ouq)", &object_path, &pass, &entered);
         log_debug(TAG, "passkey: %u, entered: %u", pass, entered);
@@ -257,4 +260,10 @@ void binc_agent_set_request_authorization_callback(Agent *agent, AgentRequestAut
     g_assert(agent != NULL);
     g_assert(callback != NULL);
     agent->request_authorization_callback = callback;
+}
+
+void binc_agent_set_request_passkey_callback(Agent *agent, AgentRequestPasskeyCallback callback) {
+    g_assert(agent != NULL);
+    g_assert(callback != NULL);
+    agent->request_passkey_callback = callback;
 }

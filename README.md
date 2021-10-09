@@ -6,8 +6,6 @@ As a result, it looks like a 'normal' C library for Bluetooth.
 
 Todo
 * Make power on/off async
-* Allow for fixed pin code to be registered for pairing
-* Provide callbacks for pincode and passcodes
 * Implement Pair and CancelPairing on Device
 * Add more device property functions
 * Check for memory leaks with valgrind

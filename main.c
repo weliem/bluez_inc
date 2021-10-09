@@ -8,6 +8,7 @@
  * gcc `pkg-config --cflags glib-2.0 gio-2.0` -Wall -Wextra -o bluez_adapter_scan ./bluez_adapter_scan.c `pkg-config --libs glib-2.0 gio-2.0`
  */
 #include <glib.h>
+#include <stdio.h>
 #include "adapter.h"
 #include "device.h"
 #include "logger.h"
@@ -44,18 +45,19 @@ void on_connection_state_changed(Device *device) {
 }
 
 void on_notification_state_changed(Characteristic *characteristic, GError *error) {
-    const char* uuid = binc_characteristic_get_uuid(characteristic);
+    const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
 
     gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
-    log_debug(TAG, "notification state <%s> : %s", binc_characteristic_get_uuid(characteristic), is_notifying ? "true" : "false");
+    log_debug(TAG, "notification state <%s> : %s", binc_characteristic_get_uuid(characteristic),
+              is_notifying ? "true" : "false");
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
-    const char* uuid = binc_characteristic_get_uuid(characteristic);
+    const char *uuid = binc_characteristic_get_uuid(characteristic);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser_set_offset(parser, 1);
     if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
@@ -70,7 +72,7 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
 }
 
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
-    const char* uuid = binc_characteristic_get_uuid(characteristic);
+    const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
@@ -86,7 +88,7 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
 }
 
 void on_write(Characteristic *characteristic, GError *error) {
-    const char* uuid = binc_characteristic_get_uuid(characteristic);
+    const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to write '%s' (error %d: %s)", uuid, error->code, error->message);
     } else {
@@ -114,7 +116,7 @@ void on_services_resolved(Device *device) {
 
     Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
     if (current_time != NULL) {
-        if (binc_characteristic_supports_write(current_time,WITH_RESPONSE)) {
+        if (binc_characteristic_supports_write(current_time, WITH_RESPONSE)) {
             GByteArray *timeBytes = binc_get_current_time();
             log_debug(TAG, "writing current time");
             binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
@@ -133,6 +135,14 @@ gboolean on_request_authorization(Device *device) {
     return TRUE;
 }
 
+guint32 on_request_passkey(Device *device) {
+    guint32 pass = 000000;
+    log_debug(TAG, "requesting passkey for '%s", binc_device_get_name(device));
+    log_debug(TAG, "Enter 6 digit pin code: ");
+    fscanf(stdin, "%d", &pass);
+    return pass;
+}
+
 gboolean delayed_connect(gpointer device) {
     binc_device_connect((Device *) device);
     return FALSE;
@@ -143,9 +153,9 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    const char* name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "Philips")) {
-        binc_adapter_stop_discovery(adapter);
+    const char *name = binc_device_get_name(device);
+    if (name != NULL && g_str_has_prefix(name, "FT95")) {
+        //binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
         binc_device_set_read_char_callback(device, &on_read);
@@ -188,6 +198,7 @@ int main(void) {
 
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
         binc_agent_set_request_authorization_callback(agent, &on_request_authorization);
+        binc_agent_set_request_passkey_callback(agent, &on_request_passkey);
 
         binc_adapter_set_powered_state_callback(default_adapter, &on_powered_state_changed);
         binc_adapter_power_off(default_adapter);
