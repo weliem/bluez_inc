@@ -1,12 +1,13 @@
 # Bluez in C
 
 
-The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky and this library does all the hard work under the hood. 
-As a result, it looks like a 'normal' C library for Bluetooth.
+The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood. 
+As a result, it looks like a 'normal' C library for Bluetooth!
 
 Todo
 * Make power on/off async
 * Implement Pair and CancelPairing on Device
+* Introduce filter object for more discovery filtering options
 * Add more device property functions
 * Check for memory leaks with valgrind
 * Use 'src' and 'include' folders in project
@@ -85,7 +86,7 @@ void on_services_resolved(Device *device) {
 }
 ```
 
-Reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. For example:
+Reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_callback(device, &on_read)`. 
 
 ```c
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
@@ -104,7 +105,7 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
 }
 ```
 
-Writing to characteristics works in a similar way. Make sure you check if you can write to the characteristic before attempting it:
+Writing to characteristics works in a similar way. Register your callback using `binc_device_set_write_char_callback(device, &on_write)`. Make sure you check if you can write to the characteristic before attempting it:
 
 ```c
 void on_services_resolved(Device *device) {
@@ -122,3 +123,43 @@ void on_services_resolved(Device *device) {
 }
 ```
 
+## Receiving notifications
+
+Bluez treats notifications and indications in the same way, calling them 'notifications'. If you want to receive notifications you have to 'start' them by calling `binc_characteristic_start_notify()`. As usual, first register your callback by calling `binc_device_set_notify_char_callback(device, &on_notify)`. Here is an example:
+
+```c
+void on_services_resolved(Device *device) {
+
+    // ...
+    
+    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE, TEMPERATURE_CHAR);
+    if (temperature != NULL) {
+        binc_characteristic_start_notify(temperature);
+    }
+}    
+```
+
+And then receiving your notifications:
+
+```c
+void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
+    const char* uuid = binc_characteristic_get_uuid(characteristic);
+    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+    parser_set_offset(parser, 1);
+    if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
+        float value = parser_get_float(parser);
+        log_debug(TAG, "temperature %.1f", value);
+    } 
+    parser_free(parser);
+}
+```
+
+## Bluez documentation
+
+The official Bluez documentation is a bit sparse but can be found here: 
+* [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/adapter-api.txt) (for adapter)
+* [GATT documentation](https://github.com/bluez/bluez/blob/master/doc/gatt-api.txt) (for service, characteristics and descriptors)
+* [Device documentation](https://github.com/bluez/bluez/blob/master/doc/device-api.txt) (for device)
+* [Agent documentation](https://github.com/bluez/bluez/blob/master/doc/agent-api.txt) (for agent)
+
+You will notice that most original methods and properties are available in this library. In some cases, some adaptations have been done for convenience.
