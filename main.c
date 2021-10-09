@@ -201,7 +201,6 @@ int main(void) {
         binc_agent_set_request_passkey_callback(agent, &on_request_passkey);
 
         binc_adapter_set_powered_state_callback(default_adapter, &on_powered_state_changed);
-        binc_adapter_power_off(default_adapter);
         binc_adapter_power_on(default_adapter);
 
         // Start a scan

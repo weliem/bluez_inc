@@ -29,15 +29,15 @@ void binc_adapter_start_discovery(Adapter *adapter);
 
 void binc_adapter_stop_discovery(Adapter *adapter);
 
-int binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
+void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
 
-int binc_adapter_remove_device(Adapter *adapter, Device *device);
+void binc_adapter_remove_device(Adapter *adapter, Device *device);
 
 Device* binc_adapter_get_device_by_path(Adapter *adapter, const char* path);
 
-int binc_adapter_power_on(Adapter *adapter);
+void binc_adapter_power_on(Adapter *adapter);
 
-int binc_adapter_power_off(Adapter *adapter);
+void binc_adapter_power_off(Adapter *adapter);
 
 char* binc_adapter_get_path(Adapter *adapter);
 

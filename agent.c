@@ -36,10 +36,6 @@ static void bluez_agent_method_call(GDBusConnection *conn,
     char *pin = NULL;
     char *uuid = NULL;
 
-    //GVariant *p = g_dbus_method_invocation_get_parameters(invocation);
-
-    //   log_debug(TAG, "agent called: %s()", method);
-
     Agent *agent = (Agent *) userdata;
     g_assert(agent != NULL);
 
@@ -63,7 +59,6 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         if (device != NULL) {
             binc_device_set_bonding_state(device, BONDING);
         }
-
         if (agent->request_passkey_callback != NULL) {
             pass = agent->request_passkey_callback(device);
             g_dbus_method_invocation_return_value(invocation, g_variant_new("(u)", pass));
