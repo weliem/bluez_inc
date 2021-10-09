@@ -5,7 +5,6 @@ The goal of this library is to provide a clean C interface to Bluez, without nee
 As a result, it looks like a 'normal' C library for Bluetooth!
 
 Todo
-* Make power on/off async
 * Implement Pair and CancelPairing on Device
 * Introduce filter object for more discovery filtering options
 * Add more device property functions
