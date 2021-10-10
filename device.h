@@ -20,13 +20,15 @@ typedef enum BondingState {
     NONE = 0, BONDING = 1, BONDED = 2
 } BondingState;
 
-Device *binc_create_device(const char *path, GDBusConnection *connection);
+Device *binc_create_device(const char *path, Adapter *adapter);
 
 void binc_init_device(Device *device);
 
 void binc_device_free(Device *device);
 
 GDBusConnection *binc_device_get_dbus_connection(Device *device);
+
+Adapter* binc_device_get_adapter(Device *device);
 
 char *binc_device_to_string(Device *device);
 

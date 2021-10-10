@@ -6,9 +6,7 @@
 #define TEST_ADAPTER_H
 
 #include <gio/gio.h>
-#include "device.h"
-
-typedef struct binc_adapter Adapter;
+#include "forward_decl.h"
 
 typedef enum DiscoveryState {
     STOPPED = 0, STARTED = 1, STARTING = 2, STOPPING = 3

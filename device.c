@@ -9,6 +9,7 @@
 #include "utility.h"
 #include "service.h"
 #include "characteristic.h"
+#include "adapter.h"
 
 #define TAG "Device"
 
@@ -21,7 +22,7 @@ char connection_state_names[4][16] =
 
 struct binc_device {
     GDBusConnection *connection;
-    const char *adapter_path;
+    Adapter *adapter;
     const char *address;
     const char *address_type;
     const char *alias;
@@ -53,7 +54,7 @@ struct binc_device {
 };
 
 void binc_init_device(Device *device) {
-    device->adapter_path = NULL;
+    device->adapter = NULL;
     device->address = NULL;
     device->address_type = NULL;
     device->alias = NULL;
@@ -78,11 +79,14 @@ void binc_init_device(Device *device) {
     device->on_write_callback = NULL;
 }
 
-Device *binc_create_device(const char *path, GDBusConnection *connection) {
-    Device *x = g_new0(Device, 1);
-    binc_init_device(x);
-    x->path = g_strdup(path);
-    x->connection = connection;
+Device *binc_create_device(const char *path, Adapter *adapter) {
+    Device *device = g_new0(Device, 1);
+    binc_init_device(device);
+
+    device->path = g_strdup(path);
+    device->adapter = adapter;
+    device->connection = binc_adapter_get_dbus_connection(adapter);
+    return device;
 }
 
 void binc_device_free_uuids(Device *device) {
@@ -135,8 +139,6 @@ void binc_device_free(Device *device) {
     // Free strings
     g_free((char *) device->path);
     device->path = NULL;
-    g_free((char *) device->adapter_path);
-    device->adapter_path = NULL;
     g_free((char *) device->address_type);
     device->address_type = NULL;
     g_free((char *) device->address);
@@ -478,7 +480,7 @@ void binc_device_connect(Device *device) {
     // Don't do anything if we are not disconnected
     if (device->connection_state != DISCONNECTED) return;
 
-    log_debug(TAG, "Connecting to '%s' (%s)", device->name, device->address);
+    log_debug(TAG, "Connecting to '%s' (%s) (%s)", device->name, device->address, device->paired ? "BONDED" : "BONE NONE");
 
     device->connection_state = CONNECTING;
     device->device_prop_changed = g_dbus_connection_signal_subscribe(device->connection,
@@ -655,22 +657,6 @@ void binc_device_set_alias(Device *device, const char *alias) {
     device->alias = g_strdup(alias);
 }
 
-const char *binc_device_get_adapter_path(Device *device) {
-    g_assert(device != NULL);
-    return device->adapter_path;
-}
-
-void binc_device_set_adapter_path(Device *device, const char *adapter_path) {
-    g_assert(device != NULL);
-    g_assert(adapter_path != NULL);
-
-    if (device->adapter_path != NULL) {
-        g_free((char *) device->adapter_path);
-    }
-    device->adapter_path = g_strdup(adapter_path);
-}
-
-
 const char *binc_device_get_name(Device *device) {
     g_assert(device != NULL);
     return device->name;
@@ -790,4 +776,9 @@ BondingState binc_device_get_bonding_state(Device *device) {
 void binc_device_set_bonding_state(Device *device, BondingState bonding_state) {
     g_assert(device != NULL);
     device->bondingState = bonding_state;
+}
+
+Adapter* binc_device_get_adapter(Device *device) {
+    g_assert(device != NULL);
+    return device->adapter;
 }

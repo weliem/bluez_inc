@@ -38,7 +38,7 @@ void on_connection_state_changed(Device *device) {
     ConnectionState state = binc_device_get_connection_state(device);
     log_debug(TAG, "'%s' %s", binc_device_get_name(device), state ? "connected" : "disconnected");
     if (state == DISCONNECTED) {
-        binc_adapter_remove_device(default_adapter, device);
+        //binc_adapter_remove_device(default_adapter, device);
     } else if (state == CONNECTED) {
         binc_adapter_stop_discovery(default_adapter);
     }
@@ -154,7 +154,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char *name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "FT95")) {
+    if (name != NULL && g_str_has_prefix(name, "Philips")) {
         //binc_adapter_stop_discovery(adapter);
         binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_register_services_resolved_callback(device, &on_services_resolved);
