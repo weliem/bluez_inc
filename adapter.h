@@ -14,7 +14,7 @@ typedef enum DiscoveryState {
 
 typedef void (*AdapterDiscoveryResultCallback)(Adapter *adapter, Device *device);
 
-typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter);
+typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter, GError *error);
 
 typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter);
 

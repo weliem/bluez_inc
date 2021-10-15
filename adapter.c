@@ -116,7 +116,7 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
         if (!g_strcmp0(key, "Discovering")) {
             adapter->discovery_state = g_variant_get_boolean(value);
             if (adapter->discoveryStateCallback != NULL) {
-                adapter->discoveryStateCallback(adapter);
+                adapter->discoveryStateCallback(adapter, NULL);
             }
         }
     }
@@ -613,6 +613,9 @@ static void binc_internal_start_discovery_callback(GObject *source_object, GAsyn
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartDiscovery", error->code, error->message);
+        if (adapter->discoveryStateCallback != NULL) {
+            adapter->discoveryStateCallback(adapter, error);
+        }
         g_clear_error(&error);
     }
 
@@ -650,6 +653,9 @@ static void binc_internal_stop_discovery_callback(GObject *source_object, GAsync
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "StopDiscovery", error->code, error->message);
+        if (adapter->discoveryStateCallback != NULL) {
+            adapter->discoveryStateCallback(adapter, error);
+        }
         g_clear_error(&error);
     }
 

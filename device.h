@@ -10,7 +10,7 @@
 #include "forward_decl.h"
 #include "characteristic.h"
 
-typedef void (*ConnectionStateChangedCallback)(Device *device);
+typedef void (*ConnectionStateChangedCallback)(Device *device, GError *error);
 
 typedef enum ConnectionState {
     DISCONNECTED = 0, CONNECTED = 1, CONNECTING = 2, DISCONNECTING = 3
@@ -44,9 +44,9 @@ void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callb
 
 void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChangedCallback callback);
 
-void binc_device_register_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
+void binc_device_set_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 
-void binc_device_register_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback);
+void binc_device_set_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback);
 
 Characteristic *
 binc_device_get_characteristic(Device *device, const char *service_uuid, const char *characteristic_uuid);

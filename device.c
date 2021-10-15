@@ -375,7 +375,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
 
     log_debug(TAG, "found %d services", g_hash_table_size(device->services));
     if (device->services_resolved_callback != NULL) {
-        device->services_resolved_callback(device);
+        device->services_resolved_callback(device, NULL);
     }
 }
 
@@ -425,7 +425,7 @@ static void binc_device_changed(GDBusConnection *conn,
             device->connection_state = g_variant_get_boolean(value);
             log_debug(TAG, "Connection state: %s", connection_state_names[device->connection_state]);
             if (device->connection_state_callback != NULL) {
-                device->connection_state_callback(device);
+                device->connection_state_callback(device, NULL);
             }
             if (device->connection_state == DISCONNECTED) {
                 // Unsubscribe properties changed signal
@@ -465,7 +465,10 @@ static void binc_internal_device_connect(GObject *source_object, GAsyncResult *r
     GVariant *value = g_dbus_connection_call_finish(device->connection, res, &error);
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "Connect", error->code, error->message);
+        log_debug(TAG, "Connect failed (error %d: %s)", error->code, error->message);
+        if (device->connection_state_callback != NULL) {
+            device->connection_state_callback(device, error);
+        }
         g_clear_error(&error);
     }
 
@@ -599,14 +602,14 @@ void binc_device_disconnect(Device *device) {
                            device);
 }
 
-void binc_device_register_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback) {
+void binc_device_set_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
 
     device->connection_state_callback = callback;
 }
 
-void binc_device_register_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback) {
+void binc_device_set_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
 

@@ -5,7 +5,6 @@ The goal of this library is to provide a clean C interface to Bluez, without nee
 As a result, it looks like a 'normal' C library for Bluetooth!
 
 Todo
-* Implement Pair and CancelPairing on Device
 * Introduce filter object for more discovery filtering options
 * Add more device property functions
 * Check for memory leaks with valgrind
@@ -46,8 +45,8 @@ void on_scan_result(Adapter *adapter, Device *device) {
     const char* name = binc_device_get_name(device);
     if (name != NULL && g_str_has_prefix(name, "Polar")) {
         binc_adapter_stop_discovery(adapter);
-        binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
-        binc_device_register_services_resolved_callback(device, &on_services_resolved);
+        binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
+        binc_device_set_services_resolved_callback(device, &on_services_resolved);
         binc_device_set_read_char_callback(device, &on_read);
         binc_device_set_write_char_callback(device, &on_write);
         binc_device_set_notify_char_callback(device, &on_notify);
