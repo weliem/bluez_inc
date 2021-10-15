@@ -43,7 +43,7 @@ struct binc_device {
     // Internal
     guint device_prop_changed;
     ConnectionStateChangedCallback connection_state_callback;
-    ConnectionStateChangedCallback services_resolved_callback;
+    ServicesResolvedCallback services_resolved_callback;
     GHashTable *services;
     GHashTable *characteristics;
 
@@ -96,6 +96,7 @@ void binc_device_free_uuids(Device *device) {
         }
         g_list_free(device->uuids);
     }
+    device->uuids = NULL;
 }
 
 void binc_device_free_manufacturer_data(Device *device) {
@@ -110,6 +111,7 @@ void binc_device_free_manufacturer_data(Device *device) {
         }
         g_hash_table_destroy(device->manufacturer_data);
     }
+    device->manufacturer_data = NULL;
 }
 
 void binc_device_free_service_data(Device *device) {
@@ -124,6 +126,7 @@ void binc_device_free_service_data(Device *device) {
         }
         g_hash_table_destroy(device->service_data);
     }
+    device->service_data = NULL;
 }
 
 void binc_device_free(Device *device) {
@@ -160,6 +163,7 @@ void binc_device_free(Device *device) {
         }
         g_hash_table_destroy(device->characteristics);
     }
+    device->characteristics = NULL;
 
     // Free services hash table
     if (device->services != NULL) {
@@ -173,6 +177,7 @@ void binc_device_free(Device *device) {
         }
         g_hash_table_destroy(device->services);
     }
+    device->services = NULL;
 
     // Free manufacturer data hash table
     binc_device_free_manufacturer_data(device);
@@ -277,6 +282,13 @@ static void binc_on_characteristic_notification_state_changed(Characteristic *ch
     }
 }
 
+static void binc_device_internal_set_conn_state(Device *device, ConnectionState state, GError *error) {
+    device->connection_state = state;
+    if (device->connection_state_callback != NULL) {
+        device->connection_state_callback(device, state, error);
+    }
+}
+
 static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     Device *device = (Device *) user_data;
@@ -375,7 +387,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
 
     log_debug(TAG, "found %d services", g_hash_table_size(device->services));
     if (device->services_resolved_callback != NULL) {
-        device->services_resolved_callback(device, NULL);
+        device->services_resolved_callback(device);
     }
 }
 
@@ -422,11 +434,7 @@ static void binc_device_changed(GDBusConnection *conn,
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
         if (g_strcmp0(key, "Connected") == 0) {
-            device->connection_state = g_variant_get_boolean(value);
-            log_debug(TAG, "Connection state: %s", connection_state_names[device->connection_state]);
-            if (device->connection_state_callback != NULL) {
-                device->connection_state_callback(device, NULL);
-            }
+            binc_device_internal_set_conn_state(device, g_variant_get_boolean(value), NULL);
             if (device->connection_state == DISCONNECTED) {
                 // Unsubscribe properties changed signal
                 g_dbus_connection_signal_unsubscribe(device->connection, device->device_prop_changed);
@@ -437,6 +445,10 @@ static void binc_device_changed(GDBusConnection *conn,
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
             if (device->services_resolved == TRUE && device->bondingState != BONDING) {
                 binc_collect_gatt_tree(device);
+            }
+
+            if (device->services_resolved == FALSE) {
+                binc_device_internal_set_conn_state(device, DISCONNECTING, NULL);
             }
         } else if (g_strcmp0(key, "Paired") == 0) {
             device->paired = g_variant_get_boolean(value);
@@ -466,9 +478,7 @@ static void binc_internal_device_connect(GObject *source_object, GAsyncResult *r
 
     if (error != NULL) {
         log_debug(TAG, "Connect failed (error %d: %s)", error->code, error->message);
-        if (device->connection_state_callback != NULL) {
-            device->connection_state_callback(device, error);
-        }
+        binc_device_internal_set_conn_state(device, DISCONNECTED, error);
         g_clear_error(&error);
     }
 
@@ -502,9 +512,8 @@ void binc_device_connect(Device *device) {
     log_debug(TAG, "Connecting to '%s' (%s) (%s)", device->name, device->address,
               device->paired ? "BONDED" : "BONE NONE");
 
-    device->connection_state = CONNECTING;
+    binc_device_internal_set_conn_state(device, CONNECTING, NULL);
     subscribe_prop_changed(device);
-
     g_dbus_connection_call(device->connection,
                            "org.bluez",
                            device->path,
@@ -528,6 +537,7 @@ static void binc_internal_device_pair(GObject *source_object, GAsyncResult *res,
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "Pair", error->code, error->message);
+        binc_device_internal_set_conn_state(device, DISCONNECTED, error);
         g_clear_error(&error);
     }
 
@@ -540,12 +550,15 @@ void binc_device_pair(Device *device) {
     g_assert(device != NULL);
     log_debug(TAG, "pairing device");
 
+    if (device->connection_state == DISCONNECTING) {
+        return;
+    }
+
     if (device->connection_state == DISCONNECTED) {
-        device->connection_state = CONNECTING;
+        binc_device_internal_set_conn_state(device, CONNECTING, NULL);
     }
 
     subscribe_prop_changed(device);
-
     g_dbus_connection_call(device->connection,
                            "org.bluez",
                            device->path,
@@ -558,7 +571,6 @@ void binc_device_pair(Device *device) {
                            NULL,
                            (GAsyncReadyCallback) binc_internal_device_pair,
                            device);
-
 }
 
 static void binc_internal_device_disconnect(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -570,6 +582,7 @@ static void binc_internal_device_disconnect(GObject *source_object, GAsyncResult
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "Disconnect", error->code, error->message);
+        binc_device_internal_set_conn_state(device, CONNECTED, error);
         g_clear_error(&error);
     }
 
@@ -582,12 +595,12 @@ void binc_device_disconnect(Device *device) {
     g_assert(device != NULL);
     g_assert(device->path != NULL);
 
-    // Don't do anything if we are not disconnected
-    if (device->connection_state != DISCONNECTED) return;
+    // Don't do anything if we are not connected
+    if (device->connection_state != CONNECTED) return;
 
     log_debug(TAG, "Disconnecting '%s' (%s)", device->name, device->address);
 
-    device->connection_state = DISCONNECTING;
+    binc_device_internal_set_conn_state(device, DISCONNECTING, NULL);
     g_dbus_connection_call(device->connection,
                            "org.bluez",
                            device->path,
@@ -609,7 +622,7 @@ void binc_device_set_connection_state_change_callback(Device *device, Connection
     device->connection_state_callback = callback;
 }
 
-void binc_device_set_services_resolved_callback(Device *device, ConnectionStateChangedCallback callback) {
+void binc_device_set_services_resolved_callback(Device *device, ServicesResolvedCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
 
@@ -663,6 +676,11 @@ void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChang
 ConnectionState binc_device_get_connection_state(Device *device) {
     g_assert(device != NULL);
     return device->connection_state;
+}
+
+const char* binc_device_get_connection_state_name(Device *device) {
+    g_assert(device != NULL);
+    return connection_state_names[device->connection_state];
 }
 
 const char *binc_device_get_address(Device *device) {

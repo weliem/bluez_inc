@@ -34,19 +34,16 @@
 Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 
-void on_connection_state_changed(Device *device,GError *error) {
-    ConnectionState state = binc_device_get_connection_state(device);
+void on_connection_state_changed(Device *device, ConnectionState state, GError *error) {
     if (error != NULL) {
         log_debug(TAG, "failed (error %d: %s)", error->code, error->message);
         return;
     }
 
-    log_debug(TAG, "'%s' %s", binc_device_get_name(device), state ? "connected" : "disconnected");
-//    if (state == DISCONNECTED) {
-//        //binc_adapter_remove_device(default_adapter, device);
-//    } else if (state == CONNECTED) {
-//        binc_adapter_stop_discovery(default_adapter);
-//    }
+    log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device), binc_device_get_connection_state_name(device), state);
+    if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
+        binc_adapter_remove_device(default_adapter, device);
+    }
 }
 
 void on_notification_state_changed(Characteristic *characteristic, GError *error) {
@@ -84,10 +81,17 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
     }
 
     if (byteArray != NULL) {
+
         if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
-            log_debug(TAG, "manufacturer = %s", byteArray->data);
+            Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+            GString *manufacturer = parser_get_string(parser);
+            log_debug(TAG, "manufacturer = %s", manufacturer->str);
+            g_string_free(manufacturer, TRUE);
         } else if (g_str_equal(uuid, MODEL_CHAR)) {
-            log_debug(TAG, "model = %s", byteArray->data);
+            Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+            GString *model = parser_get_string(parser);
+            log_debug(TAG, "model = %s", model->str);
+            g_string_free(model, TRUE);
         }
     }
 }
@@ -101,7 +105,7 @@ void on_write(Characteristic *characteristic, GError *error) {
     }
 }
 
-void on_services_resolved(Device *device, GError *error) {
+void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", binc_device_get_name(device));
     Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL) {
@@ -222,7 +226,7 @@ int main(void) {
     }
 
     // Bail out after 10 seconds
-    g_timeout_add_seconds(60, callback, loop);
+    g_timeout_add_seconds(120, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);

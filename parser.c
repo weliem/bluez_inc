@@ -129,6 +129,11 @@ float parser_get_float(Parser *parser)
     return (float) output;
 }
 
+GString *parser_get_string(Parser *parser) {
+    GString *result = g_string_new_len(parser->bytes->data, parser->bytes->len);
+    return result;
+}
+
 GByteArray* binc_get_current_time() {
     GByteArray *byteArray = g_byte_array_new();
 

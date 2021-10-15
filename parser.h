@@ -35,4 +35,6 @@ float parser_get_float(Parser *parser);
 
 GByteArray *binc_get_current_time();
 
+GString *parser_get_string(Parser *parser);
+
 #endif //TEST_PARSER_H

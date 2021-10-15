@@ -52,6 +52,7 @@ static void binc_characteristic_free_flags(Characteristic *characteristic) {
         }
         g_list_free(characteristic->flags);
     }
+    characteristic->flags = NULL;
 }
 
 void binc_characteristic_free(Characteristic *characteristic) {
@@ -63,9 +64,13 @@ void binc_characteristic_free(Characteristic *characteristic) {
     }
 
     g_free((char *) characteristic->uuid);
+    characteristic->uuid = NULL;
     g_free((char *) characteristic->path);
+    characteristic->path = NULL;
     g_free((char *) characteristic->service_path);
+    characteristic->service_path = NULL;
     g_free((char *) characteristic->service_uuid);
+    characteristic->service_uuid = NULL;
 
     // Free flags
     binc_characteristic_free_flags(characteristic);
