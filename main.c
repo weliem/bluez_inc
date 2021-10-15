@@ -81,18 +81,17 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
     }
 
     if (byteArray != NULL) {
-
+        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
         if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
-            Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
             GString *manufacturer = parser_get_string(parser);
             log_debug(TAG, "manufacturer = %s", manufacturer->str);
             g_string_free(manufacturer, TRUE);
         } else if (g_str_equal(uuid, MODEL_CHAR)) {
-            Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
             GString *model = parser_get_string(parser);
             log_debug(TAG, "model = %s", model->str);
             g_string_free(model, TRUE);
         }
+        parser_free(parser);
     }
 }
 
