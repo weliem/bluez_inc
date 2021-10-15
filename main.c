@@ -34,14 +34,19 @@
 Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 
-void on_connection_state_changed(Device *device) {
+void on_connection_state_changed(Device *device,GError *error) {
     ConnectionState state = binc_device_get_connection_state(device);
-    log_debug(TAG, "'%s' %s", binc_device_get_name(device), state ? "connected" : "disconnected");
-    if (state == DISCONNECTED) {
-        //binc_adapter_remove_device(default_adapter, device);
-    } else if (state == CONNECTED) {
-        binc_adapter_stop_discovery(default_adapter);
+    if (error != NULL) {
+        log_debug(TAG, "failed (error %d: %s)", error->code, error->message);
+        return;
     }
+
+    log_debug(TAG, "'%s' %s", binc_device_get_name(device), state ? "connected" : "disconnected");
+//    if (state == DISCONNECTED) {
+//        //binc_adapter_remove_device(default_adapter, device);
+//    } else if (state == CONNECTED) {
+//        binc_adapter_stop_discovery(default_adapter);
+//    }
 }
 
 void on_notification_state_changed(Characteristic *characteristic, GError *error) {
@@ -96,7 +101,7 @@ void on_write(Characteristic *characteristic, GError *error) {
     }
 }
 
-void on_services_resolved(Device *device) {
+void on_services_resolved(Device *device, GError *error) {
     log_debug(TAG, "'%s' services resolved", binc_device_get_name(device));
     Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL) {
@@ -154,10 +159,10 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char *name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "Philips")) {
-        //binc_adapter_stop_discovery(adapter);
-        binc_device_register_connection_state_change_callback(device, &on_connection_state_changed);
-        binc_device_register_services_resolved_callback(device, &on_services_resolved);
+    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
+        binc_adapter_stop_discovery(adapter);
+        binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
+        binc_device_set_services_resolved_callback(device, &on_services_resolved);
         binc_device_set_read_char_callback(device, &on_read);
         binc_device_set_write_char_callback(device, &on_write);
         binc_device_set_notify_char_callback(device, &on_notify);
@@ -166,7 +171,11 @@ void on_scan_result(Adapter *adapter, Device *device) {
     }
 }
 
-void on_discovery_state_changed(Adapter *adapter) {
+void on_discovery_state_changed(Adapter *adapter, GError *error) {
+    if (error != NULL) {
+        log_debug(TAG, "discovery error (error %d: %s)", error->code, error->message);
+        return;
+    }
     log_debug(TAG, "discovery '%s'", binc_adapter_get_discovery_state(adapter) ? "on" : "off");
 }
 
