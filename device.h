@@ -34,6 +34,8 @@ char *binc_device_to_string(Device *device);
 
 void binc_device_connect(Device *device);
 
+void binc_device_pair(Device *device);
+
 void binc_device_set_read_char_callback(Device *device, OnReadCallback callback);
 
 void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback);
