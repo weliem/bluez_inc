@@ -19,18 +19,17 @@ typedef enum BondingState {
 } BondingState;
 
 typedef void (*ConnectionStateChangedCallback)(Device *device, ConnectionState state, GError *error);
+
 typedef void (*ServicesResolvedCallback)(Device *device);
 
 
 Device *binc_create_device(const char *path, Adapter *adapter);
 
-void binc_init_device(Device *device);
-
 void binc_device_free(Device *device);
 
 GDBusConnection *binc_device_get_dbus_connection(Device *device);
 
-Adapter* binc_device_get_adapter(Device *device);
+Adapter *binc_device_get_adapter(Device *device);
 
 char *binc_device_to_string(Device *device);
 
@@ -55,7 +54,7 @@ binc_device_get_characteristic(Device *device, const char *service_uuid, const c
 
 ConnectionState binc_device_get_connection_state(Device *device);
 
-const char* binc_device_get_connection_state_name(Device *device);
+const char *binc_device_get_connection_state_name(Device *device);
 
 const char *binc_device_get_address(Device *device);
 

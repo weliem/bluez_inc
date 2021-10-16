@@ -130,6 +130,9 @@ void on_services_resolved(Device *device) {
             binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
             g_byte_array_free(timeBytes, TRUE);
         }
+        if (binc_characteristic_supports_notify(current_time)) {
+            binc_characteristic_start_notify(current_time);
+        }
     }
 
     Characteristic *bpm = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
@@ -164,6 +167,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     const char *name = binc_device_get_name(device);
     if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
         binc_adapter_stop_discovery(adapter);
+
         binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_set_services_resolved_callback(device, &on_services_resolved);
         binc_device_set_read_char_callback(device, &on_read);
@@ -174,16 +178,16 @@ void on_scan_result(Adapter *adapter, Device *device) {
     }
 }
 
-void on_discovery_state_changed(Adapter *adapter, GError *error) {
+void on_discovery_state_changed(Adapter *adapter, DiscoveryState state, GError *error) {
     if (error != NULL) {
         log_debug(TAG, "discovery error (error %d: %s)", error->code, error->message);
         return;
     }
-    log_debug(TAG, "discovery '%s'", binc_adapter_get_discovery_state(adapter) ? "on" : "off");
+    log_debug(TAG, "discovery '%s'", state ? "on" : "off");
 }
 
-void on_powered_state_changed(Adapter *adapter) {
-    log_debug(TAG, "powered '%s'", binc_adapter_get_powered_state(adapter) ? "on" : "off");
+void on_powered_state_changed(Adapter *adapter, gboolean state) {
+    log_debug(TAG, "powered '%s'", state ? "on" : "off");
 }
 
 gboolean callback(gpointer data) {
@@ -208,14 +212,18 @@ int main(void) {
     if (default_adapter != NULL) {
         log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
 
+        // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
         binc_agent_set_request_authorization_callback(agent, &on_request_authorization);
         binc_agent_set_request_passkey_callback(agent, &on_request_passkey);
 
+        // Make sure the adapter is on
         binc_adapter_set_powered_state_callback(default_adapter, &on_powered_state_changed);
-        binc_adapter_power_on(default_adapter);
+        if (!binc_adapter_get_powered_state(default_adapter)) {
+            binc_adapter_power_on(default_adapter);
+        }
 
-        // Start a scan
+        // Set discovery callbacks and start discovery
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
         binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(default_adapter, -100);
@@ -224,7 +232,7 @@ int main(void) {
         log_debug("MAIN", "No default_adapter found");
     }
 
-    // Bail out after 10 seconds
+    // Bail out after some time
     g_timeout_add_seconds(120, callback, loop);
 
     // Start the mainloop

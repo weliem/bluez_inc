@@ -14,9 +14,9 @@ typedef enum DiscoveryState {
 
 typedef void (*AdapterDiscoveryResultCallback)(Adapter *adapter, Device *device);
 
-typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter, GError *error);
+typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter, DiscoveryState state, GError *error);
 
-typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter);
+typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter, gboolean state);
 
 
 Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection);
@@ -31,13 +31,13 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
 
 void binc_adapter_remove_device(Adapter *adapter, Device *device);
 
-Device* binc_adapter_get_device_by_path(Adapter *adapter, const char* path);
+Device *binc_adapter_get_device_by_path(Adapter *adapter, const char *path);
 
 void binc_adapter_power_on(Adapter *adapter);
 
 void binc_adapter_power_off(Adapter *adapter);
 
-char* binc_adapter_get_path(Adapter *adapter);
+char *binc_adapter_get_path(Adapter *adapter);
 
 DiscoveryState binc_adapter_get_discovery_state(Adapter *adapter);
 

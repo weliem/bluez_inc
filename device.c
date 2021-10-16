@@ -53,7 +53,7 @@ struct binc_device {
     OnNotifyingStateChangedCallback on_notify_state_callback;
 };
 
-void binc_init_device(Device *device) {
+static void binc_init_device(Device *device) {
     device->adapter = NULL;
     device->address = NULL;
     device->address_type = NULL;
@@ -137,6 +137,7 @@ void binc_device_free(Device *device) {
     // Unsubscribe properties changed if needed
     if (device->device_prop_changed != 0) {
         g_dbus_connection_signal_unsubscribe(device->connection, device->device_prop_changed);
+        device->device_prop_changed = 0;
     }
 
     // Free strings

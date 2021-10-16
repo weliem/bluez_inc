@@ -34,7 +34,7 @@ struct binc_adapter {
     GHashTable *devices_cache;
 };
 
-void init_adapter(Adapter *adapter) {
+static void init_adapter(Adapter *adapter) {
     g_assert(adapter != NULL);
 
     adapter->address = NULL;
@@ -110,13 +110,13 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
         if (!g_strcmp0(key, "Powered")) {
             adapter->powered = g_variant_get_boolean(value);
             if (adapter->poweredStateCallback != NULL) {
-                adapter->poweredStateCallback(adapter);
+                adapter->poweredStateCallback(adapter, adapter->powered);
             }
         }
         if (!g_strcmp0(key, "Discovering")) {
             adapter->discovery_state = g_variant_get_boolean(value);
             if (adapter->discoveryStateCallback != NULL) {
-                adapter->discoveryStateCallback(adapter, NULL);
+                adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
             }
         }
     }
@@ -442,9 +442,13 @@ void setup_signal_subscribers(Adapter *adapter) {
 
 void remove_signal_subscribers(Adapter *adapter) {
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->device_prop_changed);
+    adapter->device_prop_changed = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->adapter_prop_changed);
+    adapter->device_prop_changed = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_added);
+    adapter->iface_added = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_removed);
+    adapter->iface_removed = 0;
 }
 
 Adapter *create_adapter(GDBusConnection *connection, const char *path) {
@@ -477,9 +481,12 @@ void binc_adapter_free(Adapter *adapter) {
         }
         g_hash_table_destroy(adapter->devices_cache);
     }
+    adapter->devices_cache = NULL;
 
     g_free(adapter->path);
+    adapter->path = NULL;
     g_free(adapter->address);
+    adapter->address = NULL;
     g_free(adapter);
 }
 
@@ -613,8 +620,9 @@ static void binc_internal_start_discovery_callback(GObject *source_object, GAsyn
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartDiscovery", error->code, error->message);
+        adapter->discovery_state = STOPPED;
         if (adapter->discoveryStateCallback != NULL) {
-            adapter->discoveryStateCallback(adapter, error);
+            adapter->discoveryStateCallback(adapter, adapter->discovery_state ,error);
         }
         g_clear_error(&error);
     }
@@ -654,7 +662,7 @@ static void binc_internal_stop_discovery_callback(GObject *source_object, GAsync
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "StopDiscovery", error->code, error->message);
         if (adapter->discoveryStateCallback != NULL) {
-            adapter->discoveryStateCallback(adapter, error);
+            adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
         g_clear_error(&error);
     }

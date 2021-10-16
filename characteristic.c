@@ -61,6 +61,7 @@ void binc_characteristic_free(Characteristic *characteristic) {
     // Unsubscribe signal
     if (characteristic->notify_signal != 0) {
         g_dbus_connection_signal_unsubscribe(characteristic->connection, characteristic->notify_signal);
+        characteristic->notify_signal = 0;
     }
 
     g_free((char *) characteristic->uuid);
