@@ -26,8 +26,6 @@
 #define GATT_CHR_PROP_AUTH                    0x40
 #define GATT_CHR_PROP_EXT_PROP                0x80
 
-typedef struct binc_characteristic Characteristic;
-
 
 typedef enum WriteType {
     WITH_RESPONSE = 0, WITHOUT_RESPONSE = 1

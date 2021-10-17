@@ -62,6 +62,7 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser_set_offset(parser, 1);
+
     if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
         float value = parser_get_float(parser);
         log_debug(TAG, "temperature %.1f", value);

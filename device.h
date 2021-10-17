@@ -49,6 +49,10 @@ void binc_device_set_connection_state_change_callback(Device *device, Connection
 
 void binc_device_set_services_resolved_callback(Device *device, ServicesResolvedCallback callback);
 
+GList *binc_device_get_services(Device *device);
+
+Service *binc_device_get_service(Device *device, const char *service_uuid);
+
 Characteristic *
 binc_device_get_characteristic(Device *device, const char *service_uuid, const char *characteristic_uuid);
 

@@ -7,5 +7,7 @@
 
 typedef struct binc_adapter Adapter;
 typedef struct binc_device Device;
+typedef struct binc_service Service;
+typedef struct binc_characteristic Characteristic;
 
 #endif //TEST_FORWARD_DECL_H
