@@ -700,18 +700,22 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
     adapter_call_method(adapter, "RemoveDevice", g_variant_new("(o)", binc_device_get_path(device)));
 }
 
-void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold) {
+void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids) {
     GVariantBuilder *b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(b, "{sv}", "Transport", g_variant_new_string("le"));
     g_variant_builder_add(b, "{sv}", "RSSI", g_variant_new_int16(rssi_threshold));
     g_variant_builder_add(b, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
 
-//    GVariantBuilder *u = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
-//    g_variant_builder_add(u, "s", argv[3]);
-//    g_variant_builder_add(b, "{sv}", "UUIDs", g_variant_builder_end(u));
+    if(service_uuids != NULL && service_uuids->len > 0) {
+        GVariantBuilder *u = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
+        for (int i = 0; i < service_uuids->len; i++) {
+            g_variant_builder_add(u, "s", g_ptr_array_index(service_uuids, i));
+        }
+        g_variant_builder_add(b, "{sv}", "UUIDs", g_variant_builder_end(u));
+        g_variant_builder_unref(u);
+    }
 
     GVariant *device_dict = g_variant_builder_end(b);
-//    g_variant_builder_unref(u);
     g_variant_builder_unref(b);
     adapter_call_method(adapter, "SetDiscoveryFilter", g_variant_new_tuple(&device_dict, 1));
 }

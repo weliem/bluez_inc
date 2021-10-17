@@ -36,7 +36,7 @@ Agent *agent = NULL;
 
 void on_connection_state_changed(Device *device, ConnectionState state, GError *error) {
     if (error != NULL) {
-        log_debug(TAG, "failed (error %d: %s)", error->code, error->message);
+        log_debug(TAG, "(dis)connect failed (error %d: %s)", error->code, error->message);
         return;
     }
 
@@ -224,10 +224,16 @@ int main(void) {
             binc_adapter_power_on(default_adapter);
         }
 
+        // Build UUID array so we can use it in the discovery filter
+        GPtrArray *service_uuids = g_ptr_array_new ();
+        g_ptr_array_add(service_uuids, HTS_SERVICE);
+        g_ptr_array_add(service_uuids, BLP_SERVICE);
+
         // Set discovery callbacks and start discovery
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
         binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
-        binc_adapter_set_discovery_filter(default_adapter, -100);
+        binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
+        g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);
     } else {
         log_debug("MAIN", "No default_adapter found");

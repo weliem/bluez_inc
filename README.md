@@ -4,12 +4,6 @@
 The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood. 
 As a result, it looks like a 'normal' C library for Bluetooth!
 
-Todo
-* Introduce filter object for more discovery filtering options
-* Add more device property functions
-* Check for memory leaks with valgrind
-* Use 'src' and 'include' folders in project
-* Make it a library
 
 ## Discovering devices
 
@@ -33,7 +27,7 @@ int main(void) {
     // ...
     
     binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
-    binc_adapter_set_discovery_filter(default_adapter, -100);
+    binc_adapter_set_discovery_filter(default_adapter, -100, NULL);
     binc_adapter_start_discovery(default_adapter);
 }
 ```
@@ -62,13 +56,29 @@ You connect by calling `binc_device_connect(device)`. Then the following sequenc
 * when the device is connected the *connection_state* changes and your registered callback will be called. However, you cannot use the device yet because the service discovery has not yet been done.
 * Bluez will then start the service discovery automatically and when it finishes, the *services_resolved* callback is called. So the *service_resolved* callback is the right place to start reading and writing characteristics or starting notifications. 
 
-If a connection attempt fails or times out after 25 seconds, the *connection_state* callback is called again.
+```c
+void on_connection_state_changed(Device *device, ConnectionState state, GError *error) {
+    if (error != NULL) {
+        log_debug(TAG, "(dis)connect failed (error %d: %s)", error->code, error->message);
+        return;
+    }
+
+    log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device), binc_device_get_connection_state_name(device), state);
+    if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
+        binc_adapter_remove_device(default_adapter, device);
+    }
+}
+```
+
+If a connection attempt fails or times out after 25 seconds, the *connection_state* callback is called with an error.
 
 To disconnect a connected device, call `binc_device_disconnect(device)` and the device will be disconnected. Again, the *connection_state* callback will be called. If you want to remove the device from the DBus after disconnecting, you call `binc_adapter_remove_device(adapter, device)`. 
 
-## Reading an writing characteristics
+## Reading and writing characteristics
 
-We can start using characteristics once the service discovery has been completed. Typically, we read some characteristics like its model and manufacturer. In order to read orwrite, you first need to get the **Characteristic** by using `binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR)`. You need to provide the **service UUID** and **characteristic UUID** to find a characteristic:
+We can start using characteristics once the service discovery has been completed. 
+Typically, we read some characteristics like its model and manufacturer. In order to read or write, you first need to get the **Characteristic** by using `binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR)`. 
+You need to provide the **service UUID** and **characteristic UUID** to find a characteristic:
 
 ```c
 void on_services_resolved(Device *device) {
@@ -84,7 +94,7 @@ void on_services_resolved(Device *device) {
 }
 ```
 
-Reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_callback(device, &on_read)`. 
+Like all BLE operations, reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_callback(device, &on_read)`. 
 
 ```c
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {

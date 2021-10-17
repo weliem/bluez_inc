@@ -27,7 +27,7 @@ void binc_adapter_start_discovery(Adapter *adapter);
 
 void binc_adapter_stop_discovery(Adapter *adapter);
 
-void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold);
+void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids);
 
 void binc_adapter_remove_device(Adapter *adapter, Device *device);
 
