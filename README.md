@@ -161,6 +161,43 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     parser_free(parser);
 }
 ```
+## Bonding
+Bonding is possible with this library. It supports 'confirmation' bonding (JustWorks) and PIN code bonding (passphrase).
+First you need to register an Agent and set the callbacks for these 2 types of bonding. When creating the agent you can also choose the IO capabilities for your applications, i.e. DISPLAY_ONLY, DISPLAY_YES_NO, KEYBOARD_ONLY, NO_INPUT_NO_OUTPUT, KEYBOARD_DISPLAY. Note that this will affect the bonding behavior.
+
+```c
+int main(void) {
+
+    // ...
+        
+    agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
+    binc_agent_set_request_authorization_callback(agent, &on_request_authorization);
+    binc_agent_set_request_passkey_callback(agent, &on_request_passkey);
+}
+```
+
+When bonding is starting, one of your callbacks will be called and you should handle the request. In the case of 'confirmation' bonding you either accept (TRUE) or reject (FALSE) the request for bonding:
+
+```c
+gboolean on_request_authorization(Device *device) {
+    log_debug(TAG, "requesting authorization for '%s", binc_device_get_name(device));
+    return TRUE;
+}
+```
+
+In the case of PIN code pairing you will have to provide a PIN code, which you probably need to ask to the user of your application:
+
+```c
+guint32 on_request_passkey(Device *device) {
+    guint32 pass = 000000;
+    log_debug(TAG, "requesting passkey for '%s", binc_device_get_name(device));
+    log_debug(TAG, "Enter 6 digit pin code: ");
+    fscanf(stdin, "%d", &pass);
+    return pass;
+}
+```
+
+Note that this type of bonding requires a **6 digit pin** code!
 
 ## Bluez documentation
 
