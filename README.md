@@ -199,6 +199,8 @@ guint32 on_request_passkey(Device *device) {
 
 Note that this type of bonding requires a **6 digit pin** code!
 
+If you want to initiate bonding yourself, you can call `binc_device_pair()`. The same callbacks will be called for dealing with authorization or PIN codes.
+
 ## Bluez documentation
 
 The official Bluez documentation is a bit sparse but can be found here: 
