@@ -306,12 +306,13 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
                 g_byte_array_free(byteArray, TRUE);
             }
         }
+        g_variant_unref(value);
     }
 
     if (properties != NULL)
         g_variant_iter_free(properties);
-    if (value != NULL)
-        g_variant_unref(value);
+    if (unknown != NULL)
+        g_variant_iter_free(unknown);
 }
 
 static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult *res, gpointer user_data) {
