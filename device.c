@@ -190,6 +190,13 @@ void binc_device_free(Device *device) {
 
     // Free uuids
     binc_device_free_uuids(device);
+
+    // Free services list
+    if (device->services_list != NULL) {
+        g_list_free(device->services_list);
+    }
+    device->services_list = NULL;
+
     g_free(device);
 }
 
@@ -475,6 +482,8 @@ static void binc_device_changed(GDBusConnection *conn,
     done:
     if (properties != NULL)
         g_variant_iter_free(properties);
+    if (unknown != NULL)
+        g_variant_iter_free(unknown);
 //    if (value != NULL)
 //        g_variant_unref(value);
 }
