@@ -18,7 +18,11 @@ typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter, DiscoveryS
 
 typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter, gboolean state);
 
-
+/**
+ * Get the default bluetooth adapter
+ * @param dbusConnection
+ * @return an adapter object or NULL if no adapters were found
+ */
 Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection);
 
 void binc_adapter_free(Adapter *adapter);

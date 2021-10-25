@@ -119,13 +119,14 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
                 adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
             }
         }
+        g_variant_unref(value);
     }
 
     done:
     if (properties != NULL)
         g_variant_iter_free(properties);
-    if (value != NULL)
-        g_variant_unref(value);
+    if (unknown != NULL)
+        g_variant_iter_free(unknown);
 }
 
 static void bluez_device_disappeared(GDBusConnection *sig,
@@ -278,12 +279,12 @@ static void bluez_device_appeared(GDBusConnection *sig,
             Device *device = binc_create_device(object, adapter);
 
             const gchar *property_name;
-            GVariantIter i;
+            GVariantIter iter;
             GVariant *prop_val;
-            g_variant_iter_init(&i, properties);
-            while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val)) {
-                //               bluez_property_value(property_name, prop_val);
+            g_variant_iter_init(&iter, properties);
+            while (g_variant_iter_next(&iter, "{&sv}", &property_name, &prop_val)) {
                 binc_device_update_property(device, property_name, prop_val);
+                g_variant_unref (prop_val);
             }
 
             // Update cache and deliver Device to registered callback
@@ -292,7 +293,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
                 adapter->discoveryResultCallback(adapter, device);
             }
 
-            g_variant_unref(prop_val);
+            //g_variant_unref(prop_val);
         }
         g_variant_unref(properties);
     }

@@ -25,7 +25,9 @@ long long current_timestamp_in_millis() {
  */
 char* current_time_string() {
     GDateTime *now = g_date_time_new_now_local();
-    return g_date_time_format(now, "%F %R:%S");
+    char* time_string = g_date_time_format(now, "%F %R:%S");
+    g_date_time_unref(now);
+    return time_string;
 }
 
 void log_log(const char *tag, const char *level, const char *message) {

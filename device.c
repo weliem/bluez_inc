@@ -217,6 +217,7 @@ char *binc_device_to_string(Device *device) {
             GString *byteArrayString = g_byte_array_as_hex(byteArray);
             gint keyInt = *key;
             g_string_append_printf(manufacturer_data, "%04X -> %s, ", keyInt, byteArrayString->str);
+            g_string_free(byteArrayString, TRUE);
         }
         g_string_truncate(manufacturer_data, manufacturer_data->len - 2);
     }
@@ -232,6 +233,7 @@ char *binc_device_to_string(Device *device) {
             GByteArray *byteArray = (GByteArray *) value;
             GString *byteArrayString = g_byte_array_as_hex(byteArray);
             g_string_append_printf(service_data, "%s -> %s, ", (char *) key, byteArrayString->str);
+            g_string_free(byteArrayString, TRUE);
         }
         g_string_truncate(service_data, service_data->len - 2);
     }
@@ -467,13 +469,14 @@ static void binc_device_changed(GDBusConnection *conn,
                 binc_collect_gatt_tree(device);
             }
         }
+        g_variant_unref(value);
     }
 
     done:
     if (properties != NULL)
         g_variant_iter_free(properties);
-    if (value != NULL)
-        g_variant_unref(value);
+//    if (value != NULL)
+//        g_variant_unref(value);
 }
 
 static void binc_internal_device_connect(GObject *source_object, GAsyncResult *res, gpointer user_data) {
