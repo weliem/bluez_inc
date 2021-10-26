@@ -225,22 +225,22 @@ int main(void) {
         }
 
         // Build UUID array so we can use it in the discovery filter
-        GPtrArray *service_uuids = g_ptr_array_new ();
-        g_ptr_array_add(service_uuids, HTS_SERVICE);
-        g_ptr_array_add(service_uuids, BLP_SERVICE);
+//        GPtrArray *service_uuids = g_ptr_array_new ();
+//        g_ptr_array_add(service_uuids, HTS_SERVICE);
+//        g_ptr_array_add(service_uuids, BLP_SERVICE);
 
         // Set discovery callbacks and start discovery
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
         binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
-        binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
-        g_ptr_array_free(service_uuids, TRUE);
+        binc_adapter_set_discovery_filter(default_adapter, -100, NULL);
+       // g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);
     } else {
         log_debug("MAIN", "No default_adapter found");
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(60, callback, loop);
+    g_timeout_add_seconds(10, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);

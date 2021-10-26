@@ -93,7 +93,7 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
     const char *iface;
-    const char *key;
+    char *key;
     GVariant *value = NULL;
 
     Adapter *adapter = (Adapter *) userdata;
@@ -107,18 +107,19 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
-        if (!g_strcmp0(key, "Powered")) {
+        if (g_str_equal(key, "Powered")) {
             adapter->powered = g_variant_get_boolean(value);
             if (adapter->poweredStateCallback != NULL) {
                 adapter->poweredStateCallback(adapter, adapter->powered);
             }
         }
-        if (!g_strcmp0(key, "Discovering")) {
+        if (g_str_equal(key, "Discovering")) {
             adapter->discovery_state = g_variant_get_boolean(value);
             if (adapter->discoveryStateCallback != NULL) {
                 adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
             }
         }
+        //g_free(key);
         g_variant_unref(value);
     }
 
@@ -146,7 +147,7 @@ static void bluez_device_disappeared(GDBusConnection *sig,
 
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
     while (g_variant_iter_next(interfaces, "s", &interface_name)) {
-        if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
+        if (g_str_equal(interface_name, "org.bluez.Device1")) {
             log_debug(TAG, "Device %s removed", object);
             Device *device = g_hash_table_lookup(adapter->devices_cache, object);
             if (device != NULL) {
@@ -274,8 +275,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
 
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     while (g_variant_iter_next(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
-        if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "device")) {
-
+        if (g_str_equal(interface_name, "org.bluez.Device1")) {
             Device *device = binc_create_device(object, adapter);
 
             const gchar *property_name;
@@ -284,7 +284,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
             g_variant_iter_init(&iter, properties);
             while (g_variant_iter_next(&iter, "{&sv}", &property_name, &prop_val)) {
                 binc_device_update_property(device, property_name, prop_val);
-                g_variant_unref (prop_val);
+                g_variant_unref(prop_val);
             }
 
             // Update cache and deliver Device to registered callback
@@ -296,6 +296,10 @@ static void bluez_device_appeared(GDBusConnection *sig,
             //g_variant_unref(prop_val);
         }
         g_variant_unref(properties);
+    }
+
+    if (interfaces != NULL) {
+        g_variant_iter_free(interfaces);
     }
 }
 
@@ -357,7 +361,7 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
     const char *iface;
-    const char *key;
+    char *key;
     GVariant *value = NULL;
     const gchar *signature = g_variant_get_type_string(params);
 
@@ -382,17 +386,20 @@ void bluez_signal_device_changed(GDBusConnection *conn,
         g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
         while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
             binc_device_update_property(device, key, value);
+            //g_free(key);
+            g_variant_unref(value);
         }
 
         if (adapter->discoveryResultCallback != NULL) {
             adapter->discoveryResultCallback(adapter, device);
         }
     }
+
     done:
     if (properties != NULL)
         g_variant_iter_free(properties);
-    if (value != NULL)
-        g_variant_unref(value);
+    if (unknown != NULL)
+        g_variant_iter_free(unknown);
 }
 
 void setup_signal_subscribers(Adapter *adapter) {
@@ -564,9 +571,9 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
             GVariantIter ii;
             g_variant_iter_init(&ii, ifaces_and_properties);
             while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
-                if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "adapter")) {
+                if (g_str_equal(interface_name, "org.bluez.Adapter1")) {
                     Adapter *adapter = create_adapter(dbusConnection, object_path);
-                    const gchar *property_name;
+                    gchar *property_name;
                     GVariantIter iii;
                     GVariant *prop_val;
                     g_variant_iter_init(&iii, properties);
@@ -580,9 +587,10 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                         } else if (g_strcmp0(property_name, "Discoverable") == 0) {
                             adapter->discoverable = g_variant_get_boolean(prop_val);
                         }
+                        g_free(property_name);
+                        g_variant_unref(prop_val);
                     }
                     g_ptr_array_add(binc_adapters, adapter);
-                    g_variant_unref(prop_val);
                 }
                 g_variant_unref(properties);
             }
@@ -607,7 +615,7 @@ Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
         for (int i = 1; i < adapters->len; i++) {
             binc_adapter_free(g_ptr_array_index(adapters, i));
         }
-        g_ptr_array_free(adapters, FALSE);
+        g_ptr_array_free(adapters, TRUE);
     }
     return adapter;
 }
@@ -623,7 +631,7 @@ static void binc_internal_start_discovery_callback(GObject *source_object, GAsyn
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartDiscovery", error->code, error->message);
         adapter->discovery_state = STOPPED;
         if (adapter->discoveryStateCallback != NULL) {
-            adapter->discoveryStateCallback(adapter, adapter->discovery_state ,error);
+            adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
         g_clear_error(&error);
     }
@@ -707,7 +715,7 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, G
     g_variant_builder_add(b, "{sv}", "RSSI", g_variant_new_int16(rssi_threshold));
     g_variant_builder_add(b, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
 
-    if(service_uuids != NULL && service_uuids->len > 0) {
+    if (service_uuids != NULL && service_uuids->len > 0) {
         GVariantBuilder *u = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
         for (int i = 0; i < service_uuids->len; i++) {
             g_variant_builder_add(u, "s", g_ptr_array_index(service_uuids, i));

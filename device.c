@@ -334,7 +334,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                 GVariantIter ii;
                 g_variant_iter_init(&ii, ifaces_and_properties);
                 while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
-                    if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "service")) {
+                    if(g_str_equal(interface_name, "org.bluez.GattService1" )) {
                         //log_debug(TAG, "%s", object_path);
                         char *uuid = NULL;
                         const gchar *property_name;
@@ -349,8 +349,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                         Service *service = binc_service_create(device, g_strdup(object_path), uuid);
                         g_hash_table_insert(device->services, g_strdup(object_path), service);
                         g_variant_unref(prop_val);
-                    } else if (g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "characteristic")) {
-
+                    } else if(g_str_equal(interface_name, "org.bluez.GattCharacteristic1" )) {
                         Characteristic *characteristic = binc_characteristic_create(device, object_path);
                         binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
                         binc_characteristic_set_write_callback(characteristic, &binc_on_characteristic_write);
@@ -529,7 +528,7 @@ void binc_device_connect(Device *device) {
     if (device->connection_state != DISCONNECTED) return;
 
     log_debug(TAG, "Connecting to '%s' (%s) (%s)", device->name, device->address,
-              device->paired ? "BONDED" : "BONE NONE");
+              device->paired ? "BONDED" : "BOND NONE");
 
     binc_device_internal_set_conn_state(device, CONNECTING, NULL);
     subscribe_prop_changed(device);

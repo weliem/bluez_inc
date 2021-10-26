@@ -32,6 +32,7 @@ GList* g_variant_string_array_to_list(GVariant *value) {
     g_variant_iter_init(&iter, value);
     while (g_variant_iter_next(&iter, "s", &data)) {
         list = g_list_append(list, g_strdup(data));
+        g_free(data);
     }
     return list;
 }

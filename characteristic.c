@@ -294,6 +294,7 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
             if (characteristic->notifying == FALSE) {
                 if (characteristic->notify_signal != 0) {
                     g_dbus_connection_signal_unsubscribe(characteristic->connection, characteristic->notify_signal);
+                    characteristic->notify_signal = 0;
                 }
             }
         } else if (g_str_equal(key, "Value")) {
@@ -303,8 +304,8 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
             g_string_free(result, TRUE);
             if (characteristic->on_notify_callback != NULL) {
                 characteristic->on_notify_callback(characteristic, byteArray);
-                g_byte_array_free(byteArray, TRUE);
             }
+            g_byte_array_free(byteArray, TRUE);
         }
         g_variant_unref(value);
     }
