@@ -485,7 +485,7 @@ void binc_adapter_free(Adapter *adapter) {
         gpointer key, value;
         g_hash_table_iter_init(&iter, adapter->devices_cache);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
-            g_free(key);
+            g_free((char*)key);
             Device *device = (Device *) value;
             binc_device_free(device);
         }

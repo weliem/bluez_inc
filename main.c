@@ -245,9 +245,11 @@ int main(void) {
     // Start the mainloop
     g_main_loop_run(loop);
 
+    // Clean up mainloop
     g_main_loop_unref(loop);
 
     // Disconnect from DBus
+    g_dbus_connection_close_sync(dbusConnection, NULL, NULL);
     g_object_unref(dbusConnection);
     return 0;
 }
