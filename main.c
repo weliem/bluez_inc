@@ -1,12 +1,26 @@
 /*
- * bluez_adapter_scan.c - Scan for bluetooth devices
- * 	- This example scans for new devices after powering the default_adapter, if any devices
- * 	  appeared in /org/hciX/dev_XX_YY_ZZ_AA_BB_CC, it is monitered using "Device"
- *	  signal and all the properties of the device is printed
- *	- Scanning continues to run until any device is disappered, this happens after 180 seconds
- *	  automatically if the device is not used.
- * gcc `pkg-config --cflags glib-2.0 gio-2.0` -Wall -Wextra -o bluez_adapter_scan ./bluez_adapter_scan.c `pkg-config --libs glib-2.0 gio-2.0`
+ *   Copyright (c) 2021 Martijn van Welie
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in all
+ *   copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
+ *
  */
+
 #include <glib.h>
 #include <stdio.h>
 #include "adapter.h"
@@ -40,7 +54,8 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
         return;
     }
 
-    log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device), binc_device_get_connection_state_name(device), state);
+    log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device),
+              binc_device_get_connection_state_name(device), state);
     if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
         binc_adapter_remove_device(default_adapter, device);
     }
@@ -137,7 +152,7 @@ void on_services_resolved(Device *device) {
     }
 
     Characteristic *bpm = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
-    if (bpm != NULL) {
+    if (bpm != NULL && binc_characteristic_supports_notify(bpm)) {
         binc_characteristic_start_notify(bpm);
     }
 }
@@ -233,7 +248,7 @@ int main(void) {
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
         binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(default_adapter, -100, NULL);
-       // g_ptr_array_free(service_uuids, TRUE);
+        // g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);
     } else {
         log_debug("MAIN", "No default_adapter found");

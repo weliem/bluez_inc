@@ -6,14 +6,13 @@
 #include <glib.h>
 
 uuid *uuid_create(char *uuid_string) {
-    if (uuid_string == NULL) return NULL;
+    g_assert(uuid_string != NULL);
 
-    GString *original_uuid = g_string_new(uuid_string);
-    GString *lowercase_uuid = g_string_ascii_down(original_uuid);
+    gchar* lowercase_uuid = g_ascii_strdown(uuid_string, -1);
+    g_assert(g_uuid_string_is_valid(lowercase_uuid));
 
-    if (g_uuid_string_is_valid(lowercase_uuid->str)) {
-        uuid *result = g_malloc(sizeof(uuid));
-        strncpy((char *) result, lowercase_uuid->str, 36);
-        return result;
-    } else return NULL;
+    uuid *result = g_new0(uuid, 1);
+    strncpy((char *) result, lowercase_uuid, 36);
+    g_free(lowercase_uuid);
+    return result;
 }
