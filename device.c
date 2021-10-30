@@ -84,7 +84,6 @@ static void binc_init_device(Device *device) {
 Device *binc_create_device(const char *path, Adapter *adapter) {
     Device *device = g_new0(Device, 1);
     binc_init_device(device);
-
     device->path = g_strdup(path);
     device->adapter = adapter;
     device->connection = binc_adapter_get_dbus_connection(adapter);
@@ -318,37 +317,34 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
     }
 
     /* Parse the result */
-    GVariantIter i;
+    GVariantIter iter;
     const gchar *object_path;
     GVariant *ifaces_and_properties;
     if (result) {
         device->services = g_hash_table_new(g_str_hash, g_str_equal);
         device->characteristics = g_hash_table_new(g_str_hash, g_str_equal);
         result = g_variant_get_child_value(result, 0);
-        g_variant_iter_init(&i, result);
-        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
-
+        g_variant_iter_init(&iter, result);
+        while (g_variant_iter_loop(&iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
             if (g_str_has_prefix(object_path, device->path)) {
                 const gchar *interface_name;
                 GVariant *properties;
-                GVariantIter ii;
-                g_variant_iter_init(&ii, ifaces_and_properties);
-                while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
+                GVariantIter iter2;
+                g_variant_iter_init(&iter2, ifaces_and_properties);
+                while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
                     if(g_str_equal(interface_name, "org.bluez.GattService1" )) {
-                        //log_debug(TAG, "%s", object_path);
                         char *uuid = NULL;
                         const gchar *property_name;
-                        GVariantIter iii;
+                        GVariantIter iter3;
                         GVariant *prop_val;
-                        g_variant_iter_init(&iii, properties);
-                        while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val)) {
+                        g_variant_iter_init(&iter3, properties);
+                        while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &prop_val)) {
                             if (g_strcmp0(property_name, "UUID") == 0) {
                                 uuid = g_strdup(g_variant_get_string(prop_val, NULL));
                             }
                         }
-                        Service *service = binc_service_create(device, g_strdup(object_path), uuid);
+                        Service *service = binc_service_create(device, object_path, uuid);
                         g_hash_table_insert(device->services, g_strdup(object_path), service);
-                        g_variant_unref(prop_val);
                     } else if(g_str_equal(interface_name, "org.bluez.GattCharacteristic1" )) {
                         Characteristic *characteristic = binc_characteristic_create(device, object_path);
                         binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
@@ -358,20 +354,19 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                                                                                 &binc_on_characteristic_notification_state_changed);
 
                         const gchar *property_name;
-                        GVariantIter iii;
+                        GVariantIter iter3;
                         GVariant *prop_val;
-                        g_variant_iter_init(&iii, properties);
-                        while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val)) {
-                            if (g_strcmp0(property_name, "UUID") == 0) {
+                        g_variant_iter_init(&iter3, properties);
+                        while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &prop_val)) {
+                            if (g_str_equal(property_name, "UUID")) {
                                 binc_characteristic_set_uuid(characteristic, g_variant_get_string(prop_val, NULL));
-                            } else if (g_strcmp0(property_name, "Service") == 0) {
+                            } else if (g_str_equal(property_name, "Service")) {
                                 binc_characteristic_set_service_path(characteristic,
                                                                      g_variant_get_string(prop_val, NULL));
-                            } else if (g_strcmp0(property_name, "Flags") == 0) {
+                            } else if (g_str_equal(property_name, "Flags")) {
                                 binc_characteristic_set_flags(characteristic, g_variant_string_array_to_list(prop_val));
                             }
                         }
-                        g_variant_unref(prop_val);
 
                         // Get service and link the characteristic to the service
                         Service *service = g_hash_table_lookup(device->services,
@@ -389,17 +384,13 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                                       binc_characteristic_get_service_path(characteristic));
                         }
                     }
-                    g_variant_unref(properties);
                 }
             }
-            g_variant_unref(ifaces_and_properties);
         }
         g_variant_unref(result);
     }
 
     device->services_list = g_hash_table_get_values(device->services);
-
-    //log_debug(TAG, "found %d services", g_hash_table_size(device->services));
     log_debug(TAG, "found %d services", g_list_length(device->services_list));
     if (device->services_resolved_callback != NULL) {
         device->services_resolved_callback(device);
@@ -447,15 +438,15 @@ static void binc_device_changed(GDBusConnection *conn,
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
-        if (g_strcmp0(key, "Connected") == 0) {
+    while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
+        if (g_str_equal(key, "Connected")) {
             binc_device_internal_set_conn_state(device, g_variant_get_boolean(value), NULL);
             if (device->connection_state == DISCONNECTED) {
                 // Unsubscribe properties changed signal
                 g_dbus_connection_signal_unsubscribe(device->connection, device->device_prop_changed);
                 device->device_prop_changed = 0;
             }
-        } else if (g_strcmp0(key, "ServicesResolved") == 0) {
+        } else if (g_str_equal(key, "ServicesResolved")) {
             device->services_resolved = g_variant_get_boolean(value);
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
             if (device->services_resolved == TRUE && device->bondingState != BONDING) {
@@ -465,7 +456,7 @@ static void binc_device_changed(GDBusConnection *conn,
             if (device->services_resolved == FALSE) {
                 binc_device_internal_set_conn_state(device, DISCONNECTING, NULL);
             }
-        } else if (g_strcmp0(key, "Paired") == 0) {
+        } else if (g_str_equal(key, "Paired")) {
             device->paired = g_variant_get_boolean(value);
             device->bondingState = device->paired ? BONDED : NONE;
             log_debug(TAG, "Paired %s", device->paired ? "true" : "false");
@@ -475,7 +466,6 @@ static void binc_device_changed(GDBusConnection *conn,
                 binc_collect_gatt_tree(device);
             }
         }
-        g_variant_unref(value);
     }
 
     done:
@@ -483,8 +473,6 @@ static void binc_device_changed(GDBusConnection *conn,
         g_variant_iter_free(properties);
     if (unknown != NULL)
         g_variant_iter_free(unknown);
-//    if (value != NULL)
-//        g_variant_unref(value);
 }
 
 static void binc_internal_device_connect(GObject *source_object, GAsyncResult *res, gpointer user_data) {

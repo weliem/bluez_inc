@@ -32,14 +32,18 @@ Characteristic *binc_characteristic_create(Device *device, const char *path) {
     Characteristic *characteristic = g_new0(Characteristic, 1);
     characteristic->device = device;
     characteristic->connection = binc_device_get_dbus_connection(device);
-    characteristic->path = path;
+    characteristic->path = g_strdup(path);
     characteristic->uuid = NULL;
     characteristic->service_path = NULL;
     characteristic->service_uuid = NULL;
-    characteristic->on_write_callback = NULL;
-    characteristic->on_read_callback = NULL;
-    characteristic->on_notify_callback = NULL;
+    characteristic->notifying = FALSE;
+    characteristic->flags = NULL;
+    characteristic->properties = 0;
+    characteristic->notify_signal = 0;
     characteristic->notify_state_callback = NULL;
+    characteristic->on_read_callback = NULL;
+    characteristic->on_write_callback = NULL;
+    characteristic->on_notify_callback = NULL;
     return characteristic;
 }
 
@@ -207,38 +211,35 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
     log_debug(TAG, "writing <%s> to <%s>", byteArrayStr->str, characteristic->uuid);
     g_string_free(byteArrayStr, TRUE);
 
-    guint16 offset = 0;
-    const char *writeTypeString = writeType == WITH_RESPONSE ? "request" : "command";
-
     // Convert byte array to variant
     GVariantBuilder *builder1 = g_variant_builder_new(G_VARIANT_TYPE("ay"));
     for (int i = 0; i < byteArray->len; i++) {
         g_variant_builder_add(builder1, "y", byteArray->data[i]);
     }
-    GVariant *val = g_variant_new("ay", builder1);
+    GVariant *value = g_variant_new("ay", builder1);
 
     // Convert options to variant
+    guint16 offset = 0;
+    const char *writeTypeString = writeType == WITH_RESPONSE ? "request" : "command";
     GVariantBuilder *builder2 = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
     g_variant_builder_add(builder2, "{sv}", "offset", g_variant_new_uint16(offset));
     g_variant_builder_add(builder2, "{sv}", "type", g_variant_new_string(writeTypeString));
     GVariant *options = g_variant_new("a{sv}", builder2);
-
+    g_variant_builder_unref(builder1);
+    g_variant_builder_unref(builder2);
 
     g_dbus_connection_call(characteristic->connection,
                            "org.bluez",
                            characteristic->path,
                            "org.bluez.GattCharacteristic1",
                            "WriteValue",
-                           g_variant_new("(@ay@a{sv})", val, options),
+                           g_variant_new("(@ay@a{sv})", value, options),
                            NULL,
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
                            (GAsyncReadyCallback) binc_internal_char_write_callback,
                            characteristic);
-
-    g_variant_builder_unref(builder1);
-    g_variant_builder_unref(builder2);
 }
 
 static GByteArray *g_variant_get_byte_array_for_notify(GVariant *variant) {
@@ -284,7 +285,7 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
+    while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
         if (g_str_equal(key, "Notifying")) {
             characteristic->notifying = g_variant_get_boolean(value);
             log_debug(TAG, "notifying %s <%s>", characteristic->notifying ? "true" : "false", characteristic->uuid);
@@ -307,13 +308,10 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
             }
             g_byte_array_free(byteArray, TRUE);
         }
-        g_variant_unref(value);
     }
 
-    if (properties != NULL)
-        g_variant_iter_free(properties);
-    if (unknown != NULL)
-        g_variant_iter_free(unknown);
+    g_variant_iter_free(properties);
+    g_variant_iter_free(unknown);
 }
 
 static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -324,17 +322,17 @@ static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult
 
     GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
-    if (value != NULL) {
-        g_variant_unref(value);
-    }
-
-    if (error != NULL && characteristic->notify_state_callback != NULL) {
-        characteristic->notify_state_callback(characteristic, error);
-    }
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartNotify", error->code, error->message);
+        if (characteristic->notify_state_callback != NULL) {
+            characteristic->notify_state_callback(characteristic, error);
+        }
         g_clear_error(&error);
+    }
+
+    if (value != NULL) {
+        g_variant_unref(value);
     }
 }
 

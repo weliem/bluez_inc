@@ -19,7 +19,7 @@ Service* binc_service_create(Device *device, const char* path, const char* uuid)
 
     Service *service = g_new0(Service, 1);
     service->device = device;
-    service->path = path;
+    service->path = g_strdup(path);
     service->uuid = uuid;
     service->characteristics = NULL;
     return service;

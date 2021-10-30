@@ -106,7 +106,7 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
     }
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
+    while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
         if (g_str_equal(key, "Powered")) {
             adapter->powered = g_variant_get_boolean(value);
             if (adapter->poweredStateCallback != NULL) {
@@ -119,8 +119,6 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
                 adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
             }
         }
-        //g_free(key);
-        g_variant_unref(value);
     }
 
     done:
@@ -146,7 +144,7 @@ static void bluez_device_disappeared(GDBusConnection *sig,
     g_assert(adapter != NULL);
 
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
-    while (g_variant_iter_next(interfaces, "s", &interface_name)) {
+    while (g_variant_iter_loop(interfaces, "s", &interface_name)) {
         if (g_str_equal(interface_name, "org.bluez.Device1")) {
             log_debug(TAG, "Device %s removed", object);
             Device *device = g_hash_table_lookup(adapter->devices_cache, object);
@@ -155,45 +153,10 @@ static void bluez_device_disappeared(GDBusConnection *sig,
                 binc_device_free(device);
             }
         }
-        g_free(interface_name);
     }
 
     if (interfaces != NULL) {
         g_variant_iter_free(interfaces);
-    }
-}
-
-static void bluez_property_value(const gchar *key, GVariant *value) {
-    const gchar *type = g_variant_get_type_string(value);
-
-    g_print("\t%s : ", key);
-    switch (*type) {
-        case 'o':
-        case 's':
-            g_print("%s\n", g_variant_get_string(value, NULL));
-            break;
-        case 'b':
-            g_print("%d\n", g_variant_get_boolean(value));
-            break;
-        case 'u':
-            g_print("%d\n", g_variant_get_uint32(value));
-            break;
-        case 'n':
-            g_print("%d\n", g_variant_get_int16(value));
-        case 'a':
-            /* TODO Handling only 'as', but not array of dicts */
-            if (g_strcmp0(type, "as"))
-                break;
-            g_print("\n");
-            const gchar *uuid;
-            GVariantIter i;
-            g_variant_iter_init(&i, value);
-            while (g_variant_iter_next(&i, "s", &uuid))
-                g_print("\t\t%s\n", uuid);
-            break;
-        default:
-            g_print("Other: %s\n", type);
-            break;
     }
 }
 
@@ -279,7 +242,7 @@ static void bluez_device_appeared(GDBusConnection *sig,
     g_assert(adapter != NULL);
 
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
-    while (g_variant_iter_next(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
+    while (g_variant_iter_loop(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
         if (g_str_equal(interface_name, "org.bluez.Device1")) {
             Device *device = binc_create_device(object, adapter);
 
@@ -287,10 +250,8 @@ static void bluez_device_appeared(GDBusConnection *sig,
             GVariantIter iter;
             GVariant *prop_val;
             g_variant_iter_init(&iter, properties);
-            while (g_variant_iter_next(&iter, "{&sv}", &property_name, &prop_val)) {
+            while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &prop_val)) {
                 binc_device_update_property(device, property_name, prop_val);
-                //g_free(property_name);
-                g_variant_unref(prop_val);
             }
 
             // Update cache and deliver Device to registered callback
@@ -299,7 +260,6 @@ static void bluez_device_appeared(GDBusConnection *sig,
                 adapter->discoveryResultCallback(adapter, device);
             }
         }
-        g_variant_unref(properties);
     }
 
     if (interfaces != NULL) {
@@ -325,9 +285,8 @@ static void binc_internal_device_properties_callback(GObject *source_object, GAs
         GVariantIter i;
         GVariant *property_value;
         g_variant_iter_init(&i, result);
-        while (g_variant_iter_next(&i, "{&sv}", &property_name, &property_value)) {
+        while (g_variant_iter_loop(&i, "{&sv}", &property_name, &property_value)) {
             binc_device_update_property(device, property_name, property_value);
-            g_variant_unref(property_value);
         }
         g_variant_unref(result);
 
@@ -387,9 +346,8 @@ void bluez_signal_device_changed(GDBusConnection *conn,
         device_getall_properties(adapter, device);
     } else {
         g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-        while (g_variant_iter_next(properties, "{&sv}", &key, &value)) {
+        while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
             binc_device_update_property(device, key, value);
-            g_variant_unref(value);
         }
 
         if (adapter->discoveryResultCallback != NULL) {
@@ -501,44 +459,6 @@ void binc_adapter_free(Adapter *adapter) {
 }
 
 
-//void bluez_adapter_getall_property(GDBusConnection *con,
-//                                   GAsyncResult *res,
-//                                   gpointer data) {
-//    GVariant *result = NULL;
-//
-//    result = g_dbus_connection_call_finish(con, res, NULL);
-//    if (result == NULL)
-//        g_print("Unable to get result for GetManagedObjects\n");
-//
-//    if (result) {
-//        g_print("\n\nUsing \"GetAll\":\n");
-//        result = g_variant_get_child_value(result, 0);
-//        const gchar *property_name;
-//        GVariantIter i;
-//        GVariant *prop_val;
-//        g_variant_iter_init(&i, result);
-//        while (g_variant_iter_next(&i, "{&sv}", &property_name, &prop_val))
-//            //bluez_property_value(property_name, prop_val);
-//            g_variant_unref(prop_val);
-//    }
-//}
-
-
-//int adapter_getall_properties(Adapter *adapter) {
-//    g_dbus_connection_call(adapter->connection,
-//                           "org.bluez",
-//                           adapter->path,
-//                           "org.freedesktop.DBus.Properties",
-//                           "GetAll",
-//                           g_variant_new("(s)", "org.bluez.Adapter1"),
-//                           G_VARIANT_TYPE("(a{sv})"),
-//                           G_DBUS_CALL_FLAGS_NONE,
-//                           -1,
-//                           NULL,
-//                           (GAsyncReadyCallback) bluez_adapter_getall_property,
-//                           NULL);
-//}
-
 GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
     g_assert(dbusConnection != NULL);
 
@@ -561,25 +481,25 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
         g_print("Unable to get result for GetManagedObjects\n");
 
     /* Parse the result */
-    GVariantIter i;
+    GVariantIter iter;
     const gchar *object_path;
     GVariant *ifaces_and_properties;
     if (result) {
         result = g_variant_get_child_value(result, 0);
-        g_variant_iter_init(&i, result);
-        while (g_variant_iter_next(&i, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
+        g_variant_iter_init(&iter, result);
+        while (g_variant_iter_loop(&iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
             const gchar *interface_name;
             GVariant *properties;
-            GVariantIter ii;
-            g_variant_iter_init(&ii, ifaces_and_properties);
-            while (g_variant_iter_next(&ii, "{&s@a{sv}}", &interface_name, &properties)) {
+            GVariantIter iter2;
+            g_variant_iter_init(&iter2, ifaces_and_properties);
+            while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
                 if (g_str_equal(interface_name, "org.bluez.Adapter1")) {
                     Adapter *adapter = create_adapter(dbusConnection, object_path);
                     gchar *property_name;
-                    GVariantIter iii;
+                    GVariantIter iter3;
                     GVariant *prop_val;
-                    g_variant_iter_init(&iii, properties);
-                    while (g_variant_iter_next(&iii, "{&sv}", &property_name, &prop_val)) {
+                    g_variant_iter_init(&iter3, properties);
+                    while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &prop_val)) {
                         if (g_strcmp0(property_name, "Address") == 0) {
                             adapter->address = g_strdup(g_variant_get_string(prop_val, NULL));
                         } else if (g_strcmp0(property_name, "Powered") == 0) {
@@ -589,14 +509,10 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                         } else if (g_strcmp0(property_name, "Discoverable") == 0) {
                             adapter->discoverable = g_variant_get_boolean(prop_val);
                         }
-                        g_free(property_name);
-                        g_variant_unref(prop_val);
                     }
                     g_ptr_array_add(binc_adapters, adapter);
                 }
-                g_variant_unref(properties);
             }
-            g_variant_unref(ifaces_and_properties);
         }
         g_variant_unref(result);
     }
