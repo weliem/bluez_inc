@@ -166,7 +166,10 @@ guint32 on_request_passkey(Device *device) {
     guint32 pass = 000000;
     log_debug(TAG, "requesting passkey for '%s", binc_device_get_name(device));
     log_debug(TAG, "Enter 6 digit pin code: ");
-    fscanf(stdin, "%d", &pass);
+    int result = fscanf(stdin, "%d", &pass);
+    if (result != 1) {
+        log_debug(TAG, "didn't read a pin code");
+    }
     return pass;
 }
 
