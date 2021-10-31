@@ -420,7 +420,7 @@ void remove_signal_subscribers(Adapter *adapter) {
     adapter->iface_removed = 0;
 }
 
-Adapter *create_adapter(GDBusConnection *connection, const char *path) {
+static Adapter *binc_adapter_create(GDBusConnection *connection, const char *path) {
     g_assert(connection != NULL);
     g_assert(path != NULL);
 
@@ -495,7 +495,7 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
             g_variant_iter_init(&iter2, ifaces_and_properties);
             while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
                 if (g_str_equal(interface_name, "org.bluez.Adapter1")) {
-                    Adapter *adapter = create_adapter(dbusConnection, object_path);
+                    Adapter *adapter = binc_adapter_create(dbusConnection, object_path);
                     gchar *property_name;
                     GVariantIter iter3;
                     GVariant *prop_val;
