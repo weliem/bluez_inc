@@ -147,10 +147,11 @@ static void bluez_device_disappeared(GDBusConnection *sig,
     while (g_variant_iter_loop(interfaces, "s", &interface_name)) {
         if (g_str_equal(interface_name, "org.bluez.Device1")) {
             log_debug(TAG, "Device %s removed", object);
-            Device *device = g_hash_table_lookup(adapter->devices_cache, object);
-            if (device != NULL) {
+            gpointer key, value;
+            if (g_hash_table_lookup_extended(adapter->devices_cache, object, &key, &value)) {
                 g_hash_table_remove(adapter->devices_cache, object);
-                binc_device_free(device);
+                g_free(key);
+                binc_device_free(value);
             }
         }
     }
