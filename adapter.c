@@ -637,7 +637,9 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, G
     if (service_uuids != NULL && service_uuids->len > 0) {
         GVariantBuilder *u = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
         for (int i = 0; i < service_uuids->len; i++) {
-            g_variant_builder_add(u, "s", g_ptr_array_index(service_uuids, i));
+            char *uuid = g_ptr_array_index(service_uuids, i);
+            g_assert(g_uuid_string_is_valid(uuid));
+            g_variant_builder_add(u, "s", uuid);
         }
         g_variant_builder_add(b, "{sv}", "UUIDs", g_variant_builder_end(u));
         g_variant_builder_unref(u);

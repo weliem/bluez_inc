@@ -39,8 +39,9 @@ typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter, gboolean sta
 
 /**
  * Get the default bluetooth adapter
- * @param dbusConnection
- * @return an adapter object or NULL if no adapters were found
+ *
+ * @param dbusConnection the dbus connection
+ * @return an adapter object or NULL if no adapters were found. Must be freed using binc_adapter_free().
  */
 Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection);
 
