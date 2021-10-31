@@ -444,7 +444,7 @@ void binc_adapter_free(Adapter *adapter) {
         gpointer key, value;
         g_hash_table_iter_init(&iter, adapter->devices_cache);
         while (g_hash_table_iter_next(&iter, &key, &value)) {
-            g_free((char*)key);
+            g_free((char *) key);
             Device *device = (Device *) value;
             binc_device_free(device);
         }
@@ -708,17 +708,17 @@ void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredSta
     adapter->poweredStateCallback = callback;
 }
 
-char *binc_adapter_get_path(Adapter *adapter) {
+const char *binc_adapter_get_path(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->path;
 }
 
-DiscoveryState binc_adapter_get_discovery_state(Adapter *adapter) {
+DiscoveryState binc_adapter_get_discovery_state(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->discovery_state;
 }
 
-gboolean binc_adapter_get_powered_state(Adapter *adapter) {
+gboolean binc_adapter_get_powered_state(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->powered;
 }

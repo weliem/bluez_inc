@@ -83,7 +83,7 @@ void binc_characteristic_free(Characteristic *characteristic) {
     g_free(characteristic);
 }
 
-char *binc_characteristic_to_string(Characteristic *characteristic) {
+char *binc_characteristic_to_string(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
 
     // Build up flags
@@ -432,7 +432,7 @@ void binc_characteristic_set_notifying_state_change_callback(Characteristic *cha
     characteristic->notify_state_callback = callback;
 }
 
-const char* binc_characteristic_get_uuid(Characteristic *characteristic) {
+const char* binc_characteristic_get_uuid(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->uuid;
 }
@@ -447,12 +447,12 @@ void binc_characteristic_set_uuid(Characteristic *characteristic, const char* uu
     characteristic->uuid = g_strdup(uuid);
 }
 
-const char* binc_characteristic_get_service_uuid(Characteristic *characteristic) {
+const char* binc_characteristic_get_service_uuid(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->service_uuid;
 }
 
-Device* binc_characteristic_get_device(Characteristic *characteristic) {
+Device* binc_characteristic_get_device(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->device;
 }
@@ -467,7 +467,7 @@ void binc_characteristic_set_service_uuid(Characteristic *characteristic, const 
     characteristic->service_uuid = g_strdup(service_uuid);
 }
 
-const char* binc_characteristic_get_service_path(Characteristic *characteristic) {
+const char* binc_characteristic_get_service_path(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->service_path;
 }
@@ -482,7 +482,7 @@ void binc_characteristic_set_service_path(Characteristic *characteristic, const 
     characteristic->service_path = g_strdup(service_path);
 }
 
-GList* binc_characteristic_get_flags(Characteristic *characteristic) {
+GList* binc_characteristic_get_flags(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->flags;
 }
@@ -523,7 +523,7 @@ void binc_characteristic_set_flags(Characteristic *characteristic, GList* flags)
     characteristic->properties = binc_characteristic_flags_to_int(flags);
 }
 
-guint binc_characteristic_get_properties(Characteristic *characteristic) {
+guint binc_characteristic_get_properties(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->properties;
 }
@@ -533,12 +533,12 @@ void binc_characteristic_set_properties(Characteristic *characteristic, guint pr
     characteristic->properties = properties;
 }
 
-gboolean binc_characteristic_is_notifying(Characteristic *characteristic) {
+gboolean binc_characteristic_is_notifying(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->notifying;
 }
 
-gboolean binc_characteristic_supports_write(Characteristic *characteristic, WriteType writeType) {
+gboolean binc_characteristic_supports_write(const Characteristic *characteristic, const WriteType writeType) {
     if (writeType == WITH_RESPONSE) {
         return (characteristic->properties & GATT_CHR_PROP_WRITE) > 0;
     } else {
@@ -546,11 +546,11 @@ gboolean binc_characteristic_supports_write(Characteristic *characteristic, Writ
     }
 }
 
-gboolean binc_characteristic_supports_read(Characteristic *characteristic) {
+gboolean binc_characteristic_supports_read(const Characteristic *characteristic) {
     return (characteristic->properties & GATT_CHR_PROP_READ) > 0;
 }
 
-gboolean binc_characteristic_supports_notify(Characteristic *characteristic) {
+gboolean binc_characteristic_supports_notify(const Characteristic *characteristic) {
     return ((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
             (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 }

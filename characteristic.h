@@ -90,35 +90,35 @@ void binc_characteristic_start_notify(Characteristic *characteristic);
 
 void binc_characteristic_stop_notify(Characteristic *characteristic);
 
-Device* binc_characteristic_get_device(Characteristic *characteristic);
+Device* binc_characteristic_get_device(const Characteristic *characteristic);
 
-const char* binc_characteristic_get_uuid(Characteristic *characteristic);
+const char* binc_characteristic_get_uuid(const Characteristic *characteristic);
 
 void binc_characteristic_set_uuid(Characteristic *characteristic, const char* uuid);
 
-const char* binc_characteristic_get_service_uuid(Characteristic *characteristic);
+const char* binc_characteristic_get_service_uuid(const Characteristic *characteristic);
 
 void binc_characteristic_set_service_uuid(Characteristic *characteristic, const char* service_uuid);
 
-const char* binc_characteristic_get_service_path(Characteristic *characteristic);
+const char* binc_characteristic_get_service_path(const Characteristic *characteristic);
 
 void binc_characteristic_set_service_path(Characteristic *characteristic, const char* service_path);
 
-GList* binc_characteristic_get_flags(Characteristic *characteristic);
+GList* binc_characteristic_get_flags(const Characteristic *characteristic);
 
 void binc_characteristic_set_flags(Characteristic *characteristic, GList* flags);
 
-guint binc_characteristic_get_properties(Characteristic *characteristic);
+guint binc_characteristic_get_properties(const Characteristic *characteristic);
 
 void binc_characteristic_set_properties(Characteristic *characteristic, guint properties);
 
-gboolean binc_characteristic_is_notifying(Characteristic *characteristic);
+gboolean binc_characteristic_is_notifying(const Characteristic *characteristic);
 
-gboolean binc_characteristic_supports_write(Characteristic *characteristic, WriteType writeType);
+gboolean binc_characteristic_supports_write(const Characteristic *characteristic, const WriteType writeType);
 
-gboolean binc_characteristic_supports_read(Characteristic *characteristic);
+gboolean binc_characteristic_supports_read(const Characteristic *characteristic);
 
-gboolean binc_characteristic_supports_notify(Characteristic *characteristic);
+gboolean binc_characteristic_supports_notify(const Characteristic *characteristic);
 
 
 /**
@@ -126,6 +126,6 @@ gboolean binc_characteristic_supports_notify(Characteristic *characteristic);
  * @param characteristic
  * @return string representation of characteristic, caller must free
  */
-char *binc_characteristic_to_string(Characteristic *characteristic);
+char *binc_characteristic_to_string(const Characteristic *characteristic);
 
 #endif //TEST_CHARACTERISTIC_H

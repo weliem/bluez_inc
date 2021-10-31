@@ -60,11 +60,11 @@ void binc_adapter_power_on(Adapter *adapter);
 
 void binc_adapter_power_off(Adapter *adapter);
 
-char *binc_adapter_get_path(Adapter *adapter);
+const char *binc_adapter_get_path(const Adapter *adapter);
 
-DiscoveryState binc_adapter_get_discovery_state(Adapter *adapter);
+DiscoveryState binc_adapter_get_discovery_state(const Adapter *adapter);
 
-gboolean binc_adapter_get_powered_state(Adapter *adapter);
+gboolean binc_adapter_get_powered_state(const Adapter *adapter);
 
 void binc_adapter_set_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback);
 
