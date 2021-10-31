@@ -727,7 +727,7 @@ Device *binc_adapter_get_device_by_path(Adapter *adapter, const char *path) {
     return g_hash_table_lookup(adapter->devices_cache, path);
 }
 
-GDBusConnection *binc_adapter_get_dbus_connection(Adapter *adapter) {
+GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->connection;
 }

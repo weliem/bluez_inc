@@ -202,11 +202,11 @@ void on_discovery_state_changed(Adapter *adapter, DiscoveryState state, GError *
         log_debug(TAG, "discovery error (error %d: %s)", error->code, error->message);
         return;
     }
-    log_debug(TAG, "discovery '%s'", state ? "on" : "off");
+    log_debug(TAG, "discovery '%s' (%s)", state ? "on" : "off", binc_adapter_get_path(adapter));
 }
 
 void on_powered_state_changed(Adapter *adapter, gboolean state) {
-    log_debug(TAG, "powered '%s'", state ? "on" : "off");
+    log_debug(TAG, "powered '%s' (%s)", state ? "on" : "off", binc_adapter_get_path(adapter));
 }
 
 gboolean callback(gpointer data) {

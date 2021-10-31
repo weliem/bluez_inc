@@ -345,6 +345,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                         }
                         Service *service = binc_service_create(device, object_path, uuid);
                         g_hash_table_insert(device->services, g_strdup(object_path), service);
+                        g_free(uuid);
                     } else if(g_str_equal(interface_name, "org.bluez.GattCharacteristic1" )) {
                         Characteristic *characteristic = binc_characteristic_create(device, object_path);
                         binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
@@ -643,6 +644,7 @@ void binc_device_set_services_resolved_callback(Device *device, ServicesResolved
 Service *binc_device_get_service(Device *device, const char *service_uuid) {
     g_assert(device != NULL);
     g_assert(service_uuid != NULL);
+    g_assert(g_uuid_string_is_valid(service_uuid));
 
     if (device->services_list != NULL) {
         for (GList *iterator = device->services_list; iterator; iterator = iterator->next) {
@@ -661,6 +663,8 @@ binc_device_get_characteristic(Device *device, const char *service_uuid, const c
     g_assert(device != NULL);
     g_assert(service_uuid != NULL);
     g_assert(characteristic_uuid != NULL);
+    g_assert(g_uuid_string_is_valid(service_uuid));
+    g_assert(g_uuid_string_is_valid(characteristic_uuid));
 
     Service *service = binc_device_get_service(device, service_uuid);
     if (service != NULL) {
@@ -697,17 +701,17 @@ void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChang
     device->on_notify_state_callback = callback;
 }
 
-ConnectionState binc_device_get_connection_state(Device *device) {
+ConnectionState binc_device_get_connection_state(const Device *device) {
     g_assert(device != NULL);
     return device->connection_state;
 }
 
-const char* binc_device_get_connection_state_name(Device *device) {
+const char* binc_device_get_connection_state_name(const Device *device) {
     g_assert(device != NULL);
     return connection_state_names[device->connection_state];
 }
 
-const char *binc_device_get_address(Device *device) {
+const char *binc_device_get_address(const Device *device) {
     g_assert(device != NULL);
     return device->address;
 }
@@ -722,7 +726,7 @@ void binc_device_set_address(Device *device, const char *address) {
     device->address = g_strdup(address);
 }
 
-const char *binc_device_get_address_type(Device *device) {
+const char *binc_device_get_address_type(const Device *device) {
     g_assert(device != NULL);
     return device->address_type;
 }
@@ -737,7 +741,7 @@ void binc_device_set_address_type(Device *device, const char *address_type) {
     device->address_type = g_strdup(address_type);
 }
 
-const char *binc_device_get_alias(Device *device) {
+const char *binc_device_get_alias(const Device *device) {
     g_assert(device != NULL);
     return device->alias;
 }
@@ -752,7 +756,7 @@ void binc_device_set_alias(Device *device, const char *alias) {
     device->alias = g_strdup(alias);
 }
 
-const char *binc_device_get_name(Device *device) {
+const char *binc_device_get_name(const Device *device) {
     g_assert(device != NULL);
     return device->name;
 }
@@ -767,7 +771,7 @@ void binc_device_set_name(Device *device, const char *name) {
     device->name = g_strdup(name);
 }
 
-const char *binc_device_get_path(Device *device) {
+const char *binc_device_get_path(const Device *device) {
     g_assert(device != NULL);
     return device->path;
 }
@@ -782,7 +786,7 @@ void binc_device_set_path(Device *device, const char *path) {
     device->path = g_strdup(path);
 }
 
-gboolean binc_device_get_paired(Device *device) {
+gboolean binc_device_get_paired(const Device *device) {
     g_assert(device != NULL);
     return device->paired;
 }
@@ -792,7 +796,7 @@ void binc_device_set_paired(Device *device, gboolean paired) {
     device->paired = paired;
 }
 
-short binc_device_get_rssi(Device *device) {
+short binc_device_get_rssi(const Device *device) {
     g_assert(device != NULL);
     return device->rssi;
 }
@@ -802,7 +806,7 @@ void binc_device_set_rssi(Device *device, short rssi) {
     device->rssi = rssi;
 }
 
-gboolean binc_device_get_trusted(Device *device) {
+gboolean binc_device_get_trusted(const Device *device) {
     g_assert(device != NULL);
     return device->trusted;
 }
@@ -812,7 +816,7 @@ void binc_device_set_trusted(Device *device, gboolean trusted) {
     device->trusted = trusted;
 }
 
-short binc_device_get_txpower(Device *device) {
+short binc_device_get_txpower(const Device *device) {
     g_assert(device != NULL);
     return device->txpower;
 }
@@ -822,7 +826,7 @@ void binc_device_set_txpower(Device *device, short txpower) {
     device->txpower = txpower;
 }
 
-GList *binc_device_get_uuids(Device *device) {
+GList *binc_device_get_uuids(const Device *device) {
     g_assert(device != NULL);
     return device->uuids;
 }
@@ -834,7 +838,7 @@ void binc_device_set_uuids(Device *device, GList *uuids) {
     device->uuids = uuids;
 }
 
-GHashTable *binc_device_get_manufacturer_data(Device *device) {
+GHashTable *binc_device_get_manufacturer_data(const Device *device) {
     g_assert(device != NULL);
     return device->manufacturer_data;
 }
@@ -846,7 +850,7 @@ void binc_device_set_manufacturer_data(Device *device, GHashTable *manufacturer_
     device->manufacturer_data = manufacturer_data;
 }
 
-GHashTable *binc_device_get_service_data(Device *device) {
+GHashTable *binc_device_get_service_data(const Device *device) {
     g_assert(device != NULL);
     return device->service_data;
 }
@@ -863,7 +867,7 @@ GDBusConnection *binc_device_get_dbus_connection(Device *device) {
     return device->connection;
 }
 
-BondingState binc_device_get_bonding_state(Device *device) {
+BondingState binc_device_get_bonding_state(const Device *device) {
     g_assert(device != NULL);
     return device->bondingState;
 }
@@ -873,7 +877,7 @@ void binc_device_set_bonding_state(Device *device, BondingState bonding_state) {
     device->bondingState = bonding_state;
 }
 
-Adapter *binc_device_get_adapter(Device *device) {
+Adapter *binc_device_get_adapter(const Device *device) {
     g_assert(device != NULL);
     return device->adapter;
 }

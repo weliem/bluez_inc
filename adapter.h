@@ -72,6 +72,6 @@ void binc_adapter_set_discovery_state_callback(Adapter *adapter, AdapterDiscover
 
 void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
 
-GDBusConnection *binc_adapter_get_dbus_connection(Adapter *adapter);
+GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter);
 
 #endif //TEST_ADAPTER_H
