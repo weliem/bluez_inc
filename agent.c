@@ -11,7 +11,6 @@
 #include <stdio.h>
 
 #define TAG "Agent"
-//#define AGENT_PATH "/org/bluez/BincAgent"
 
 struct binc_agent {
     char *path;

@@ -188,7 +188,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char *name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "Philips")) {
+    if (name != NULL && g_str_has_prefix(name, "FT95")) {
         binc_adapter_stop_discovery(adapter);
 
         binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
@@ -215,10 +215,16 @@ void on_powered_state_changed(Adapter *adapter, gboolean state) {
 }
 
 gboolean callback(gpointer data) {
-    binc_agent_free(agent);
-    agent = NULL;
-    binc_adapter_free(default_adapter);
-    default_adapter = NULL;
+    if (agent != NULL) {
+        binc_agent_free(agent);
+        agent = NULL;
+    }
+
+    if (default_adapter != NULL) {
+        binc_adapter_free(default_adapter);
+        default_adapter = NULL;
+    }
+
     g_main_loop_quit((GMainLoop *) data);
     return FALSE;
 }
@@ -230,7 +236,7 @@ int main(void) {
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-    // Get the default default_adapter
+//    // Get the default default_adapter
     default_adapter = binc_get_default_adapter(dbusConnection);
 
     if (default_adapter != NULL) {
@@ -256,14 +262,14 @@ int main(void) {
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
         binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
-         g_ptr_array_free(service_uuids, TRUE);
+        g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);
     } else {
         log_debug("MAIN", "No default_adapter found");
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(75, callback, loop);
+    g_timeout_add_seconds(20, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
