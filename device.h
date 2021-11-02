@@ -40,6 +40,7 @@ typedef void (*ConnectionStateChangedCallback)(Device *device, ConnectionState s
 
 typedef void (*ServicesResolvedCallback)(Device *device);
 
+typedef void (*BondingStateChangedCallback)(Device *device, BondingState new_state, BondingState old_state, GError *error);
 
 Device *binc_create_device(const char *path, Adapter *adapter);
 
@@ -73,6 +74,8 @@ void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChang
 void binc_device_set_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 
 void binc_device_set_services_resolved_callback(Device *device, ServicesResolvedCallback callback);
+
+void binc_device_set_bonding_state_changed_callback(Device *device, BondingStateChangedCallback callback);
 
 GList *binc_device_get_services(Device *device);
 

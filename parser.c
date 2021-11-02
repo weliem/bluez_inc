@@ -149,6 +149,7 @@ GByteArray* binc_get_current_time() {
     guint8 dayOfWeek = g_date_time_get_day_of_week(now);
     guint8 miliseconds = (g_date_time_get_microsecond(now) / 1000) * 256 / 1000;
     guint8 reason = 1;
+    g_date_time_unref(now);
 
     g_byte_array_append(byteArray, &yearLsb, 1);
     g_byte_array_append(byteArray, &yearMsb, 1);

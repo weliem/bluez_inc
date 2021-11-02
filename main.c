@@ -61,6 +61,10 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
     }
 }
 
+void on_bonding_state_changed(Device *device, BondingState new_state, BondingState old_state, GError *error) {
+    log_debug(TAG, "bonding state changed from %d to %d", old_state, new_state);
+}
+
 void on_notification_state_changed(Characteristic *characteristic, GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
@@ -184,11 +188,12 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char *name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
+    if (name != NULL && g_str_has_prefix(name, "Philips")) {
         binc_adapter_stop_discovery(adapter);
 
         binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
         binc_device_set_services_resolved_callback(device, &on_services_resolved);
+        binc_device_set_bonding_state_changed_callback(device, &on_bonding_state_changed);
         binc_device_set_read_char_callback(device, &on_read);
         binc_device_set_write_char_callback(device, &on_write);
         binc_device_set_notify_char_callback(device, &on_notify);

@@ -44,6 +44,7 @@ struct binc_device {
     guint device_prop_changed;
     ConnectionStateChangedCallback connection_state_callback;
     ServicesResolvedCallback services_resolved_callback;
+    BondingStateChangedCallback bonding_state_callback;
     GHashTable *services;
     GList *services_list;
     GHashTable *characteristics;
@@ -60,6 +61,7 @@ static void binc_init_device(Device *device) {
     device->address_type = NULL;
     device->alias = NULL;
     device->bondingState = NONE;
+    device->bonding_state_callback = NULL;
     device->connection_state = DISCONNECTED;
     device->connection_state_callback = NULL;
     device->connection = NULL;
@@ -459,8 +461,8 @@ static void binc_device_changed(GDBusConnection *conn,
             }
         } else if (g_str_equal(key, "Paired")) {
             device->paired = g_variant_get_boolean(value);
-            device->bondingState = device->paired ? BONDED : NONE;
             log_debug(TAG, "Paired %s", device->paired ? "true" : "false");
+            binc_device_set_bonding_state(device, device->paired ? BONDED : NONE);
 
             // If gatt-tree has not been built yet, start building it
             if (device->services == NULL && device->services_resolved) {
@@ -639,6 +641,13 @@ void binc_device_set_services_resolved_callback(Device *device, ServicesResolved
     g_assert(callback != NULL);
 
     device->services_resolved_callback = callback;
+}
+
+void binc_device_set_bonding_state_changed_callback(Device *device, BondingStateChangedCallback callback) {
+    g_assert(device != NULL);
+    g_assert(callback != NULL);
+
+    device->bonding_state_callback = callback;
 }
 
 Service *binc_device_get_service(Device *device, const char *service_uuid) {
@@ -874,7 +883,11 @@ BondingState binc_device_get_bonding_state(const Device *device) {
 
 void binc_device_set_bonding_state(Device *device, BondingState bonding_state) {
     g_assert(device != NULL);
+    BondingState old_state = device->bondingState;
     device->bondingState = bonding_state;
+    if (device->bonding_state_callback != NULL) {
+        device->bonding_state_callback(device, device->bondingState, old_state, NULL);
+    }
 }
 
 Adapter *binc_device_get_adapter(const Device *device) {
