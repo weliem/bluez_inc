@@ -28,6 +28,8 @@
 #include "logger.h"
 #include "parser.h"
 #include "agent.h"
+#include "service_handler_manager.h"
+#include "hts_service_handler.h"
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
@@ -47,6 +49,7 @@
 
 Adapter *default_adapter = NULL;
 Agent *agent = NULL;
+ServiceHandlerManager *serviceHandlerManager = NULL;
 
 void on_connection_state_changed(Device *device, ConnectionState state, GError *error) {
     if (error != NULL) {
@@ -78,19 +81,30 @@ void on_notification_state_changed(Characteristic *characteristic, GError *error
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
-    const char *uuid = binc_characteristic_get_uuid(characteristic);
-    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-    parser_set_offset(parser, 1);
+//    const char *uuid = binc_characteristic_get_uuid(characteristic);
+//    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+//    parser_set_offset(parser, 1);
+//
+//    if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
+//        float value = parser_get_float(parser);
+//        log_debug(TAG, "temperature %.1f", value);
+//    } else if (g_str_equal(uuid, BLOODPRESSURE_CHAR)) {
+//        float systolic = parser_get_sfloat(parser);
+//        float diastolic = parser_get_sfloat(parser);
+//        log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
+//    }
+//    parser_free(parser);
 
-    if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
-        float value = parser_get_float(parser);
-        log_debug(TAG, "temperature %.1f", value);
-    } else if (g_str_equal(uuid, BLOODPRESSURE_CHAR)) {
-        float systolic = parser_get_sfloat(parser);
-        float diastolic = parser_get_sfloat(parser);
-        log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
+    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
+    if (serviceHandler != NULL) {
+        serviceHandler->on_characteristic_changed(
+                serviceHandler->handler,
+                binc_characteristic_get_device(characteristic),
+                characteristic,
+                byteArray,
+                NULL);
     }
-    parser_free(parser);
 }
 
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
@@ -188,7 +202,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char *name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "FT95")) {
+    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
         binc_adapter_stop_discovery(adapter);
 
         binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
@@ -236,7 +250,7 @@ int main(void) {
     // Setup mainloop
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
-//    // Get the default default_adapter
+    // Get the default default_adapter
     default_adapter = binc_get_default_adapter(dbusConnection);
 
     if (default_adapter != NULL) {
@@ -254,9 +268,13 @@ int main(void) {
         }
 
         // Build UUID array so we can use it in the discovery filter
-        GPtrArray *service_uuids = g_ptr_array_new ();
+        GPtrArray *service_uuids = g_ptr_array_new();
         g_ptr_array_add(service_uuids, HTS_SERVICE);
         g_ptr_array_add(service_uuids, BLP_SERVICE);
+
+        serviceHandlerManager = binc_service_handler_manager_create();
+        ServiceHandler *hts_service_handler = hts_service_handler_get();
+        binc_service_handler_manager_add(serviceHandlerManager, hts_service_handler);
 
         // Set discovery callbacks and start discovery
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
