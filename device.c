@@ -502,7 +502,7 @@ void subscribe_prop_changed(Device *device) {
                                                                          "org.bluez",
                                                                          "org.freedesktop.DBus.Properties",
                                                                          "PropertiesChanged",
-                                                                         NULL,
+                                                                         device->path,
                                                                          "org.bluez.Device1",
                                                                          G_DBUS_SIGNAL_FLAGS_NONE,
                                                                          binc_device_changed,
