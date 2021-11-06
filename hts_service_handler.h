@@ -7,6 +7,8 @@
 
 #include "service_handler_manager.h"
 
-ServiceHandler* hts_service_handler_get();
+
+
+ServiceHandler* hts_service_handler_create();
 
 #endif //TEST_HTS_SERVICE_HANDLER_H

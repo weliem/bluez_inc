@@ -14,6 +14,24 @@ ServiceHandlerManager* binc_service_handler_manager_create() {
     return serviceHandlerManager;
 }
 
+void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerManager) {
+
+    if (serviceHandlerManager->service_handlers != NULL) {
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, serviceHandlerManager->service_handlers);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            g_free(key);
+            ServiceHandler *handler = (ServiceHandler *) value;
+            handler->service_handler_free(handler->handler);
+            g_free(handler);
+        }
+        g_hash_table_destroy(serviceHandlerManager->service_handlers);
+    }
+    serviceHandlerManager->service_handlers = NULL;
+    g_free(serviceHandlerManager);
+}
+
 void binc_service_handler_manager_add(ServiceHandlerManager *serviceHandlerManager, ServiceHandler *service_handler) {
     g_assert(serviceHandlerManager != NULL);
     g_assert(service_handler != NULL);

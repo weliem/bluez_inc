@@ -62,6 +62,10 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
     if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
         binc_adapter_remove_device(default_adapter, device);
     }
+
+    if (state == CONNECTED) {
+        binc_adapter_start_discovery(default_adapter);
+    }
 }
 
 void on_bonding_state_changed(Device *device, BondingState new_state, BondingState old_state, GError *error) {
@@ -81,23 +85,9 @@ void on_notification_state_changed(Characteristic *characteristic, GError *error
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
-//    const char *uuid = binc_characteristic_get_uuid(characteristic);
-//    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-//    parser_set_offset(parser, 1);
-//
-//    if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
-//        float value = parser_get_float(parser);
-//        log_debug(TAG, "temperature %.1f", value);
-//    } else if (g_str_equal(uuid, BLOODPRESSURE_CHAR)) {
-//        float systolic = parser_get_sfloat(parser);
-//        float diastolic = parser_get_sfloat(parser);
-//        log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
-//    }
-//    parser_free(parser);
-
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
-    if (serviceHandler != NULL) {
+    if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
         serviceHandler->on_characteristic_changed(
                 serviceHandler->handler,
                 binc_characteristic_get_device(characteristic),
@@ -202,7 +192,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     g_free(deviceToString);
 
     const char *name = binc_device_get_name(device);
-    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
+//    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
         binc_adapter_stop_discovery(adapter);
 
         binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
@@ -213,7 +203,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
         binc_device_set_notify_char_callback(device, &on_notify);
         binc_device_set_notify_state_callback(device, &on_notification_state_changed);
         g_timeout_add(CONNECT_DELAY, delayed_connect, device);
-    }
+//    }
 }
 
 void on_discovery_state_changed(Adapter *adapter, DiscoveryState state, GError *error) {
@@ -239,6 +229,7 @@ gboolean callback(gpointer data) {
         default_adapter = NULL;
     }
 
+    binc_service_handler_manager_free(serviceHandlerManager);
     g_main_loop_quit((GMainLoop *) data);
     return FALSE;
 }
@@ -273,7 +264,7 @@ int main(void) {
         g_ptr_array_add(service_uuids, BLP_SERVICE);
 
         serviceHandlerManager = binc_service_handler_manager_create();
-        ServiceHandler *hts_service_handler = hts_service_handler_get();
+        ServiceHandler *hts_service_handler = hts_service_handler_create();
         binc_service_handler_manager_add(serviceHandlerManager, hts_service_handler);
 
         // Set discovery callbacks and start discovery
