@@ -134,6 +134,17 @@ GString *parser_get_string(Parser *parser) {
     return result;
 }
 
+GDateTime* parser_get_date_time(Parser *parser) {
+    guint16 year = parser_get_uint16(parser);
+    guint8 month = parser_get_uint8(parser);
+    guint8 day = parser_get_uint8(parser);
+    guint8 hour = parser_get_uint8(parser);
+    guint8 min = parser_get_uint8(parser);
+    guint8 sec = parser_get_uint8(parser);
+
+    return g_date_time_new_local(year, month, day, hour, min, sec);
+}
+
 GByteArray* binc_get_current_time() {
     GByteArray *byteArray = g_byte_array_new();
 
