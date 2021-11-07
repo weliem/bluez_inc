@@ -30,22 +30,12 @@
 #include "agent.h"
 #include "service_handler_manager.h"
 #include "hts_service_handler.h"
+#include "dis_service_handler.h"
+#include "cts_service_handler.h"
+#include "blp_service_handler.h"
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
-
-#define DIS_SERVICE "0000180a-0000-1000-8000-00805f9b34fb"
-#define MANUFACTURER_CHAR "00002a29-0000-1000-8000-00805f9b34fb"
-#define MODEL_CHAR "00002a24-0000-1000-8000-00805f9b34fb"
-
-#define HTS_SERVICE "00001809-0000-1000-8000-00805f9b34fb"
-#define TEMPERATURE_CHAR "00002a1c-0000-1000-8000-00805f9b34fb"
-
-#define CTS_SERVICE "00001805-0000-1000-8000-00805f9b34fb"
-#define CURRENT_TIME_CHAR "00002a2b-0000-1000-8000-00805f9b34fb"
-
-#define BLP_SERVICE "00001810-0000-1000-8000-00805f9b34fb"
-#define BLOODPRESSURE_CHAR "00002a35-0000-1000-8000-00805f9b34fb"
 
 Adapter *default_adapter = NULL;
 Agent *agent = NULL;
@@ -73,15 +63,6 @@ void on_bonding_state_changed(Device *device, BondingState new_state, BondingSta
 }
 
 void on_notification_state_changed(Characteristic *characteristic, GError *error) {
-//    const char *uuid = binc_characteristic_get_uuid(characteristic);
-//    if (error != NULL) {
-//        log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
-//        return;
-//    }
-//
-//    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
-//    log_debug(TAG, "notification state <%s> : %s", binc_characteristic_get_uuid(characteristic),
-//              is_notifying ? "true" : "false");
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_notification_state_updated != NULL) {
@@ -107,25 +88,6 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
 }
 
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
-//    const char *uuid = binc_characteristic_get_uuid(characteristic);
-//    if (error != NULL) {
-//        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
-//        return;
-//    }
-//
-//    if (byteArray != NULL) {
-//        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-//        if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
-//            GString *manufacturer = parser_get_string(parser);
-//            log_debug(TAG, "manufacturer = %s", manufacturer->str);
-//            g_string_free(manufacturer, TRUE);
-//        } else if (g_str_equal(uuid, MODEL_CHAR)) {
-//            GString *model = parser_get_string(parser);
-//            log_debug(TAG, "model = %s", model->str);
-//            g_string_free(model, TRUE);
-//        }
-//        parser_free(parser);
-//    }
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
@@ -139,12 +101,6 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
 }
 
 void on_write(Characteristic *characteristic, GError *error) {
-//    const char *uuid = binc_characteristic_get_uuid(characteristic);
-//    if (error != NULL) {
-//        log_debug(TAG, "failed to write '%s' (error %d: %s)", uuid, error->code, error->message);
-//    } else {
-//        log_debug(TAG, "writing succeeded");
-//    }
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_write != NULL) {
@@ -159,42 +115,9 @@ void on_write(Characteristic *characteristic, GError *error) {
 
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", binc_device_get_name(device));
-//    Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
-//    if (manufacturer != NULL) {
-//        binc_characteristic_read(manufacturer);
-//    }
-//
-//    Characteristic *model = binc_device_get_characteristic(device, DIS_SERVICE, MODEL_CHAR);
-//    if (model != NULL) {
-//        binc_characteristic_read(model);
-//    }
-//
-//    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE, TEMPERATURE_CHAR);
-//    if (temperature != NULL) {
-//        log_debug(TAG, "starting notify for temperature");
-//        binc_characteristic_start_notify(temperature);
-//    }
-//
-//    Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
-//    if (current_time != NULL) {
-//        if (binc_characteristic_supports_write(current_time, WITH_RESPONSE)) {
-//            GByteArray *timeBytes = binc_get_current_time();
-//            log_debug(TAG, "writing current time");
-//            binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
-//            g_byte_array_free(timeBytes, TRUE);
-//        }
-//        if (binc_characteristic_supports_notify(current_time)) {
-//            binc_characteristic_start_notify(current_time);
-//        }
-//    }
-//
-//    Characteristic *bpm = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
-//    if (bpm != NULL && binc_characteristic_supports_notify(bpm)) {
-//        binc_characteristic_start_notify(bpm);
-//    }
 
+    // Activate service handlers if they exist
     GList *services = binc_device_get_services(device);
-
     for (GList *iterator = services; iterator; iterator = iterator->next) {
         Service *service = (Service *) iterator->data;
         const char* service_uuid = binc_service_get_uuid(service);
@@ -306,7 +229,13 @@ int main(void) {
         // Setup service handlers
         serviceHandlerManager = binc_service_handler_manager_create();
         ServiceHandler *hts_service_handler = hts_service_handler_create();
+        ServiceHandler *dis_service_handler = dis_service_handler_create();
+        ServiceHandler *cts_service_handler = cts_service_handler_create();
+        ServiceHandler *blp_service_handler = blp_service_handler_create();
         binc_service_handler_manager_add(serviceHandlerManager, hts_service_handler);
+        binc_service_handler_manager_add(serviceHandlerManager, dis_service_handler);
+        binc_service_handler_manager_add(serviceHandlerManager, cts_service_handler);
+        binc_service_handler_manager_add(serviceHandlerManager, blp_service_handler);
 
         // Set discovery callbacks and start discovery
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
@@ -319,7 +248,7 @@ int main(void) {
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(45, callback, loop);
+    g_timeout_add_seconds(120, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
