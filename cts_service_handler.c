@@ -52,6 +52,7 @@ static void cts_onCharacteristicChanged(gpointer *handler, Device *device, Chara
             char* time_string = g_date_time_format(dateTime, "%F %R:%S");
             log_debug(TAG, "currenttime=%s",time_string);
             g_free(time_string);
+            g_date_time_unref(dateTime);
         }
         parser_free(parser);
     }
