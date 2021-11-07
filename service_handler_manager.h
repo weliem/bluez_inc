@@ -10,7 +10,7 @@
 
 typedef void (*onCharacteristicsDiscovered)(gpointer *handler, Device *device);
 
-typedef void (*onNotificationStateUpdated)(gpointer *handler, Device *device, Characteristic *characteristic);
+typedef void (*onNotificationStateUpdated)(gpointer *handler, Device *device, Characteristic *characteristic, GError *error);
 
 typedef void (*onCharacteristicWrite)(gpointer *handler, Device *device, Characteristic *characteristic,
                                       GByteArray *byteArray, GError *error);

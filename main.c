@@ -73,15 +73,24 @@ void on_bonding_state_changed(Device *device, BondingState new_state, BondingSta
 }
 
 void on_notification_state_changed(Characteristic *characteristic, GError *error) {
-    const char *uuid = binc_characteristic_get_uuid(characteristic);
-    if (error != NULL) {
-        log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
-        return;
+//    const char *uuid = binc_characteristic_get_uuid(characteristic);
+//    if (error != NULL) {
+//        log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
+//        return;
+//    }
+//
+//    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
+//    log_debug(TAG, "notification state <%s> : %s", binc_characteristic_get_uuid(characteristic),
+//              is_notifying ? "true" : "false");
+    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
+    if (serviceHandler != NULL && serviceHandler->on_notification_state_updated != NULL) {
+        serviceHandler->on_notification_state_updated(
+                serviceHandler->handler,
+                binc_characteristic_get_device(characteristic),
+                characteristic,
+                error);
     }
-
-    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
-    log_debug(TAG, "notification state <%s> : %s", binc_characteristic_get_uuid(characteristic),
-              is_notifying ? "true" : "false");
 }
 
 void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
@@ -98,70 +107,101 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
 }
 
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
-    const char *uuid = binc_characteristic_get_uuid(characteristic);
-    if (error != NULL) {
-        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
-        return;
-    }
-
-    if (byteArray != NULL) {
-        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-        if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
-            GString *manufacturer = parser_get_string(parser);
-            log_debug(TAG, "manufacturer = %s", manufacturer->str);
-            g_string_free(manufacturer, TRUE);
-        } else if (g_str_equal(uuid, MODEL_CHAR)) {
-            GString *model = parser_get_string(parser);
-            log_debug(TAG, "model = %s", model->str);
-            g_string_free(model, TRUE);
-        }
-        parser_free(parser);
+//    const char *uuid = binc_characteristic_get_uuid(characteristic);
+//    if (error != NULL) {
+//        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
+//        return;
+//    }
+//
+//    if (byteArray != NULL) {
+//        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+//        if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
+//            GString *manufacturer = parser_get_string(parser);
+//            log_debug(TAG, "manufacturer = %s", manufacturer->str);
+//            g_string_free(manufacturer, TRUE);
+//        } else if (g_str_equal(uuid, MODEL_CHAR)) {
+//            GString *model = parser_get_string(parser);
+//            log_debug(TAG, "model = %s", model->str);
+//            g_string_free(model, TRUE);
+//        }
+//        parser_free(parser);
+//    }
+    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
+    if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
+        serviceHandler->on_characteristic_changed(
+                serviceHandler->handler,
+                binc_characteristic_get_device(characteristic),
+                characteristic,
+                byteArray,
+                error);
     }
 }
 
 void on_write(Characteristic *characteristic, GError *error) {
-    const char *uuid = binc_characteristic_get_uuid(characteristic);
-    if (error != NULL) {
-        log_debug(TAG, "failed to write '%s' (error %d: %s)", uuid, error->code, error->message);
-    } else {
-        log_debug(TAG, "writing succeeded");
+//    const char *uuid = binc_characteristic_get_uuid(characteristic);
+//    if (error != NULL) {
+//        log_debug(TAG, "failed to write '%s' (error %d: %s)", uuid, error->code, error->message);
+//    } else {
+//        log_debug(TAG, "writing succeeded");
+//    }
+    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
+    if (serviceHandler != NULL && serviceHandler->on_characteristic_write != NULL) {
+        serviceHandler->on_characteristic_write(
+                serviceHandler->handler,
+                binc_characteristic_get_device(characteristic),
+                characteristic,
+                NULL,
+                error);
     }
 }
 
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", binc_device_get_name(device));
-    Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
-    if (manufacturer != NULL) {
-        binc_characteristic_read(manufacturer);
-    }
+//    Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
+//    if (manufacturer != NULL) {
+//        binc_characteristic_read(manufacturer);
+//    }
+//
+//    Characteristic *model = binc_device_get_characteristic(device, DIS_SERVICE, MODEL_CHAR);
+//    if (model != NULL) {
+//        binc_characteristic_read(model);
+//    }
+//
+//    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE, TEMPERATURE_CHAR);
+//    if (temperature != NULL) {
+//        log_debug(TAG, "starting notify for temperature");
+//        binc_characteristic_start_notify(temperature);
+//    }
+//
+//    Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
+//    if (current_time != NULL) {
+//        if (binc_characteristic_supports_write(current_time, WITH_RESPONSE)) {
+//            GByteArray *timeBytes = binc_get_current_time();
+//            log_debug(TAG, "writing current time");
+//            binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
+//            g_byte_array_free(timeBytes, TRUE);
+//        }
+//        if (binc_characteristic_supports_notify(current_time)) {
+//            binc_characteristic_start_notify(current_time);
+//        }
+//    }
+//
+//    Characteristic *bpm = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
+//    if (bpm != NULL && binc_characteristic_supports_notify(bpm)) {
+//        binc_characteristic_start_notify(bpm);
+//    }
 
-    Characteristic *model = binc_device_get_characteristic(device, DIS_SERVICE, MODEL_CHAR);
-    if (model != NULL) {
-        binc_characteristic_read(model);
-    }
+    GList *services = binc_device_get_services(device);
 
-    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE, TEMPERATURE_CHAR);
-    if (temperature != NULL) {
-        log_debug(TAG, "starting notify for temperature");
-        binc_characteristic_start_notify(temperature);
-    }
-
-    Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
-    if (current_time != NULL) {
-        if (binc_characteristic_supports_write(current_time, WITH_RESPONSE)) {
-            GByteArray *timeBytes = binc_get_current_time();
-            log_debug(TAG, "writing current time");
-            binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
-            g_byte_array_free(timeBytes, TRUE);
+    for (GList *iterator = services; iterator; iterator = iterator->next) {
+        Service *service = (Service *) iterator->data;
+        const char* service_uuid = binc_service_get_uuid(service);
+        ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
+        if (serviceHandler != NULL && serviceHandler->on_characteristics_discovered != NULL) {
+            serviceHandler->on_characteristics_discovered(serviceHandler->handler,device);
         }
-        if (binc_characteristic_supports_notify(current_time)) {
-            binc_characteristic_start_notify(current_time);
-        }
-    }
-
-    Characteristic *bpm = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
-    if (bpm != NULL && binc_characteristic_supports_notify(bpm)) {
-        binc_characteristic_start_notify(bpm);
     }
 }
 
@@ -193,16 +233,16 @@ void on_scan_result(Adapter *adapter, Device *device) {
 
     const char *name = binc_device_get_name(device);
 //    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
-        binc_adapter_stop_discovery(adapter);
+    binc_adapter_stop_discovery(adapter);
 
-        binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
-        binc_device_set_services_resolved_callback(device, &on_services_resolved);
-        binc_device_set_bonding_state_changed_callback(device, &on_bonding_state_changed);
-        binc_device_set_read_char_callback(device, &on_read);
-        binc_device_set_write_char_callback(device, &on_write);
-        binc_device_set_notify_char_callback(device, &on_notify);
-        binc_device_set_notify_state_callback(device, &on_notification_state_changed);
-        g_timeout_add(CONNECT_DELAY, delayed_connect, device);
+    binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
+    binc_device_set_services_resolved_callback(device, &on_services_resolved);
+    binc_device_set_bonding_state_changed_callback(device, &on_bonding_state_changed);
+    binc_device_set_read_char_callback(device, &on_read);
+    binc_device_set_write_char_callback(device, &on_write);
+    binc_device_set_notify_char_callback(device, &on_notify);
+    binc_device_set_notify_state_callback(device, &on_notification_state_changed);
+    g_timeout_add(CONNECT_DELAY, delayed_connect, device);
 //    }
 }
 
@@ -263,6 +303,7 @@ int main(void) {
         g_ptr_array_add(service_uuids, HTS_SERVICE);
         g_ptr_array_add(service_uuids, BLP_SERVICE);
 
+        // Setup service handlers
         serviceHandlerManager = binc_service_handler_manager_create();
         ServiceHandler *hts_service_handler = hts_service_handler_create();
         binc_service_handler_manager_add(serviceHandlerManager, hts_service_handler);
@@ -278,7 +319,7 @@ int main(void) {
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(20, callback, loop);
+    g_timeout_add_seconds(45, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);

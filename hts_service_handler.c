@@ -38,7 +38,7 @@ static TemperatureMeasurement *hts_create_measurement(GByteArray *byteArray) {
 
     measurement->value = parser_get_float(parser);
     measurement->unit = (flags & 0x01) > 0 ? FAHRENHEIT : CELSIUS;
-    measurement->timestamp = parser_get_date_time(parser);
+    measurement->timestamp = timestamp_present ? parser_get_date_time(parser) : NULL;
     measurement->temperature_type = type_present ? parser_get_uint8(parser) : UNKNOWN;
 
     parser_free(parser);
@@ -58,9 +58,14 @@ static void hts_onCharacteristicsDiscovered(gpointer *handler, Device *device) {
     }
 }
 
-static void hts_onNotificationStateUpdated(gpointer *handler, Device *device, Characteristic *characteristic) {
+static void hts_onNotificationStateUpdated(gpointer *handler, Device *device, Characteristic *characteristic, GError *error) {
+    const char *uuid = binc_characteristic_get_uuid(characteristic);
     gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
-    log_debug(TAG, "characteristic <%s> notifying %s", binc_characteristic_get_uuid(characteristic), is_notifying ? "true" : "false");
+        if (error != NULL) {
+        log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
+        return;
+    }
+    log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
 static void hts_onCharacteristicWrite(gpointer *handler, Device *device, Characteristic *characteristic, GByteArray *byteArray, GError *error) {
