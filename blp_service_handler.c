@@ -7,8 +7,49 @@
 #include "parser.h"
 #include "logger.h"
 #include "device.h"
+#include "observation_units.h"
 
 #define TAG "BLP_Service_Handler"
+
+typedef struct blp_measurement {
+    float systolic;
+    float diastolic;
+    float mean_arterial_pressure;
+    ObservationUnit unit;
+    GDateTime *timestamp;
+    float pulse_rate;
+    guint8 user_id;
+    guint16 status;
+} BloodPressureMeasurement;
+
+static BloodPressureMeasurement *blp_create_measurement(GByteArray *byteArray) {
+    BloodPressureMeasurement *measurement = g_new0(BloodPressureMeasurement, 1);
+    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+
+    guint8 flags = parser_get_uint8(parser);
+    gboolean timestamp_present = (flags & 0x02) > 0;
+    gboolean pulse_present = (flags & 0x04) > 0;
+    gboolean user_id_present = (flags & 0x08) > 0;
+    gboolean status_present = (flags & 0x10) > 0;
+
+    measurement->systolic = parser_get_sfloat(parser);
+    measurement->diastolic = parser_get_sfloat(parser);
+    measurement->mean_arterial_pressure = parser_get_sfloat(parser);
+    measurement->unit = (flags & 0x01) > 0 ? KPA : MMHG;
+    measurement->timestamp = timestamp_present ? parser_get_date_time(parser) : NULL;
+    measurement->pulse_rate = pulse_present ? parser_get_sfloat(parser) : 0;
+    measurement->user_id = user_id_present ? parser_get_uint8(parser) : 0xFF;
+    measurement->status = status_present ? parser_get_uint16(parser) : 0xFFFF;
+
+    parser_free(parser);
+    return measurement;
+}
+
+void blp_measurement_free(BloodPressureMeasurement *measurement) {
+    g_date_time_unref(measurement->timestamp);
+    measurement->timestamp = NULL;
+    g_free(measurement);
+}
 
 static void blp_onCharacteristicsDiscovered(gpointer *handler, Device *device) {
     Characteristic *blp_measurement = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
@@ -44,15 +85,22 @@ blp_onCharacteristicChanged(gpointer *handler, Device *device, Characteristic *c
     }
 
     if (byteArray != NULL) {
-        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-        parser_set_offset(parser, 1);
-
         if (g_str_equal(uuid, BLOODPRESSURE_CHAR)) {
-            float systolic = parser_get_sfloat(parser);
-            float diastolic = parser_get_sfloat(parser);
-            log_debug(TAG, "bpm %.0f/%.0f", systolic, diastolic);
+            BloodPressureMeasurement *measurement = blp_create_measurement(byteArray);
+
+            // Log the measurement
+            char* time_string = g_date_time_format(measurement->timestamp, "%F %R:%S");
+            log_debug(TAG, "systolic=%.0f, diastolic=%.0f, unit=%s, pulse=%.0f, timestamp=%s",
+                      measurement->systolic,
+                      measurement->diastolic,
+                      measurement->unit == MMHG ? "mmHg":"kPa",
+                      measurement->pulse_rate,
+                      time_string
+            );
+            g_free(time_string);
+
+            blp_measurement_free(measurement);
         }
-        parser_free(parser);
     }
 }
 

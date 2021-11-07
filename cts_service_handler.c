@@ -19,6 +19,11 @@ static void cts_onCharacteristicsDiscovered(gpointer *handler, Device *device) {
             binc_characteristic_write(current_time, timeBytes, WITH_RESPONSE);
             g_byte_array_free(timeBytes, TRUE);
         }
+
+        if (binc_characteristic_supports_read(current_time)) {
+            binc_characteristic_read(current_time);
+        }
+
         if (binc_characteristic_supports_notify(current_time)) {
             binc_characteristic_start_notify(current_time);
         }
@@ -41,17 +46,14 @@ static void cts_onCharacteristicChanged(gpointer *handler, Device *device, Chara
     }
 
     if (byteArray != NULL) {
-//        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-//        if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
-//            GString *manufacturer = parser_get_string(parser);
-//            log_debug(TAG, "manufacturer = %s", manufacturer->str);
-//            g_string_free(manufacturer, TRUE);
-//        } else if (g_str_equal(uuid, MODEL_CHAR)) {
-//            GString *model = parser_get_string(parser);
-//            log_debug(TAG, "model = %s", model->str);
-//            g_string_free(model, TRUE);
-//        }
-//        parser_free(parser);
+        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+        if (g_str_equal(uuid, CURRENT_TIME_CHAR)) {
+            GDateTime *dateTime = parser_get_date_time(parser);
+            char* time_string = g_date_time_format(dateTime, "%F %R:%S");
+            log_debug(TAG, "currenttime=%s",time_string);
+            g_free(time_string);
+        }
+        parser_free(parser);
     }
 }
 

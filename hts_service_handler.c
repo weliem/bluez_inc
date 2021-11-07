@@ -7,15 +7,14 @@
 #include "parser.h"
 #include "logger.h"
 #include "device.h"
+#include "observation_units.h"
 
 #define TAG "HTS_Service_Handler"
 
 #define HTS_SERVICE_UUID "00001809-0000-1000-8000-00805f9b34fb"
 #define TEMPERATURE_CHAR_UUID "00002a1c-0000-1000-8000-00805f9b34fb"
 
-typedef enum observation_unit {
-    FAHRENHEIT = 0, CELSIUS = 1
-} ObservationUnit;
+
 
 typedef enum temperature_type {
     ARMPIT = 0, EAR = 1, UNKNOWN = 99

@@ -640,7 +640,7 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
     g_assert(device != NULL);
     g_assert (adapter != NULL);
 
-    log_debug(TAG, "removing %s", binc_device_get_name(device));
+    log_debug(TAG, "removing %s (%s)", binc_device_get_name(device), binc_device_get_address(device));
     adapter_call_method(adapter, "RemoveDevice", g_variant_new("(o)", binc_device_get_path(device)));
 }
 
