@@ -52,6 +52,8 @@ float parser_get_sfloat(Parser *parser);
 
 float parser_get_float(Parser *parser);
 
+GDateTime* parser_get_date_time(Parser *parser);
+
 GByteArray *binc_get_current_time();
 
 GString *parser_get_string(Parser *parser);

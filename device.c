@@ -325,8 +325,8 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
     if (result) {
         device->services = g_hash_table_new(g_str_hash, g_str_equal);
         device->characteristics = g_hash_table_new(g_str_hash, g_str_equal);
-        result = g_variant_get_child_value(result, 0);
-        g_variant_iter_init(&iter, result);
+        GVariant *innerResult = g_variant_get_child_value(result, 0);
+        g_variant_iter_init(&iter, innerResult);
         while (g_variant_iter_loop(&iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
             if (g_str_has_prefix(object_path, device->path)) {
                 const gchar *interface_name;
@@ -390,6 +390,7 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                 }
             }
         }
+        g_variant_unref(innerResult);
         g_variant_unref(result);
     }
 
@@ -502,7 +503,7 @@ void subscribe_prop_changed(Device *device) {
                                                                          "org.bluez",
                                                                          "org.freedesktop.DBus.Properties",
                                                                          "PropertiesChanged",
-                                                                         NULL,
+                                                                         device->path,
                                                                          "org.bluez.Device1",
                                                                          G_DBUS_SIGNAL_FLAGS_NONE,
                                                                          binc_device_changed,
