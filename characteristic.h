@@ -20,6 +20,7 @@
  *   SOFTWARE.
  *
  */
+
 #ifndef TEST_CHARACTERISTIC_H
 #define TEST_CHARACTERISTIC_H
 

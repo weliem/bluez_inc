@@ -1,8 +1,25 @@
-//
-// Created by martijn on 26/8/21.
-//
-// https://review.tizen.org/git/?p=platform/core/connectivity/bluetooth-frwk.git;a=blob;f=bt-api/bt-gatt-client.c;h=b51dbc5e40ce4b391dac6488ffd69f1a21e0e60b;hb=HEAD
-//
+/*
+ *   Copyright (c) 2021 Martijn van Welie
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in all
+ *   copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
+ *
+ */
 
 #include <stdint-gcc.h>
 #include "adapter.h"
@@ -13,14 +30,12 @@
 #define TAG "Adapter"
 
 struct binc_adapter {
-    // Public stuff
     char *path;
     char *address;
     gboolean powered;
     gboolean discoverable;
     DiscoveryState discovery_state;
 
-    // Internal stuff
     GDBusConnection *connection;
     guint device_prop_changed;
     guint adapter_prop_changed;
@@ -33,19 +48,6 @@ struct binc_adapter {
 
     GHashTable *devices_cache;
 };
-
-static void init_adapter(Adapter *adapter) {
-    g_assert(adapter != NULL);
-
-    adapter->address = NULL;
-    adapter->connection = NULL;
-    adapter->discoverable = FALSE;
-    adapter->discovery_state = STOPPED;
-    adapter->path = NULL;
-    adapter->powered = FALSE;
-    adapter->discoveryResultCallback = NULL;
-    adapter->devices_cache = NULL;
-}
 
 static void binc_internal_call_method(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Adapter *adapter = (Adapter *) user_data;
@@ -424,7 +426,41 @@ void setup_signal_subscribers(Adapter *adapter) {
                                                                 NULL);
 }
 
+static void init_adapter(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    adapter->address = NULL;
+    adapter->connection = NULL;
+    adapter->discoverable = FALSE;
+    adapter->discovery_state = STOPPED;
+    adapter->path = NULL;
+    adapter->powered = FALSE;
+    adapter->device_prop_changed = 0;
+    adapter->adapter_prop_changed = 0;
+    adapter->iface_added = 0;
+    adapter->iface_removed = 0;
+    adapter->discoveryResultCallback = NULL;
+    adapter->discoveryStateCallback = NULL;
+    adapter->poweredStateCallback = NULL;
+    adapter->devices_cache = NULL;
+}
+
+static Adapter *binc_adapter_create(GDBusConnection *connection, const char *path) {
+    g_assert(connection != NULL);
+    g_assert(path != NULL);
+
+    Adapter *adapter = g_new0(Adapter, 1);
+    init_adapter(adapter);
+    adapter->connection = connection;
+    adapter->path = g_strdup(path);
+    adapter->devices_cache = g_hash_table_new(g_str_hash, g_str_equal);
+    setup_signal_subscribers(adapter);
+    return adapter;
+}
+
 void remove_signal_subscribers(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->device_prop_changed);
     adapter->device_prop_changed = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->adapter_prop_changed);
@@ -433,19 +469,6 @@ void remove_signal_subscribers(Adapter *adapter) {
     adapter->iface_added = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_removed);
     adapter->iface_removed = 0;
-}
-
-static Adapter *binc_adapter_create(GDBusConnection *connection, const char *path) {
-    g_assert(connection != NULL);
-    g_assert(path != NULL);
-
-    Adapter *adapter = g_new(Adapter, 1);
-    init_adapter(adapter);
-    adapter->connection = connection;
-    adapter->path = g_strdup(path);
-    adapter->devices_cache = g_hash_table_new(g_str_hash, g_str_equal);
-    setup_signal_subscribers(adapter);
-    return adapter;
 }
 
 void binc_adapter_free(Adapter *adapter) {
@@ -540,6 +563,7 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
 
 Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
     g_assert(dbusConnection != NULL);
+
     Adapter *adapter = NULL;
     GPtrArray *adapters = binc_find_adapters(dbusConnection);
     if (adapters->len > 0) {
