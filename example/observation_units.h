@@ -6,7 +6,14 @@
 #define TEST_OBSERVATION_UNITS_H
 
 typedef enum observation_unit {
-    FAHRENHEIT = 0, CELSIUS = 1, MMHG = 3, KPA = 4
+    FAHRENHEIT = 0,
+    CELSIUS = 1,
+    MMHG = 2,
+    KPA = 3,
+    BPM = 4
 } ObservationUnit;
+
+const char* observation_unit_str(ObservationUnit unit);
+
 
 #endif //TEST_OBSERVATION_UNITS_H

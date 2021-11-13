@@ -3,11 +3,12 @@
 //
 
 #include "blp_service_handler.h"
-#include "characteristic.h"
-#include "parser.h"
-#include "logger.h"
-#include "device.h"
+#include "../characteristic.h"
+#include "../parser.h"
+#include "../logger.h"
+#include "../device.h"
 #include "observation_units.h"
+#include "observation.h"
 
 #define TAG "BLP_Service_Handler"
 
@@ -21,6 +22,52 @@ typedef struct blp_measurement {
     guint8 user_id;
     guint16 status;
 } BloodPressureMeasurement;
+
+static GList *blp_measurement_as_observations(BloodPressureMeasurement *measurement) {
+    GList *observation_list = NULL;
+
+    Observation *observation1 = g_new0(Observation, 1);
+    observation1->value = measurement->systolic;
+    observation1->unit = measurement->unit;
+    observation1->duration_msec = 30000;
+    observation1->type = "blood.pressure.systolic";
+    observation1->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
+    observation1->received = g_date_time_new_now_utc();
+    observation1->location = LOCATION_ARM;
+    observation_list = g_list_append(observation_list, observation1);
+
+    Observation *observation2 = g_new0(Observation, 1);
+    observation2->value = measurement->diastolic;
+    observation2->unit = measurement->unit;
+    observation2->duration_msec = 30000;
+    observation2->type = "blood.pressure.diastolic";
+    observation2->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
+    observation2->received = g_date_time_new_now_utc();
+    observation2->location = LOCATION_ARM;
+    observation_list = g_list_append(observation_list, observation2);
+
+    Observation *observation3 = g_new0(Observation, 1);
+    observation3->value = measurement->mean_arterial_pressure;
+    observation3->unit = measurement->unit;
+    observation3->duration_msec = 30000;
+    observation3->type = "blood.pressure.mean";
+    observation3->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
+    observation3->received = g_date_time_new_now_utc();
+    observation3->location = LOCATION_ARM;
+    observation_list = g_list_append(observation_list, observation3);
+
+    Observation *observation4 = g_new0(Observation, 1);
+    observation4->value = measurement->pulse_rate;
+    observation4->unit = BPM;
+    observation4->duration_msec = 30000;
+    observation4->type = "heart.pulse_rate";
+    observation4->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
+    observation4->received = g_date_time_new_now_utc();
+    observation4->location = LOCATION_ARM;
+    observation_list = g_list_append(observation_list, observation4);
+
+    return observation_list;
+}
 
 static BloodPressureMeasurement *blp_create_measurement(GByteArray *byteArray) {
     BloodPressureMeasurement *measurement = g_new0(BloodPressureMeasurement, 1);
@@ -51,15 +98,15 @@ void blp_measurement_free(BloodPressureMeasurement *measurement) {
     g_free(measurement);
 }
 
-static void blp_onCharacteristicsDiscovered(gpointer *handler, Device *device) {
-    Characteristic *blp_measurement = binc_device_get_characteristic(device, BLP_SERVICE, BLOODPRESSURE_CHAR);
+static void blp_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
+    Characteristic *blp_measurement = binc_device_get_characteristic(device, BLP_SERVICE_UUID, BLOODPRESSURE_CHAR_UUID);
     if (blp_measurement != NULL && binc_characteristic_supports_notify(blp_measurement)) {
         binc_characteristic_start_notify(blp_measurement);
     }
 }
 
 static void
-blp_onNotificationStateUpdated(gpointer *handler, Device *device, Characteristic *characteristic, GError *error) {
+blp_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
     if (error != NULL) {
@@ -70,23 +117,25 @@ blp_onNotificationStateUpdated(gpointer *handler, Device *device, Characteristic
 }
 
 static void
-blp_onCharacteristicWrite(gpointer *handler, Device *device, Characteristic *characteristic, GByteArray *byteArray,
+blp_onCharacteristicWrite(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GByteArray *byteArray,
                           GError *error) {
 
 }
 
 static void
-blp_onCharacteristicChanged(gpointer *handler, Device *device, Characteristic *characteristic, GByteArray *byteArray,
+blp_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GByteArray *byteArray,
                             GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
+
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
 
     if (byteArray != NULL) {
-        if (g_str_equal(uuid, BLOODPRESSURE_CHAR)) {
+        if (g_str_equal(uuid, BLOODPRESSURE_CHAR_UUID)) {
             BloodPressureMeasurement *measurement = blp_create_measurement(byteArray);
+            GList *observations_list = blp_measurement_as_observations(measurement);
 
             // Log the measurement
             char* time_string = g_date_time_format(measurement->timestamp, "%F %R:%S");
@@ -100,18 +149,28 @@ blp_onCharacteristicChanged(gpointer *handler, Device *device, Characteristic *c
             g_free(time_string);
 
             blp_measurement_free(measurement);
+
+            if (service_handler->observations_callback != NULL) {
+                service_handler->observations_callback(observations_list);
+            }
+
+            for (GList *iterator = observations_list; iterator; iterator = iterator->next) {
+                Observation *observation = (Observation *) iterator->data;
+                g_free(observation);
+            }
+            g_list_free(observations_list);
         }
     }
 }
 
-static void blp_free(gpointer *handler) {
-    log_debug(TAG, "freeing BLP handler");
+static void blp_free(ServiceHandler *service_handler) {
+    log_debug(TAG, "freeing BLP private_data");
 }
 
 ServiceHandler *blp_service_handler_create() {
     ServiceHandler *handler = g_new0(ServiceHandler, 1);
-    handler->handler = NULL;
-    handler->uuid = BLP_SERVICE;
+    handler->private_data = NULL;
+    handler->uuid = BLP_SERVICE_UUID;
     handler->on_characteristics_discovered = &blp_onCharacteristicsDiscovered;
     handler->on_notification_state_updated = &blp_onNotificationStateUpdated;
     handler->on_characteristic_write = &blp_onCharacteristicWrite;

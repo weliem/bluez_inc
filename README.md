@@ -142,7 +142,7 @@ void on_services_resolved(Device *device) {
 
     // ...
     
-    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE, TEMPERATURE_CHAR);
+    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE_UUID, TEMPERATURE_CHAR);
     if (temperature != NULL) {
         binc_characteristic_start_notify(temperature);
     }

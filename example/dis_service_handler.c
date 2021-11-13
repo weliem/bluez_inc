@@ -3,14 +3,14 @@
 //
 
 #include "dis_service_handler.h"
-#include "characteristic.h"
-#include "parser.h"
-#include "logger.h"
-#include "device.h"
+#include "../characteristic.h"
+#include "../parser.h"
+#include "../logger.h"
+#include "../device.h"
 
 #define TAG "DIS_Service_Handler"
 
-static void dis_onCharacteristicsDiscovered(gpointer *handler, Device *device) {
+static void dis_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
     Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL && binc_characteristic_supports_read(manufacturer)) {
         binc_characteristic_read(manufacturer);
@@ -21,15 +21,15 @@ static void dis_onCharacteristicsDiscovered(gpointer *handler, Device *device) {
     }
 }
 
-static void dis_onNotificationStateUpdated(gpointer *handler, Device *device, Characteristic *characteristic, GError *error) {
+static void dis_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GError *error) {
 
 }
 
-static void dis_onCharacteristicWrite(gpointer *handler, Device *device, Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+static void dis_onCharacteristicWrite(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GByteArray *byteArray, GError *error) {
 
 }
 
-static void dis_onCharacteristicChanged(gpointer *handler, Device *device, Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+static void dis_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GByteArray *byteArray, GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
@@ -51,13 +51,13 @@ static void dis_onCharacteristicChanged(gpointer *handler, Device *device, Chara
     }
 }
 
-static void dis_free(gpointer *handler) {
-    log_debug(TAG, "freeing DIS handler");
+static void dis_free(ServiceHandler *service_handler) {
+    log_debug(TAG, "freeing DIS private_data");
 }
 
 ServiceHandler* dis_service_handler_create() {
     ServiceHandler *handler = g_new0(ServiceHandler, 1);
-    handler->handler = NULL;
+    handler->private_data = NULL;
     handler->uuid = DIS_SERVICE;
     handler->on_characteristics_discovered = &dis_onCharacteristicsDiscovered;
     handler->on_notification_state_updated = &dis_onNotificationStateUpdated;

@@ -23,11 +23,11 @@
 
 #include <glib.h>
 #include <stdio.h>
-#include "adapter.h"
-#include "device.h"
-#include "logger.h"
-#include "parser.h"
-#include "agent.h"
+#include "../adapter.h"
+#include "../device.h"
+#include "../logger.h"
+#include "../parser.h"
+#include "../agent.h"
 #include "service_handler_manager.h"
 #include "hts_service_handler.h"
 #include "dis_service_handler.h"
@@ -49,7 +49,9 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
 
     log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device),
               binc_device_get_connection_state_name(device), state);
-    if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
+
+    // Remove devices immediately of they are not bonded
+    if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED ) {
         binc_adapter_remove_device(default_adapter, device);
     }
 
@@ -67,7 +69,7 @@ void on_notification_state_changed(Characteristic *characteristic, GError *error
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_notification_state_updated != NULL) {
         serviceHandler->on_notification_state_updated(
-                serviceHandler->handler,
+                serviceHandler,
                 binc_characteristic_get_device(characteristic),
                 characteristic,
                 error);
@@ -79,7 +81,7 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
         serviceHandler->on_characteristic_changed(
-                serviceHandler->handler,
+                serviceHandler,
                 binc_characteristic_get_device(characteristic),
                 characteristic,
                 byteArray,
@@ -92,7 +94,7 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
         serviceHandler->on_characteristic_changed(
-                serviceHandler->handler,
+                serviceHandler,
                 binc_characteristic_get_device(characteristic),
                 characteristic,
                 byteArray,
@@ -105,7 +107,7 @@ void on_write(Characteristic *characteristic, GError *error) {
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_write != NULL) {
         serviceHandler->on_characteristic_write(
-                serviceHandler->handler,
+                serviceHandler,
                 binc_characteristic_get_device(characteristic),
                 characteristic,
                 NULL,
@@ -123,7 +125,7 @@ void on_services_resolved(Device *device) {
         const char* service_uuid = binc_service_get_uuid(service);
         ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
         if (serviceHandler != NULL && serviceHandler->on_characteristics_discovered != NULL) {
-            serviceHandler->on_characteristics_discovered(serviceHandler->handler,device);
+            serviceHandler->on_characteristics_discovered(serviceHandler->private_data, device);
         }
     }
 }
@@ -223,8 +225,8 @@ int main(void) {
 
         // Build UUID array so we can use it in the discovery filter
         GPtrArray *service_uuids = g_ptr_array_new();
-        g_ptr_array_add(service_uuids, HTS_SERVICE);
-        g_ptr_array_add(service_uuids, BLP_SERVICE);
+        g_ptr_array_add(service_uuids, HTS_SERVICE_UUID);
+        g_ptr_array_add(service_uuids, BLP_SERVICE_UUID);
 
         // Setup service handlers
         serviceHandlerManager = binc_service_handler_manager_create();

@@ -33,7 +33,7 @@ typedef enum ConnectionState {
 } ConnectionState;
 
 typedef enum BondingState {
-    NONE = 0, BONDING = 1, BONDED = 2
+    BOND_NONE = 0, BONDING = 1, BONDED = 2
 } BondingState;
 
 typedef void (*ConnectionStateChangedCallback)(Device *device, ConnectionState state, GError *error);

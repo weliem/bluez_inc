@@ -101,12 +101,7 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
     Adapter *adapter = (Adapter *) userdata;
     g_assert(adapter != NULL);
 
-    const gchar *signature = g_variant_get_type_string(params);
-    if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
-        g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
-        goto done;
-    }
-
+    g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
         if (g_str_equal(key, "Powered")) {
@@ -123,10 +118,6 @@ void bluez_signal_adapter_changed(GDBusConnection *conn,
         }
     }
 
-    done:
-//    if (iface != NULL) {
-//        g_free((char*) iface);
-//    }
     if (properties != NULL)
         g_variant_iter_free(properties);
     if (unknown != NULL)
@@ -164,9 +155,6 @@ static void bluez_device_disappeared(GDBusConnection *sig,
     if (interfaces != NULL) {
         g_variant_iter_free(interfaces);
     }
-//    if (object != NULL) {
-//        g_free((char*)object);
-//    }
 }
 
 
@@ -274,9 +262,6 @@ static void bluez_device_appeared(GDBusConnection *sig,
     if (interfaces != NULL) {
         g_variant_iter_free(interfaces);
     }
-//    if (object != NULL) {
-//        g_free((char*)object);
-//    }
 }
 
 static void binc_internal_device_properties_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -338,7 +323,6 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     const char *iface = NULL;
     char *key = NULL;
     GVariant *value = NULL;
-    const gchar *signature = g_variant_get_type_string(params);
 
     Adapter *adapter = (Adapter *) userdata;
     g_assert(adapter != NULL);
@@ -346,10 +330,7 @@ void bluez_signal_device_changed(GDBusConnection *conn,
     // If we are not scanning we're bailing out
     if (adapter->discovery_state != STARTED) return;
 
-    if (g_strcmp0(signature, "(sa{sv}as)") != 0) {
-        g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
-        goto done;
-    }
+    g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
 
     // Look up device
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
@@ -371,9 +352,6 @@ void bluez_signal_device_changed(GDBusConnection *conn,
         }
     }
 
-    done:
-//    if (iface != NULL)
-//        g_free((char*)iface);
     if (properties != NULL)
         g_variant_iter_free(properties);
     if (unknown != NULL)
@@ -396,7 +374,7 @@ void setup_signal_subscribers(Adapter *adapter) {
                                                                        "org.bluez",
                                                                        "org.freedesktop.DBus.Properties",
                                                                        "PropertiesChanged",
-                                                                       NULL,
+                                                                       adapter->path,
                                                                        "org.bluez.Adapter1",
                                                                        G_DBUS_SIGNAL_FLAGS_NONE,
                                                                        bluez_signal_adapter_changed,
@@ -519,7 +497,6 @@ GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
     if (result == NULL)
         g_print("Unable to get result for GetManagedObjects\n");
 
-    /* Parse the result */
     GVariantIter iter;
     const gchar *object_path;
     GVariant *ifaces_and_properties;
