@@ -30,9 +30,9 @@ static GList *blp_measurement_as_observations(BloodPressureMeasurement *measurem
     observation1->value = measurement->systolic;
     observation1->unit = measurement->unit;
     observation1->duration_msec = 30000;
-    observation1->type = "blood.pressure.systolic";
-    observation1->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
-    observation1->received = g_date_time_new_now_utc();
+    observation1->type = BLOOD_PRESSURE_SYSTOLIC;
+    observation1->timestamp = g_date_time_ref(measurement->timestamp);
+    observation1->received = g_date_time_new_now_local();
     observation1->location = LOCATION_ARM;
     observation_list = g_list_append(observation_list, observation1);
 
@@ -40,9 +40,9 @@ static GList *blp_measurement_as_observations(BloodPressureMeasurement *measurem
     observation2->value = measurement->diastolic;
     observation2->unit = measurement->unit;
     observation2->duration_msec = 30000;
-    observation2->type = "blood.pressure.diastolic";
-    observation2->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
-    observation2->received = g_date_time_new_now_utc();
+    observation2->type = BLOOD_PRESSURE_DIASTOLIC;
+    observation2->timestamp = g_date_time_ref(measurement->timestamp);
+    observation2->received = g_date_time_new_now_local();
     observation2->location = LOCATION_ARM;
     observation_list = g_list_append(observation_list, observation2);
 
@@ -50,9 +50,9 @@ static GList *blp_measurement_as_observations(BloodPressureMeasurement *measurem
     observation3->value = measurement->mean_arterial_pressure;
     observation3->unit = measurement->unit;
     observation3->duration_msec = 30000;
-    observation3->type = "blood.pressure.mean";
-    observation3->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
-    observation3->received = g_date_time_new_now_utc();
+    observation3->type = BLOOD_PRESSURE_MEAN;
+    observation3->timestamp = g_date_time_ref(measurement->timestamp);
+    observation3->received = g_date_time_new_now_local();
     observation3->location = LOCATION_ARM;
     observation_list = g_list_append(observation_list, observation3);
 
@@ -60,9 +60,9 @@ static GList *blp_measurement_as_observations(BloodPressureMeasurement *measurem
     observation4->value = measurement->pulse_rate;
     observation4->unit = BPM;
     observation4->duration_msec = 30000;
-    observation4->type = "heart.pulse_rate";
-    observation4->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
-    observation4->received = g_date_time_new_now_utc();
+    observation4->type = BLOOD_PRESSURE_PULSE;
+    observation4->timestamp = g_date_time_ref(measurement->timestamp);
+    observation4->received = g_date_time_new_now_local();
     observation4->location = LOCATION_ARM;
     observation_list = g_list_append(observation_list, observation4);
 
@@ -154,11 +154,7 @@ blp_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Cha
                 service_handler->observations_callback(observations_list);
             }
 
-            for (GList *iterator = observations_list; iterator; iterator = iterator->next) {
-                Observation *observation = (Observation *) iterator->data;
-                g_free(observation);
-            }
-            g_list_free(observations_list);
+            observation_list_free(observations_list);
         }
     }
 }

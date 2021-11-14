@@ -19,7 +19,6 @@ ServiceHandlerManager* binc_service_handler_manager_create() {
 }
 
 void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerManager) {
-
     if (serviceHandlerManager->service_handlers != NULL) {
         GHashTableIter iter;
         gpointer key, value;
@@ -27,7 +26,7 @@ void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerMana
         while (g_hash_table_iter_next(&iter, &key, &value)) {
             g_free(key);
             ServiceHandler *handler = (ServiceHandler *) value;
-            handler->service_handler_free(handler->private_data);
+            handler->service_handler_free(handler);
             g_free(handler);
         }
         g_hash_table_destroy(serviceHandlerManager->service_handlers);
@@ -41,14 +40,18 @@ static void on_observation(GList *observations) {
         Observation *observation = (Observation *) iterator->data;
 
         char* time_string = g_date_time_format(observation->timestamp, "%F %R:%S");
-        log_debug(TAG, "observation{value=%.1f, unit=%s, type=%s, utc_timestamp=%s, location=%s}",
+        log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', utc_timestamp=%s, location=%s}",
                   observation->value,
                   observation_unit_str(observation->unit),
-                  observation->type,
+                  observation_get_display_str(observation),
                   time_string,
                   observation_location_str(observation->location));
         g_free(time_string);
     }
+
+    char* fhir = observation_list_as_fhir(observations);
+    g_print("%s", fhir);
+    g_free(fhir);
 }
 
 void binc_service_handler_manager_add(ServiceHandlerManager *serviceHandlerManager, ServiceHandler *service_handler) {

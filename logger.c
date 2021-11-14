@@ -6,7 +6,7 @@
 #include <glib.h>
 #include <sys/time.h>
 
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 1024
 
 /**
  * Get the current UTC time in milliseconds since epoch

@@ -360,6 +360,7 @@ void binc_characteristic_start_notify(Characteristic *characteristic) {
     g_assert((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
              (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 
+    log_debug(TAG, "start notify for <%s>", characteristic->uuid);
     characteristic->notify_signal = g_dbus_connection_signal_subscribe(characteristic->connection,
                                                                        "org.bluez",
                                                                        "org.freedesktop.DBus.Properties",

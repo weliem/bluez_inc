@@ -9,10 +9,20 @@
 #include "observation_units.h"
 #include "observation_location.h"
 
+
+
+typedef enum observation_type {
+    BODY_TEMPERATURE = 0,
+    BLOOD_PRESSURE_SYSTOLIC = 1,
+    BLOOD_PRESSURE_DIASTOLIC = 2,
+    BLOOD_PRESSURE_MEAN = 3,
+    BLOOD_PRESSURE_PULSE = 4
+} ObservationType;
+
 typedef struct observation {
     float value;
     ObservationUnit unit;
-    const char* type;
+    ObservationType type;
     int duration_msec;
     GDateTime *timestamp;
     GDateTime *received;
@@ -20,6 +30,8 @@ typedef struct observation {
     int sensor;
 } Observation;
 
-
+const char *observation_get_display_str(Observation *observation);
+void observation_list_free(GList *observation_list);
+char* observation_list_as_fhir(GList *observation_list);
 
 #endif //TEST_OBSERVATION_H

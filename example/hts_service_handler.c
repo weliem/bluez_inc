@@ -47,9 +47,9 @@ static Observation *hts_measurement_as_observation(TemperatureMeasurement *measu
     observation->value = measurement->value;
     observation->unit = measurement->unit;
     observation->duration_msec = 1000;
-    observation->type = "body.temperature";
-    observation->timestamp = g_date_time_new_from_unix_utc(g_date_time_to_unix(measurement->timestamp));
-    observation->received = g_date_time_new_now_utc();
+    observation->type = BODY_TEMPERATURE;
+    observation->timestamp = g_date_time_ref(measurement->timestamp);
+    observation->received = g_date_time_new_now_local();
     observation->location = hts_get_location(measurement);
     return observation;
 }
@@ -118,11 +118,13 @@ static void hts_onCharacteristicChanged(ServiceHandler *service_handler, Device 
         }
 
         Observation *observation = hts_measurement_as_observation(measurement);
-        observation_list = g_list_append(observation_list, observation);
-        service_handler->observations_callback(observation_list);
-        g_list_free(observation_list);
-        g_free(observation);
         hts_measurement_free(measurement);
+
+        observation_list = g_list_append(observation_list, observation);
+        if (service_handler->observations_callback != NULL) {
+            service_handler->observations_callback(observation_list);
+        }
+        observation_list_free(observation_list);
     }
 }
 
