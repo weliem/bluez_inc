@@ -22,6 +22,7 @@
  */
 
 #include "utility.h"
+#include "math.h"
 
 void bytes_to_hex(char *dest, const guint8 *src, int n)
 {
@@ -53,5 +54,11 @@ GList* g_variant_string_array_to_list(GVariant *value) {
         list = g_list_append(list, g_strdup(data));
     }
     return list;
+}
+
+float binc_round_with_precision(float value, guint8 precision) {
+    int multiplier = (int) pow(10.0, precision);
+    float rounded_float = (float) round(value * multiplier)/multiplier;
+    return rounded_float;
 }
 

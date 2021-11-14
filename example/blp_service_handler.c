@@ -122,9 +122,9 @@ blp_onCharacteristicWrite(ServiceHandler *service_handler, Device *device, Chara
 
 }
 
-static void
-blp_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GByteArray *byteArray,
-                            GError *error) {
+static void blp_onCharacteristicChanged(ServiceHandler *service_handler, Device *device,
+                            Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+
     const char *uuid = binc_characteristic_get_uuid(characteristic);
 
     if (error != NULL) {

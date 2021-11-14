@@ -28,5 +28,6 @@
 
 GString* g_byte_array_as_hex(GByteArray *byteArray);
 GList* g_variant_string_array_to_list(GVariant *value);
+float binc_round_with_precision(float value, guint8 precision);
 
 #endif //TEST_UTILITY_H

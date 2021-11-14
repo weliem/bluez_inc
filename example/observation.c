@@ -4,6 +4,7 @@
 
 #include "observation.h"
 #include "cJSON.h"
+#include "../utility.h"
 
 const char *observation_type_loinc_codes[] = {
         [BLOOD_PRESSURE_SYSTOLIC] = "8480-6",
@@ -53,13 +54,16 @@ static void add_observation(Observation *observation, cJSON *fhir_json) {
 
     // Build up value
     cJSON *value = cJSON_AddObjectToObject(fhir_json, "valueQuantity");
-    cJSON_AddNumberToObject(value, "value", observation->value);
+    cJSON_AddNumberToObject(value, "value",  binc_round_with_precision(observation->value,1));
     cJSON_AddStringToObject(value, "unit", observation_unit_str(observation->unit));
     cJSON_AddStringToObject(value, "system", "http://unitsofmeasure.org");
     cJSON_AddStringToObject(value, "code", observation_get_unit_ucum_str(observation));
 }
 
 char *observation_list_as_fhir(GList *observation_list) {
+    g_assert(observation_list != NULL);
+    if (g_list_length(observation_list) == 0) return "";
+
     cJSON *fhir_json = cJSON_CreateObject();
     if (fhir_json == NULL) return NULL;
 
