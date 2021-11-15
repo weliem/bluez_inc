@@ -80,7 +80,7 @@ binc_date_time_format_iso8601(GDateTime *datetime) {
     if (offset == 0) {
         g_string_append_c (outstr, 'Z');
     } else {
-        gchar *time_zone = g_date_time_format(datetime, "%:::z:00");
+        gchar *time_zone = g_date_time_format(datetime, "%:z");
         g_string_append(outstr, time_zone);
         g_free(time_zone);
     }
