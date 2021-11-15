@@ -24,13 +24,12 @@
 #include "utility.h"
 #include "math.h"
 
-void bytes_to_hex(char *dest, const guint8 *src, int n)
-{
-    const char xx[]= "0123456789abcdef";
+void bytes_to_hex(char *dest, const guint8 *src, int n) {
+    const char xx[] = "0123456789abcdef";
     while (--n >= 0) dest[n] = xx[(src[n >> 1] >> ((1 - (n & 1)) << 2)) & 0xF];
 }
 
-GString* g_byte_array_as_hex(GByteArray *byteArray) {
+GString *g_byte_array_as_hex(GByteArray *byteArray) {
     int hexLength = (int) byteArray->len * 2;
     GString *result = g_string_sized_new(hexLength + 1);
     bytes_to_hex(result->str, byteArray->data, hexLength);
@@ -39,7 +38,7 @@ GString* g_byte_array_as_hex(GByteArray *byteArray) {
     return result;
 }
 
-GList* g_variant_string_array_to_list(GVariant *value) {
+GList *g_variant_string_array_to_list(GVariant *value) {
     g_assert(value != NULL);
 
     const gchar *type = g_variant_get_type_string(value);
@@ -58,7 +57,34 @@ GList* g_variant_string_array_to_list(GVariant *value) {
 
 float binc_round_with_precision(float value, guint8 precision) {
     int multiplier = (int) pow(10.0, precision);
-    float rounded_float = (float) round(value * multiplier)/multiplier;
+    float rounded_float = (float) round(value * multiplier) / multiplier;
     return rounded_float;
+}
+
+gchar *
+binc_date_time_format_iso8601(GDateTime *datetime) {
+    GString *outstr = NULL;
+    gchar *main_date = NULL;
+    gint64 offset;
+    gchar *format = "%Y-%m-%dT%H:%M:%S";
+
+    /* Main date and time. */
+    main_date = g_date_time_format(datetime, format);
+    outstr = g_string_new(main_date);
+    g_free(main_date);
+
+    /* Timezone. Format it as `%:::z` unless the offset is zero, in which case
+     * we can simply use `Z`. */
+    offset = g_date_time_get_utc_offset(datetime);
+
+    if (offset == 0) {
+        g_string_append_c (outstr, 'Z');
+    } else {
+        gchar *time_zone = g_date_time_format(datetime, "%:::z:00");
+        g_string_append(outstr, time_zone);
+        g_free(time_zone);
+    }
+
+    return g_string_free(outstr, FALSE);
 }
 

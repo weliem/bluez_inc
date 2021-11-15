@@ -26,8 +26,12 @@
 
 #include <glib.h>
 
-GString* g_byte_array_as_hex(GByteArray *byteArray);
-GList* g_variant_string_array_to_list(GVariant *value);
+GString *g_byte_array_as_hex(GByteArray *byteArray);
+
+GList *g_variant_string_array_to_list(GVariant *value);
+
 float binc_round_with_precision(float value, guint8 precision);
+
+gchar *binc_date_time_format_iso8601(GDateTime *datetime);
 
 #endif //TEST_UTILITY_H

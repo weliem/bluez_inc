@@ -102,7 +102,7 @@ char *observation_list_as_fhir(GList *observation_list) {
         add_observation(first_observation, fhir_json);
     }
 
-    char *time_string = g_date_time_format_iso8601(first_observation->timestamp);
+    char *time_string = binc_date_time_format_iso8601(first_observation->timestamp);
     cJSON_AddStringToObject(fhir_json, "effectiveDateTime", time_string);
 
     char *result = cJSON_Print(fhir_json);
