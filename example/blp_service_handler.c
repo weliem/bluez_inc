@@ -105,8 +105,9 @@ static void blp_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
     }
 }
 
-static void
-blp_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GError *error) {
+static void blp_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device,
+                                           Characteristic *characteristic, GError *error) {
+
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
     if (error != NULL) {
@@ -116,14 +117,25 @@ blp_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device, 
     log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
-static void
-blp_onCharacteristicWrite(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GByteArray *byteArray,
-                          GError *error) {
+static void blp_onCharacteristicWrite(ServiceHandler *service_handler, Device *device,
+                                      Characteristic *characteristic, GByteArray *byteArray, GError *error) {
 
 }
 
+static void log_measurement(BloodPressureMeasurement *measurement) {// Log the measurement
+    char *time_string = g_date_time_format(measurement->timestamp, "%F %R:%S");
+    log_debug(TAG, "systolic=%.0f, diastolic=%.0f, unit=%s, pulse=%.0f, timestamp=%s",
+              measurement->systolic,
+              measurement->diastolic,
+              measurement->unit == MMHG ? "mmHg" : "kPa",
+              measurement->pulse_rate,
+              time_string
+    );
+    g_free(time_string);
+}
+
 static void blp_onCharacteristicChanged(ServiceHandler *service_handler, Device *device,
-                            Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+                                        Characteristic *characteristic, GByteArray *byteArray, GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
 
@@ -136,18 +148,7 @@ static void blp_onCharacteristicChanged(ServiceHandler *service_handler, Device 
         if (g_str_equal(uuid, BLOODPRESSURE_CHAR_UUID)) {
             BloodPressureMeasurement *measurement = blp_create_measurement(byteArray);
             GList *observations_list = blp_measurement_as_observations(measurement);
-
-            // Log the measurement
-            char* time_string = g_date_time_format(measurement->timestamp, "%F %R:%S");
-            log_debug(TAG, "systolic=%.0f, diastolic=%.0f, unit=%s, pulse=%.0f, timestamp=%s",
-                      measurement->systolic,
-                      measurement->diastolic,
-                      measurement->unit == MMHG ? "mmHg":"kPa",
-                      measurement->pulse_rate,
-                      time_string
-            );
-            g_free(time_string);
-
+            log_measurement(measurement);
             blp_measurement_free(measurement);
 
             if (service_handler->observations_callback != NULL) {
@@ -158,6 +159,8 @@ static void blp_onCharacteristicChanged(ServiceHandler *service_handler, Device 
         }
     }
 }
+
+
 
 static void blp_free(ServiceHandler *service_handler) {
     log_debug(TAG, "freeing BLP private_data");
