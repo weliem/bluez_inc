@@ -24,6 +24,8 @@
 #ifndef TEST_ADAPTER_H
 #define TEST_ADAPTER_H
 
+
+
 #include <gio/gio.h>
 #include "forward_decl.h"
 

@@ -28,6 +28,32 @@
 #include "utility.h"
 
 #define TAG "Adapter"
+#define BLUEZ_DBUS "org.bluez"
+#define INTERFACE_ADAPTER "org.bluez.Adapter1"
+#define INTERFACE_DEVICE "org.bluez.Device1"
+#define INTERFACE_OBJECT_MANAGER "org.freedesktop.DBus.ObjectManager"
+
+#define METHOD_START_DISCOVERY "StartDiscovery"
+#define METHOD_STOP_DISCOVERY "StopDiscovery"
+#define METHOD_REMOVE_DEVICE "RemoveDevice"
+#define METHOD_SET_DISCOVERY_FILTER "SetDiscoveryFilter"
+
+#define ADAPTER_PROPERTY_POWERED "Powered"
+#define ADAPTER_PROPERTY_DISCOVERING "Discovering"
+#define ADAPTER_PROPERTY_ADDRESS "Address"
+#define ADAPTER_PROPERTY_DISCOVERABLE "Discoverable"
+
+#define DEVICE_PROPERTY_ADDRESS "Address"
+#define DEVICE_PROPERTY_ADDRESS_TYPE "AddressType"
+#define DEVICE_PROPERTY_ALIAS "Alias"
+#define DEVICE_PROPERTY_NAME "Name"
+#define DEVICE_PROPERTY_PAIRED "Paired"
+#define DEVICE_PROPERTY_RSSI "RSSI"
+#define DEVICE_PROPERTY_TRUSTED "Trusted"
+#define DEVICE_PROPERTY_TXPOWER "TxPower"
+#define DEVICE_PROPERTY_UUIDS "UUIDs"
+#define DEVICE_PROPERTY_MANUFACTURER_DATA "ManufacturerData"
+#define DEVICE_PROPERTY_SERVICE_DATA "ServiceData"
 
 struct binc_adapter {
     char *path;
@@ -65,16 +91,16 @@ static void binc_internal_call_method_cb(GObject *source_object, GAsyncResult *r
     }
 }
 
-static void binc_internal_adapter_call_method(Adapter *adapter, const char *method, GVariant *param) {
+static void binc_internal_adapter_call_method(Adapter *adapter, const char *method, GVariant *parameters) {
     g_assert(adapter != NULL);
     g_assert(method != NULL);
 
     g_dbus_connection_call(adapter->connection,
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            adapter->path,
-                           "org.bluez.Adapter1",
+                           INTERFACE_ADAPTER,
                            method,
-                           param,
+                           parameters,
                            NULL,
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
@@ -95,23 +121,23 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
     char *iface = NULL;
-    char *key = NULL;
-    GVariant *value = NULL;
+    char *property_name = NULL;
+    GVariant *property_value = NULL;
 
     Adapter *adapter = (Adapter *) userdata;
     g_assert(adapter != NULL);
 
     g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
-        if (g_str_equal(key, "Powered")) {
-            adapter->powered = g_variant_get_boolean(value);
+    while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
+        if (g_str_equal(property_name, ADAPTER_PROPERTY_POWERED)) {
+            adapter->powered = g_variant_get_boolean(property_value);
             if (adapter->poweredStateCallback != NULL) {
                 adapter->poweredStateCallback(adapter, adapter->powered);
             }
         }
-        if (g_str_equal(key, "Discovering")) {
-            adapter->discovery_state = g_variant_get_boolean(value);
+        if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
+            adapter->discovery_state = g_variant_get_boolean(property_value);
             if (adapter->discoveryStateCallback != NULL) {
                 adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
             }
@@ -141,7 +167,7 @@ static void binc_internal_device_disappeared(GDBusConnection *sig,
 
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
     while (g_variant_iter_loop(interfaces, "s", &interface_name)) {
-        if (g_str_equal(interface_name, "org.bluez.Device1")) {
+        if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
             log_debug(TAG, "Device %s removed", object);
             gpointer key, value;
             if (g_hash_table_lookup_extended(adapter->devices_cache, object, &key, &value)) {
@@ -159,25 +185,25 @@ static void binc_internal_device_disappeared(GDBusConnection *sig,
 
 
 static void binc_internal_device_update_property(Device *device, const char *property_name, GVariant *property_value) {
-    if (g_str_equal(property_name, "Address")) {
+    if (g_str_equal(property_name, DEVICE_PROPERTY_ADDRESS)) {
         binc_device_set_address(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, "AddressType")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_ADDRESS_TYPE)) {
         binc_device_set_address_type(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, "Alias")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_ALIAS)) {
         binc_device_set_alias(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, "Name")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_NAME)) {
         binc_device_set_name(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, "Paired")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
         binc_device_set_paired(device, g_variant_get_boolean(property_value));
-    } else if (g_str_equal(property_name, "RSSI")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_RSSI)) {
         binc_device_set_rssi(device, g_variant_get_int16(property_value));
-    } else if (g_str_equal(property_name, "Trusted")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_TRUSTED)) {
         binc_device_set_trusted(device, g_variant_get_boolean(property_value));
-    } else if (g_str_equal(property_name, "TxPower")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_TXPOWER)) {
         binc_device_set_txpower(device, g_variant_get_int16(property_value));
-    } else if (g_str_equal(property_name, "UUIDs")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_UUIDS)) {
         binc_device_set_uuids(device, g_variant_string_array_to_list(property_value));
-    } else if (g_str_equal(property_name, "ManufacturerData")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_MANUFACTURER_DATA)) {
         GVariantIter *iter;
         g_variant_get(property_value, "a{qv}", &iter);
 
@@ -198,7 +224,7 @@ static void binc_internal_device_update_property(Device *device, const char *pro
         }
         binc_device_set_manufacturer_data(device, manufacturer_data);
         g_variant_iter_free(iter);
-    } else if (g_str_equal(property_name, "ServiceData")) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_SERVICE_DATA)) {
         GVariantIter *iter;
         g_variant_get(property_value, "a{sv}", &iter);
 
@@ -240,15 +266,15 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
 
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     while (g_variant_iter_loop(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
-        if (g_str_equal(interface_name, "org.bluez.Device1")) {
+        if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
             Device *device = binc_create_device(object, adapter);
 
             gchar *property_name;
             GVariantIter iter;
-            GVariant *prop_val;
+            GVariant *property_value;
             g_variant_iter_init(&iter, properties);
-            while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &prop_val)) {
-                binc_internal_device_update_property(device, property_name, prop_val);
+            while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &property_value)) {
+                binc_internal_device_update_property(device, property_name, property_value);
             }
 
             // Update cache and deliver Device to registered callback
@@ -264,7 +290,7 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
     }
 }
 
-static void binc_internal_device_properties_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_device_getall_properties_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
 
@@ -272,7 +298,7 @@ static void binc_internal_device_properties_callback(GObject *source_object, GAs
     GVariant *result = g_dbus_connection_call_finish(binc_device_get_dbus_connection(device), res, &error);
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartDiscovery", error->code, error->message);
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", "GetAll", error->code, error->message);
         g_clear_error(&error);
     }
 
@@ -297,16 +323,16 @@ static void binc_internal_device_properties_callback(GObject *source_object, GAs
 
 static void binc_internal_device_getall_properties(Adapter *adapter, Device *device) {
     g_dbus_connection_call(adapter->connection,
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            binc_device_get_path(device),
                            "org.freedesktop.DBus.Properties",
                            "GetAll",
-                           g_variant_new("(s)", "org.bluez.Device1"),
+                           g_variant_new("(s)", INTERFACE_DEVICE),
                            G_VARIANT_TYPE("(a{sv})"),
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
-                           (GAsyncReadyCallback) binc_internal_device_properties_callback,
+                           (GAsyncReadyCallback) binc_internal_device_getall_properties_cb,
                            device);
 }
 
@@ -342,7 +368,7 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         if (binc_device_get_connection_state(device) == DISCONNECTED) {
             g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
             while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
-                if (g_str_equal(key, "RSSI") || g_str_equal(key, "ManufacturerData")) {
+                if (g_str_equal(key, DEVICE_PROPERTY_RSSI) || g_str_equal(key, DEVICE_PROPERTY_MANUFACTURER_DATA)) {
                     binc_internal_device_update_property(device, key, value);
                     if (adapter->discoveryResultCallback != NULL) {
                         adapter->discoveryResultCallback(adapter, device);
@@ -360,30 +386,30 @@ static void binc_internal_device_changed(GDBusConnection *conn,
 
 static void setup_signal_subscribers(Adapter *adapter) {
     adapter->device_prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
-                                                                      "org.bluez",
+                                                                      BLUEZ_DBUS,
                                                                       "org.freedesktop.DBus.Properties",
                                                                       "PropertiesChanged",
                                                                       NULL,
-                                                                      "org.bluez.Device1",
+                                                                      INTERFACE_DEVICE,
                                                                       G_DBUS_SIGNAL_FLAGS_NONE,
                                                                       binc_internal_device_changed,
                                                                       adapter,
                                                                       NULL);
 
     adapter->adapter_prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
-                                                                       "org.bluez",
+                                                                       BLUEZ_DBUS,
                                                                        "org.freedesktop.DBus.Properties",
                                                                        "PropertiesChanged",
                                                                        adapter->path,
-                                                                       "org.bluez.Adapter1",
+                                                                       INTERFACE_ADAPTER,
                                                                        G_DBUS_SIGNAL_FLAGS_NONE,
                                                                        binc_internal_adapter_changed,
                                                                        adapter,
                                                                        NULL);
 
     adapter->iface_added = g_dbus_connection_signal_subscribe(adapter->connection,
-                                                              "org.bluez",
-                                                              "org.freedesktop.DBus.ObjectManager",
+                                                              BLUEZ_DBUS,
+                                                              INTERFACE_OBJECT_MANAGER,
                                                               "InterfacesAdded",
                                                               NULL,
                                                               NULL,
@@ -393,8 +419,8 @@ static void setup_signal_subscribers(Adapter *adapter) {
                                                               NULL);
 
     adapter->iface_removed = g_dbus_connection_signal_subscribe(adapter->connection,
-                                                                "org.bluez",
-                                                                "org.freedesktop.DBus.ObjectManager",
+                                                                BLUEZ_DBUS,
+                                                                INTERFACE_OBJECT_MANAGER,
                                                                 "InterfacesRemoved",
                                                                 NULL,
                                                                 NULL,
@@ -483,9 +509,9 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
     log_debug(TAG, "finding adapters");
 
     GVariant *result = g_dbus_connection_call_sync(dbusConnection,
-                                                   "org.bluez",
+                                                   BLUEZ_DBUS,
                                                    "/",
-                                                   "org.freedesktop.DBus.ObjectManager",
+                                                   INTERFACE_OBJECT_MANAGER,
                                                    "GetManagedObjects",
                                                    NULL,
                                                    G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
@@ -509,20 +535,20 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
             GVariantIter iter2;
             g_variant_iter_init(&iter2, ifaces_and_properties);
             while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
-                if (g_str_equal(interface_name, "org.bluez.Adapter1")) {
+                if (g_str_equal(interface_name, INTERFACE_ADAPTER)) {
                     Adapter *adapter = binc_adapter_create(dbusConnection, object_path);
                     gchar *property_name;
                     GVariantIter iter3;
                     GVariant *prop_val;
                     g_variant_iter_init(&iter3, properties);
                     while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &prop_val)) {
-                        if (g_strcmp0(property_name, "Address") == 0) {
+                        if (g_strcmp0(property_name, ADAPTER_PROPERTY_ADDRESS) == 0) {
                             adapter->address = g_strdup(g_variant_get_string(prop_val, NULL));
-                        } else if (g_strcmp0(property_name, "Powered") == 0) {
+                        } else if (g_strcmp0(property_name, ADAPTER_PROPERTY_POWERED) == 0) {
                             adapter->powered = g_variant_get_boolean(prop_val);
-                        } else if (g_strcmp0(property_name, "Discovering") == 0) {
+                        } else if (g_strcmp0(property_name, ADAPTER_PROPERTY_DISCOVERING) == 0) {
                             adapter->discovery_state = g_variant_get_boolean(prop_val);
-                        } else if (g_strcmp0(property_name, "Discoverable") == 0) {
+                        } else if (g_strcmp0(property_name, ADAPTER_PROPERTY_DISCOVERABLE) == 0) {
                             adapter->discoverable = g_variant_get_boolean(prop_val);
                         }
                     }
@@ -564,7 +590,7 @@ static void binc_internal_start_discovery_callback(GObject *source_object, GAsyn
     GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartDiscovery", error->code, error->message);
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", METHOD_START_DISCOVERY, error->code, error->message);
         adapter->discovery_state = STOPPED;
         if (adapter->discoveryStateCallback != NULL) {
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
@@ -583,10 +609,10 @@ void binc_adapter_start_discovery(Adapter *adapter) {
     if (adapter->discovery_state == STOPPED) {
         adapter->discovery_state = STARTING;
         g_dbus_connection_call(adapter->connection,
-                               "org.bluez",
+                               BLUEZ_DBUS,
                                adapter->path,
-                               "org.bluez.Adapter1",
-                               "StartDiscovery",
+                               INTERFACE_ADAPTER,
+                               METHOD_START_DISCOVERY,
                                NULL,
                                NULL,
                                G_DBUS_CALL_FLAGS_NONE,
@@ -597,7 +623,7 @@ void binc_adapter_start_discovery(Adapter *adapter) {
     }
 }
 
-static void binc_internal_stop_discovery_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_stop_discovery_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
@@ -605,7 +631,7 @@ static void binc_internal_stop_discovery_callback(GObject *source_object, GAsync
     GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "StopDiscovery", error->code, error->message);
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", METHOD_STOP_DISCOVERY, error->code, error->message);
         if (adapter->discoveryStateCallback != NULL) {
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
@@ -623,16 +649,16 @@ void binc_adapter_stop_discovery(Adapter *adapter) {
     if (adapter->discovery_state == STARTED) {
         adapter->discovery_state = STOPPING;
         g_dbus_connection_call(adapter->connection,
-                               "org.bluez",
+                               BLUEZ_DBUS,
                                adapter->path,
-                               "org.bluez.Adapter1",
-                               "StopDiscovery",
+                               INTERFACE_ADAPTER,
+                               METHOD_STOP_DISCOVERY,
                                NULL,
                                NULL,
                                G_DBUS_CALL_FLAGS_NONE,
                                -1,
                                NULL,
-                               (GAsyncReadyCallback) binc_internal_stop_discovery_callback,
+                               (GAsyncReadyCallback) binc_internal_stop_discovery_cb,
                                adapter);
     }
 }
@@ -642,13 +668,14 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
     g_assert (adapter != NULL);
 
     log_debug(TAG, "removing %s (%s)", binc_device_get_name(device), binc_device_get_address(device));
-    binc_internal_adapter_call_method(adapter, "RemoveDevice", g_variant_new("(o)", binc_device_get_path(device)));
+    binc_internal_adapter_call_method(adapter, METHOD_REMOVE_DEVICE,
+                                      g_variant_new("(o)", binc_device_get_path(device)));
 }
 
 void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids) {
     GVariantBuilder *b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(b, "{sv}", "Transport", g_variant_new_string("le"));
-    g_variant_builder_add(b, "{sv}", "RSSI", g_variant_new_int16(rssi_threshold));
+    g_variant_builder_add(b, "{sv}", DEVICE_PROPERTY_RSSI, g_variant_new_int16(rssi_threshold));
     g_variant_builder_add(b, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
 
     if (service_uuids != NULL && service_uuids->len > 0) {
@@ -658,13 +685,13 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, G
             g_assert(g_uuid_string_is_valid(uuid));
             g_variant_builder_add(u, "s", uuid);
         }
-        g_variant_builder_add(b, "{sv}", "UUIDs", g_variant_builder_end(u));
+        g_variant_builder_add(b, "{sv}", DEVICE_PROPERTY_UUIDS, g_variant_builder_end(u));
         g_variant_builder_unref(u);
     }
 
     GVariant *device_dict = g_variant_builder_end(b);
     g_variant_builder_unref(b);
-    binc_internal_adapter_call_method(adapter, "SetDiscoveryFilter", g_variant_new_tuple(&device_dict, 1));
+    binc_internal_adapter_call_method(adapter, METHOD_SET_DISCOVERY_FILTER, g_variant_new_tuple(&device_dict, 1));
 }
 
 static void binc_internal_set_property(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -685,11 +712,11 @@ static void binc_internal_set_property(GObject *source_object, GAsyncResult *res
 
 void adapter_set_property(Adapter *adapter, const char *prop, GVariant *value) {
     g_dbus_connection_call(adapter->connection,
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            adapter->path,
                            "org.freedesktop.DBus.Properties",
                            "Set",
-                           g_variant_new("(ssv)", "org.bluez.Adapter1", prop, value),
+                           g_variant_new("(ssv)", INTERFACE_ADAPTER, prop, value),
                            NULL,
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
@@ -699,11 +726,11 @@ void adapter_set_property(Adapter *adapter, const char *prop, GVariant *value) {
 }
 
 void binc_adapter_power_on(Adapter *adapter) {
-    adapter_set_property(adapter, "Powered", g_variant_new("b", TRUE));
+    adapter_set_property(adapter, ADAPTER_PROPERTY_POWERED, g_variant_new("b", TRUE));
 }
 
 void binc_adapter_power_off(Adapter *adapter) {
-    adapter_set_property(adapter, "Powered", g_variant_new("b", FALSE));
+    adapter_set_property(adapter, ADAPTER_PROPERTY_POWERED, g_variant_new("b", FALSE));
 }
 
 void binc_adapter_set_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
