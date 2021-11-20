@@ -45,9 +45,7 @@ typedef void (*BondingStateChangedCallback)(Device *device, BondingState new_sta
 
 
 
-Adapter *binc_device_get_adapter(const Device *device);
 
-char *binc_device_to_string(const Device *device);
 
 /**
  * Connect to a device asynchronously
@@ -59,6 +57,8 @@ char *binc_device_to_string(const Device *device);
 void binc_device_connect(Device *device);
 
 void binc_device_pair(Device *device);
+
+void binc_device_disconnect(Device *device);
 
 void binc_device_set_read_char_callback(Device *device, OnReadCallback callback);
 
@@ -110,5 +110,9 @@ GHashTable *binc_device_get_manufacturer_data(const Device *device);
 GHashTable *binc_device_get_service_data(const Device *device);
 
 BondingState binc_device_get_bonding_state(const Device *device);
+
+Adapter *binc_device_get_adapter(const Device *device);
+
+char *binc_device_to_string(const Device *device);
 
 #endif //TEST_DEVICE_H
