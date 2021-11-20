@@ -59,30 +59,6 @@ typedef void (*OnReadCallback)(Characteristic *characteristic, GByteArray *byteA
 typedef void (*OnWriteCallback)(Characteristic *characteristic, GError *error);
 
 
-/**
- * Create a characteristic
- *
- * @param connection dbus connection
- * @param path the path of the object on the dbus
- * @return the newly create characteristic. Free by calling binc_characteristic_free()
- */
-Characteristic *binc_characteristic_create(Device *device, const char *path);
-
-/**
- * Free a characteristic object
- * @param characteristic
- */
-void binc_characteristic_free(Characteristic *characteristic);
-
-void binc_characteristic_set_read_callback(Characteristic *characteristic, OnReadCallback callback);
-
-void binc_characteristic_set_write_callback(Characteristic *characteristic, OnWriteCallback callback);
-
-void binc_characteristic_set_notify_callback(Characteristic *characteristic, OnNotifyCallback callback);
-
-void binc_characteristic_set_notifying_state_change_callback(Characteristic *characteristic,
-                                                             OnNotifyingStateChangedCallback callback);
-
 void binc_characteristic_read(Characteristic *characteristic);
 
 void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType);
@@ -95,27 +71,17 @@ Device* binc_characteristic_get_device(const Characteristic *characteristic);
 
 const char* binc_characteristic_get_uuid(const Characteristic *characteristic);
 
-void binc_characteristic_set_uuid(Characteristic *characteristic, const char* uuid);
-
 const char* binc_characteristic_get_service_uuid(const Characteristic *characteristic);
-
-void binc_characteristic_set_service_uuid(Characteristic *characteristic, const char* service_uuid);
 
 const char* binc_characteristic_get_service_path(const Characteristic *characteristic);
 
-void binc_characteristic_set_service_path(Characteristic *characteristic, const char* service_path);
-
 GList* binc_characteristic_get_flags(const Characteristic *characteristic);
-
-void binc_characteristic_set_flags(Characteristic *characteristic, GList* flags);
 
 guint binc_characteristic_get_properties(const Characteristic *characteristic);
 
-void binc_characteristic_set_properties(Characteristic *characteristic, guint properties);
-
 gboolean binc_characteristic_is_notifying(const Characteristic *characteristic);
 
-gboolean binc_characteristic_supports_write(const Characteristic *characteristic, const WriteType writeType);
+gboolean binc_characteristic_supports_write(const Characteristic *characteristic, WriteType writeType);
 
 gboolean binc_characteristic_supports_read(const Characteristic *characteristic);
 

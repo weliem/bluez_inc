@@ -24,6 +24,7 @@
 #include <stdint-gcc.h>
 #include "adapter.h"
 #include "device.h"
+#include "device_internal.h"
 #include "logger.h"
 #include "utility.h"
 

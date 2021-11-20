@@ -26,8 +26,18 @@
 #include "logger.h"
 #include "utility.h"
 #include "device.h"
+#include "device_internal.h"
 
 #define TAG "Characteristic"
+#define INTERFACE_CHARACTERISTIC "org.bluez.GattCharacteristic1"
+#define BLUEZ_DBUS "org.bluez"
+
+#define CHARACTERISTIC_METHOD_READ_VALUE "ReadValue"
+#define CHARACTERISTIC_METHOD_WRITE_VALUE "WriteValue"
+#define CHARACTERISTIC_METHOD_STOP_NOTIFY "StopNotify"
+#define CHARACTERISTIC_METHOD_START_NOTIFY "StartNotify"
+#define CHARACTERISTIC_PROPERTY_NOTIFYING "Notifying"
+#define CHARACTERISTIC_PROPERTY_VALUE "Value"
 
 struct binc_characteristic {
     Device *device;
@@ -166,7 +176,7 @@ static void binc_internal_char_read_callback(GObject *source_object, GAsyncResul
     }
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "ReadValue", error->code, error->message);
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", CHARACTERISTIC_METHOD_READ_VALUE, error->code, error->message);
         g_clear_error(&error);
     }
 }
@@ -182,10 +192,10 @@ void binc_characteristic_read(Characteristic *characteristic) {
     g_variant_builder_add(builder, "{sv}", "offset", g_variant_new_uint16(offset));
 
     g_dbus_connection_call(characteristic->connection,
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            characteristic->path,
-                           "org.bluez.GattCharacteristic1",
-                           "ReadValue",
+                           INTERFACE_CHARACTERISTIC,
+                           CHARACTERISTIC_METHOD_READ_VALUE,
                            g_variant_new("(a{sv})", builder),
                            G_VARIANT_TYPE("(ay)"),
                            G_DBUS_CALL_FLAGS_NONE,
@@ -211,7 +221,7 @@ static void binc_internal_char_write_callback(GObject *source_object, GAsyncResu
     }
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "WriteValue", error->code, error->message);
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", CHARACTERISTIC_METHOD_WRITE_VALUE, error->code, error->message);
         g_clear_error(&error);
     }
 }
@@ -248,10 +258,10 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
     g_variant_builder_unref(builder2);
 
     g_dbus_connection_call(characteristic->connection,
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            characteristic->path,
-                           "org.bluez.GattCharacteristic1",
-                           "WriteValue",
+                           INTERFACE_CHARACTERISTIC,
+                           CHARACTERISTIC_METHOD_WRITE_VALUE,
                            g_variant_new("(@ay@a{sv})", value, options),
                            NULL,
                            G_DBUS_CALL_FLAGS_NONE,
@@ -305,7 +315,7 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
-        if (g_str_equal(key, "Notifying")) {
+        if (g_str_equal(key, CHARACTERISTIC_PROPERTY_NOTIFYING)) {
             characteristic->notifying = g_variant_get_boolean(value);
             log_debug(TAG, "notifying %s <%s>", characteristic->notifying ? "true" : "false", characteristic->uuid);
             if (characteristic->notify_state_callback != NULL) {
@@ -317,7 +327,7 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
                     characteristic->notify_signal = 0;
                 }
             }
-        } else if (g_str_equal(key, "Value")) {
+        } else if (g_str_equal(key, CHARACTERISTIC_PROPERTY_VALUE)) {
             GByteArray *byteArray = g_variant_get_byte_array_for_notify(value);
             GString *result = g_byte_array_as_hex(byteArray);
             log_debug(TAG, "notification <%s> on <%s>", result->str, characteristic->uuid);
@@ -329,21 +339,23 @@ static void binc_signal_characteristic_changed(GDBusConnection *conn,
         }
     }
 
-    g_variant_iter_free(properties);
-    g_variant_iter_free(unknown);
+    if (properties != NULL) {
+        g_variant_iter_free(properties);
+    }
+    if (unknown != NULL) {
+        g_variant_iter_free(unknown);
+    }
 }
 
 static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Characteristic *characteristic = (Characteristic *) user_data;
     g_assert(characteristic != NULL);
-    g_assert((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
-             (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 
     GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "StartNotify", error->code, error->message);
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", CHARACTERISTIC_METHOD_START_NOTIFY, error->code, error->message);
         if (characteristic->notify_state_callback != NULL) {
             characteristic->notify_state_callback(characteristic, error);
         }
@@ -357,16 +369,15 @@ static void binc_internal_char_start_notify(GObject *source_object, GAsyncResult
 
 void binc_characteristic_start_notify(Characteristic *characteristic) {
     g_assert(characteristic != NULL);
-    g_assert((characteristic->properties & GATT_CHR_PROP_INDICATE) > 0 ||
-             (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
+    g_assert(binc_characteristic_supports_notify(characteristic));
 
     log_debug(TAG, "start notify for <%s>", characteristic->uuid);
     characteristic->notify_signal = g_dbus_connection_signal_subscribe(characteristic->connection,
-                                                                       "org.bluez",
+                                                                       BLUEZ_DBUS,
                                                                        "org.freedesktop.DBus.Properties",
                                                                        "PropertiesChanged",
                                                                        characteristic->path,
-                                                                       "org.bluez.GattCharacteristic1",
+                                                                       INTERFACE_CHARACTERISTIC,
                                                                        G_DBUS_SIGNAL_FLAGS_NONE,
                                                                        binc_signal_characteristic_changed,
                                                                        characteristic,
@@ -374,10 +385,10 @@ void binc_characteristic_start_notify(Characteristic *characteristic) {
 
 
     g_dbus_connection_call(characteristic->connection,
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            characteristic->path,
-                           "org.bluez.GattCharacteristic1",
-                           "StartNotify",
+                           INTERFACE_CHARACTERISTIC,
+                           CHARACTERISTIC_METHOD_START_NOTIFY,
                            NULL,
                            NULL,
                            G_DBUS_CALL_FLAGS_NONE,
@@ -395,7 +406,7 @@ static void binc_internal_char_stop_notify(GObject *source_object, GAsyncResult 
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
 
     if (error != NULL) {
-        log_debug(TAG, "failed to call '%s' (error %d: %s)", "StopNotify", error->code, error->message);
+        log_debug(TAG, "failed to call '%s' (error %d: %s)", CHARACTERISTIC_METHOD_STOP_NOTIFY, error->code, error->message);
         if (characteristic->notify_state_callback != NULL) {
             characteristic->notify_state_callback(characteristic, error);
         }
@@ -413,10 +424,10 @@ void binc_characteristic_stop_notify(Characteristic *characteristic) {
              (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 
     g_dbus_connection_call(characteristic->connection,
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            characteristic->path,
-                           "org.bluez.GattCharacteristic1",
-                           "StopNotify",
+                           INTERFACE_CHARACTERISTIC,
+                           CHARACTERISTIC_METHOD_STOP_NOTIFY,
                            NULL,
                            NULL,
                            G_DBUS_CALL_FLAGS_NONE,
@@ -558,7 +569,7 @@ gboolean binc_characteristic_is_notifying(const Characteristic *characteristic) 
     return characteristic->notifying;
 }
 
-gboolean binc_characteristic_supports_write(const Characteristic *characteristic, const WriteType writeType) {
+gboolean binc_characteristic_supports_write(const Characteristic *characteristic, WriteType writeType) {
     if (writeType == WITH_RESPONSE) {
         return (characteristic->properties & GATT_CHR_PROP_WRITE) > 0;
     } else {
