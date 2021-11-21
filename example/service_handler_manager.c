@@ -5,6 +5,7 @@
 #include "service_handler_manager.h"
 #include "../logger.h"
 #include "observation.h"
+#include "../utility.h"
 
 #define TAG "ServiceHandlerManager"
 
@@ -39,8 +40,8 @@ static void on_observation(GList *observations) {
     for (GList *iterator = observations; iterator; iterator = iterator->next) {
         Observation *observation = (Observation *) iterator->data;
 
-        char* time_string = g_date_time_format(observation->timestamp, "%F %R:%S");
-        log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', utc_timestamp=%s, location=%s}",
+        char* time_string = binc_date_time_format_iso8601(observation->timestamp);
+        log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
                   observation->value,
                   observation_unit_str(observation->unit),
                   observation_get_display_str(observation),
