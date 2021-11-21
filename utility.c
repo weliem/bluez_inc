@@ -57,8 +57,7 @@ GList *g_variant_string_array_to_list(GVariant *value) {
 
 float binc_round_with_precision(float value, guint8 precision) {
     int multiplier = (int) pow(10.0, precision);
-    float rounded_float = (float) round(value * multiplier) / multiplier;
-    return rounded_float;
+    return roundf(value * multiplier) / multiplier;
 }
 
 gchar *

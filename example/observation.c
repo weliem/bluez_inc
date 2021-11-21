@@ -54,10 +54,12 @@ static void add_observation(Observation *observation, cJSON *fhir_json) {
 
     // Build up value
     cJSON *value = cJSON_AddObjectToObject(fhir_json, "valueQuantity");
-    cJSON_AddNumberToObject(value, "value",  binc_round_with_precision(observation->value,1));
+    char* value_string = g_strdup_printf("%.1f", binc_round_with_precision(observation->value,1));
+    cJSON_AddRawToObject(value, "value", value_string);
     cJSON_AddStringToObject(value, "unit", observation_unit_str(observation->unit));
     cJSON_AddStringToObject(value, "system", "http://unitsofmeasure.org");
     cJSON_AddStringToObject(value, "code", observation_get_unit_ucum_str(observation));
+    g_free(value_string);
 }
 
 char *observation_list_as_fhir(GList *observation_list) {
