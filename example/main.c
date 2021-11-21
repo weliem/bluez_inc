@@ -131,6 +131,7 @@ GList* order_services(GList *services) {
             }
         }
     }
+    g_list_free(preferred_order);
 
     // Add the remainder
     for (GList *iterator = services; iterator; iterator = iterator->next) {
@@ -153,7 +154,7 @@ void on_services_resolved(Device *device) {
         const char* service_uuid = binc_service_get_uuid(service);
         ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
         if (serviceHandler != NULL && serviceHandler->on_characteristics_discovered != NULL) {
-            serviceHandler->on_characteristics_discovered(serviceHandler->private_data, device);
+            serviceHandler->on_characteristics_discovered(serviceHandler, device);
         }
     }
     g_list_free(services);
