@@ -56,6 +56,13 @@
 #define DEVICE_PROPERTY_MANUFACTURER_DATA "ManufacturerData"
 #define DEVICE_PROPERTY_SERVICE_DATA "ServiceData"
 
+const char *discovery_state_names[] = {
+        [STOPPED] = "stopped",
+        [STARTED] = "started",
+        [STARTING]  = "starting",
+        [STOPPING]  = "stopping"
+};
+
 struct binc_adapter {
     char *path;
     char *address;
@@ -111,6 +118,13 @@ static void binc_internal_adapter_call_method(Adapter *adapter, const char *meth
 }
 
 
+static void binc_internal_set_discovery_state(Adapter *adapter, DiscoveryState discovery_state) {
+    adapter->discovery_state = discovery_state;
+    if (adapter->discoveryStateCallback != NULL) {
+        adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
+    }
+}
+
 static void binc_internal_adapter_changed(GDBusConnection *conn,
                                           const gchar *sender,
                                           const gchar *path,
@@ -138,10 +152,8 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
             }
         }
         if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
-            adapter->discovery_state = g_variant_get_boolean(property_value);
-            if (adapter->discoveryStateCallback != NULL) {
-                adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
-            }
+            DiscoveryState discovery_state = g_variant_get_boolean(property_value);
+            binc_internal_set_discovery_state(adapter, discovery_state);
         }
     }
 
@@ -608,7 +620,7 @@ void binc_adapter_start_discovery(Adapter *adapter) {
     g_assert (adapter != NULL);
 
     if (adapter->discovery_state == STOPPED) {
-        adapter->discovery_state = STARTING;
+        binc_internal_set_discovery_state(adapter, STARTING);
         g_dbus_connection_call(adapter->connection,
                                BLUEZ_DBUS,
                                adapter->path,
@@ -648,7 +660,7 @@ void binc_adapter_stop_discovery(Adapter *adapter) {
     g_assert (adapter != NULL);
 
     if (adapter->discovery_state == STARTED) {
-        adapter->discovery_state = STOPPING;
+        binc_internal_set_discovery_state(adapter, STOPPING);
         g_dbus_connection_call(adapter->connection,
                                BLUEZ_DBUS,
                                adapter->path,
@@ -778,4 +790,9 @@ Device *binc_adapter_get_device_by_path(Adapter *adapter, const char *path) {
 GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->connection;
+}
+
+const char* binc_adapter_get_discovery_state_name(const Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return discovery_state_names[adapter->discovery_state];
 }

@@ -24,8 +24,6 @@
 #ifndef TEST_ADAPTER_H
 #define TEST_ADAPTER_H
 
-
-
 #include <gio/gio.h>
 #include "forward_decl.h"
 
@@ -66,6 +64,8 @@ void binc_adapter_power_off(Adapter *adapter);
 const char *binc_adapter_get_path(const Adapter *adapter);
 
 DiscoveryState binc_adapter_get_discovery_state(const Adapter *adapter);
+
+const char* binc_adapter_get_discovery_state_name(const Adapter *adapter);
 
 gboolean binc_adapter_get_powered_state(const Adapter *adapter);
 
