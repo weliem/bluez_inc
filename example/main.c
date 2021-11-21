@@ -26,7 +26,6 @@
 #include "../adapter.h"
 #include "../device.h"
 #include "../logger.h"
-#include "../parser.h"
 #include "../agent.h"
 #include "service_handler_manager.h"
 #include "hts_service_handler.h"
@@ -115,11 +114,40 @@ void on_write(Characteristic *characteristic, GError *error) {
     }
 }
 
+GList* order_services(GList *services) {
+    GList *ordered_services = NULL;
+    GList *preferred_order = NULL;
+
+    preferred_order = g_list_append(preferred_order, DIS_SERVICE);
+    preferred_order = g_list_append(preferred_order, CTS_SERVICE);
+
+    // Get the services that are in the preferred order list
+    for (GList *iterator = preferred_order; iterator; iterator = iterator->next) {
+        const char* service_uuid = (char *) iterator->data;
+        for (GList *service_iterator = services; service_iterator; service_iterator = service_iterator->next) {
+            Service *service = (Service *) service_iterator->data;
+            if (g_str_equal(binc_service_get_uuid(service), service_uuid)) {
+                ordered_services = g_list_append(ordered_services, service);
+            }
+        }
+    }
+
+    // Add the remainder
+    for (GList *iterator = services; iterator; iterator = iterator->next) {
+        Service *service = (Service *) iterator->data;
+        if(g_list_index(ordered_services, service) < 0 ) {
+            ordered_services = g_list_append(ordered_services, service);
+        }
+    }
+    return ordered_services;
+}
+
 void on_services_resolved(Device *device) {
     log_debug(TAG, "'%s' services resolved", binc_device_get_name(device));
 
     // Activate service handlers if they exist
-    GList *services = binc_device_get_services(device);
+    GList *device_services = binc_device_get_services(device);
+    GList *services = order_services(device_services);
     for (GList *iterator = services; iterator; iterator = iterator->next) {
         Service *service = (Service *) iterator->data;
         const char* service_uuid = binc_service_get_uuid(service);
@@ -128,6 +156,7 @@ void on_services_resolved(Device *device) {
             serviceHandler->on_characteristics_discovered(serviceHandler->private_data, device);
         }
     }
+    g_list_free(services);
 }
 
 gboolean on_request_authorization(Device *device) {

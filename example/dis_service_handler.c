@@ -11,6 +11,7 @@
 #define TAG "DIS_Service_Handler"
 
 static void dis_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
+    log_debug(TAG, "discovered DeviceInformationService");
     Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
     if (manufacturer != NULL && binc_characteristic_supports_read(manufacturer)) {
         binc_characteristic_read(manufacturer);

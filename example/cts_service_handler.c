@@ -27,6 +27,7 @@ static gboolean isOmron(Device *device) {
 }
 
 static void cts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
+    log_debug(TAG, "discovered CurrentTimeService");
     Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
     if (current_time != NULL) {
         if (binc_characteristic_supports_notify(current_time)) {

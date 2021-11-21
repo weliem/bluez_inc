@@ -78,15 +78,16 @@ void hts_measurement_free(TemperatureMeasurement *measurement) {
 }
 
 static void hts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
+    log_debug(TAG, "discovered HealthThermometerService");
     Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE_UUID, TEMPERATURE_CHAR_UUID);
     if (temperature != NULL && binc_characteristic_supports_notify(temperature)) {
         binc_characteristic_start_notify(temperature);
     }
 }
 
-static void
-hts_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                               GError *error) {
+static void hts_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device,
+                                           Characteristic *characteristic,GError *error) {
+
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
     if (error != NULL) {
