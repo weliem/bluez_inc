@@ -22,6 +22,14 @@ const char *observation_type_loinc_display[] = {
         [BODY_TEMPERATURE]  = "Body temperature"
 };
 
+const char *observation_precision[] = {
+        [BLOOD_PRESSURE_SYSTOLIC] = "0",
+        [BLOOD_PRESSURE_DIASTOLIC] = "0",
+        [BLOOD_PRESSURE_MEAN]  = "0",
+        [BLOOD_PRESSURE_PULSE]  = "0",
+        [BODY_TEMPERATURE]  = "1"
+};
+
 const char *observation_unit_ucum[] = {
         [CELSIUS] = "Cel",
         [FAHRENHEIT] =  "[degF]",
@@ -54,11 +62,14 @@ static void add_observation(Observation *observation, cJSON *fhir_json) {
 
     // Build up value
     cJSON *value = cJSON_AddObjectToObject(fhir_json, "valueQuantity");
-    char* value_string = g_strdup_printf("%.1f", binc_round_with_precision(observation->value,1));
+    const char* precision = observation_precision[observation->type];
+    char* precision_string = g_strdup_printf("%%.%sf", precision );
+    char* value_string = g_strdup_printf(precision_string, binc_round_with_precision(observation->value,atoi(precision)));
     cJSON_AddRawToObject(value, "value", value_string);
     cJSON_AddStringToObject(value, "unit", observation_unit_str(observation->unit));
     cJSON_AddStringToObject(value, "system", "http://unitsofmeasure.org");
     cJSON_AddStringToObject(value, "code", observation_get_unit_ucum_str(observation));
+    g_free(precision_string);
     g_free(value_string);
 }
 
