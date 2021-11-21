@@ -276,7 +276,7 @@ char *binc_device_to_string(const Device *device) {
     g_string_append(service_data, "]");
 
     char *result = g_strdup_printf(
-            "Device{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, manufacturer_data=%s, service_data=%s, paired=%d, txpower=%d path='%s' }",
+            "Device{name='%s', address='%s', address_type=%s, rssi=%d, uuids=%s, manufacturer_data=%s, service_data=%s, paired=%s, txpower=%d path='%s' }",
             device->name,
             device->address,
             device->address_type,
@@ -284,7 +284,7 @@ char *binc_device_to_string(const Device *device) {
             uuids->str,
             manufacturer_data->str,
             service_data->str,
-            device->paired,
+            device->paired ? "true" : "false",
             device->txpower,
             device->path
     );
@@ -684,8 +684,6 @@ void binc_device_set_services_resolved_callback(Device *device, ServicesResolved
 
     device->services_resolved_callback = callback;
 }
-
-
 
 Service *binc_device_get_service(const Device *device, const char *service_uuid) {
     g_assert(device != NULL);
