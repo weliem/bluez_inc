@@ -6,6 +6,7 @@
 #include "../logger.h"
 #include "observation.h"
 #include "../utility.h"
+#include "../fhir_uploader.h"
 
 #define TAG "ServiceHandlerManager"
 
@@ -51,7 +52,8 @@ static void on_observation(GList *observations) {
     }
 
     char* fhir = observation_list_as_fhir(observations);
-    g_print("%s", fhir);
+    //g_print("%s", fhir);
+    postFhir(fhir);
     g_free(fhir);
 }
 

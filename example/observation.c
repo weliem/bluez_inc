@@ -85,11 +85,14 @@ char *observation_list_as_fhir(GList *observation_list) {
 
     // Build up vital signs category
     cJSON *category = cJSON_AddArrayToObject(fhir_json, "category");
+    cJSON *category_item = cJSON_CreateObject();
     cJSON *category_entry = cJSON_CreateObject();
+    cJSON *category_coding = cJSON_AddArrayToObject(category_item, "coding");
     cJSON_AddStringToObject(category_entry, "system", "http://terminology.hl7.org/CodeSystems/observation_category");
     cJSON_AddStringToObject(category_entry, "code", "vital-signs");
     cJSON_AddStringToObject(category_entry, "display", "Vital Signs");
-    cJSON_AddItemToArray(category, category_entry);
+    cJSON_AddItemToArray(category_coding, category_entry);
+    cJSON_AddItemToArray(category, category_item);
 
     // Build up coding
     Observation *first_observation = (Observation *) observation_list->data;
