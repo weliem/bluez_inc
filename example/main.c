@@ -32,6 +32,7 @@
 #include "dis_service_handler.h"
 #include "cts_service_handler.h"
 #include "blp_service_handler.h"
+#include "device_info.h"
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
@@ -49,9 +50,13 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
     log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device),
               binc_device_get_connection_state_name(device), state);
 
+
     // Remove devices immediately of they are not bonded
-    if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED ) {
-        binc_adapter_remove_device(default_adapter, device);
+    if (state == DISCONNECTED) {
+        binc_service_handler_manager_device_disconnected(serviceHandlerManager, device);
+        if (binc_device_get_bonding_state(device) != BONDED) {
+            binc_adapter_remove_device(default_adapter, device);
+        }
     }
 
     if (state == CONNECTED) {
@@ -114,7 +119,7 @@ void on_write(Characteristic *characteristic, GError *error) {
     }
 }
 
-GList* order_services(GList *services) {
+GList *order_services(GList *services) {
     GList *ordered_services = NULL;
     GList *preferred_order = NULL;
 
@@ -123,7 +128,7 @@ GList* order_services(GList *services) {
 
     // Get the services that are in the preferred order list
     for (GList *iterator = preferred_order; iterator; iterator = iterator->next) {
-        const char* service_uuid = (char *) iterator->data;
+        const char *service_uuid = (char *) iterator->data;
         for (GList *service_iterator = services; service_iterator; service_iterator = service_iterator->next) {
             Service *service = (Service *) service_iterator->data;
             if (g_str_equal(binc_service_get_uuid(service), service_uuid)) {
@@ -136,7 +141,7 @@ GList* order_services(GList *services) {
     // Add the remainder
     for (GList *iterator = services; iterator; iterator = iterator->next) {
         Service *service = (Service *) iterator->data;
-        if(g_list_index(ordered_services, service) < 0 ) {
+        if (g_list_index(ordered_services, service) < 0) {
             ordered_services = g_list_append(ordered_services, service);
         }
     }
@@ -151,10 +156,11 @@ void on_services_resolved(Device *device) {
     GList *services = order_services(device_services);
     for (GList *iterator = services; iterator; iterator = iterator->next) {
         Service *service = (Service *) iterator->data;
-        const char* service_uuid = binc_service_get_uuid(service);
+        const char *service_uuid = binc_service_get_uuid(service);
         ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
         if (serviceHandler != NULL && serviceHandler->on_characteristics_discovered != NULL) {
-            serviceHandler->on_characteristics_discovered(serviceHandler, device);
+            serviceHandler->on_characteristics_discovered(serviceHandler, device,
+                                                          binc_service_get_characteristics(service));
         }
     }
     g_list_free(services);
@@ -206,7 +212,8 @@ void on_discovery_state_changed(Adapter *adapter, DiscoveryState state, GError *
         log_debug(TAG, "discovery error (error %d: %s)", error->code, error->message);
         return;
     }
-    log_debug(TAG, "discovery '%s' (%s)", binc_adapter_get_discovery_state_name(adapter), binc_adapter_get_path(adapter));
+    log_debug(TAG, "discovery '%s' (%s)", binc_adapter_get_discovery_state_name(adapter),
+              binc_adapter_get_path(adapter));
 }
 
 void on_powered_state_changed(Adapter *adapter, gboolean state) {
@@ -225,6 +232,8 @@ gboolean callback(gpointer data) {
     }
 
     binc_service_handler_manager_free(serviceHandlerManager);
+
+    device_info_close();
     g_main_loop_quit((GMainLoop *) data);
     return FALSE;
 }

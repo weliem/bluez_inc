@@ -73,7 +73,7 @@ void binc_service_add_characteristic(Service *service, Characteristic *character
     service->characteristics = g_list_append(service->characteristics, characteristic);
 }
 
-const GList *binc_service_get_characteristics(const Service *service) {
+GList *binc_service_get_characteristics(const Service *service) {
     g_assert(service != NULL);
     return service->characteristics;
 }

@@ -73,13 +73,11 @@ static void add_observation(Observation *observation, cJSON *fhir_json) {
     g_free(value_string);
 }
 
-char *observation_list_as_fhir(GList *observation_list) {
+cJSON *observation_list_as_fhir(GList *observation_list, const char* device_reference) {
     g_assert(observation_list != NULL);
-    if (g_list_length(observation_list) == 0) return "";
+    if (g_list_length(observation_list) == 0) return NULL;
 
     cJSON *fhir_json = cJSON_CreateObject();
-    if (fhir_json == NULL) return NULL;
-
     cJSON_AddStringToObject(fhir_json, "resourceType", "Observation");
     cJSON_AddStringToObject(fhir_json, "status", "final");
 
@@ -121,10 +119,17 @@ char *observation_list_as_fhir(GList *observation_list) {
     char *time_string = binc_date_time_format_iso8601(first_observation->timestamp);
     cJSON_AddStringToObject(fhir_json, "effectiveDateTime", time_string);
 
-    char *result = cJSON_Print(fhir_json);
-    cJSON_Delete(fhir_json);
-    g_free(time_string);
-    return result;
+    if (device_reference != NULL) {
+        cJSON *device_ref = cJSON_CreateObject();
+        cJSON_AddStringToObject(device_ref, "reference", device_reference);
+        cJSON_AddItemToObject(fhir_json, "device", device_ref);
+    }
+
+    return fhir_json;
+//    char *result = cJSON_Print(fhir_json);
+//    cJSON_Delete(fhir_json);
+//    g_free(time_string);
+//    return result;
 }
 
 void observation_list_free(GList *observation_list) {

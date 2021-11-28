@@ -3,7 +3,7 @@
 //
 
 #include "fhir_uploader.h"
-#include "logger.h"
+#include "../logger.h"
 #include <curl/curl.h>
 #include <string.h>
 
@@ -55,7 +55,7 @@ void postFhir(const char *fhir_json) {
         /* First set the URL that is about to receive our POST. This URL can
            just as well be a https:// URL if that is what should receive the
            data. */
-        curl_easy_setopt(curl, CURLOPT_URL, "http://hapi.fhir.org/baseR4/Observation");
+        curl_easy_setopt(curl, CURLOPT_URL, "http://hapi.fhir.org/baseR4/");
 
         /* Now specify we want to POST data */
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -83,6 +83,7 @@ void postFhir(const char *fhir_json) {
                     curl_easy_strerror(res));
 
         /* always cleanup */
+        curl_slist_free_all(list);
         curl_easy_cleanup(curl);
     }
 }

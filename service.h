@@ -32,7 +32,7 @@ const char *binc_service_get_uuid(const Service *service);
 
 Device *binc_service_get_device(const Service *service);
 
-const GList *binc_service_get_characteristics(const Service *service);
+GList *binc_service_get_characteristics(const Service *service);
 
 Characteristic *binc_service_get_characteristic(const Service *service, const char *char_uuid);
 

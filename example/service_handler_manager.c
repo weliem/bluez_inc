@@ -6,7 +6,8 @@
 #include "../logger.h"
 #include "observation.h"
 #include "../utility.h"
-#include "../fhir_uploader.h"
+#include "fhir_uploader.h"
+#include "cJSON.h"
 
 #define TAG "ServiceHandlerManager"
 
@@ -37,7 +38,7 @@ void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerMana
     g_free(serviceHandlerManager);
 }
 
-static void on_observation(GList *observations) {
+static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     for (GList *iterator = observations; iterator; iterator = iterator->next) {
         Observation *observation = (Observation *) iterator->data;
 
@@ -51,10 +52,53 @@ static void on_observation(GList *observations) {
         g_free(time_string);
     }
 
-    char* fhir = observation_list_as_fhir(observations);
+    // Build bundle
+    cJSON *fhir_json = cJSON_CreateObject();
+    cJSON_AddStringToObject(fhir_json, "resourceType", "Bundle");
+    cJSON_AddStringToObject(fhir_json, "type", "transaction");
+    cJSON *entries = cJSON_AddArrayToObject(fhir_json, "entry");
+
+    // Add device
+    GString* device_full_url = g_string_new("urn:uuid:");
+    g_string_append(device_full_url, g_uuid_string_random());
+    cJSON *device_entry = cJSON_CreateObject();
+    cJSON_AddStringToObject(device_entry, "fullUrl", device_full_url->str);
+    cJSON_AddItemToObject(device_entry, "resource", device_info_to_fhir(deviceInfo) );
+    cJSON *device_request = cJSON_CreateObject();
+    cJSON_AddStringToObject(device_request, "method", "POST");
+    cJSON_AddStringToObject(device_request, "url", "Device");
+    GString *ifNoneExist = g_string_new("identifier=");
+    g_string_append(ifNoneExist, DEVICE_SYSTEM);
+    g_string_append(ifNoneExist, "|");
+    GString *mac_address = g_string_new(device_info_get_address(deviceInfo));
+    g_string_replace(mac_address, ":", "-", 0);
+    g_string_append(ifNoneExist, mac_address->str);
+    cJSON_AddStringToObject(device_request, "ifNoneExist", ifNoneExist->str);
+    g_string_free(ifNoneExist, TRUE);
+    cJSON_AddItemToObject(device_entry, "request", device_request);
+    cJSON_AddItemToArray(entries, device_entry);
+
+    // Add observation
+    gchar* observation_full_url = g_uuid_string_random();
+    cJSON *observation_entry = cJSON_CreateObject();
+    cJSON_AddStringToObject(observation_entry, "fullUrl", observation_full_url);
+    cJSON_AddItemToObject(observation_entry, "resource", observation_list_as_fhir(observations, device_full_url->str));
+    cJSON *observation_request = cJSON_CreateObject();
+    cJSON_AddStringToObject(observation_request, "method", "POST");
+    cJSON_AddStringToObject(observation_request, "url", "Device");
+    cJSON_AddItemToObject(observation_entry, "request", observation_request);
+    cJSON_AddItemToArray(entries, observation_entry);
+
+    char *result = cJSON_Print(fhir_json);
+    g_print("%s", result);
+    cJSON_Delete(fhir_json);
+    postFhir(result);
+    g_free(result);
+    g_string_free(device_full_url, TRUE);
+
     //g_print("%s", fhir);
-    postFhir(fhir);
-    g_free(fhir);
+//    postFhir(fhir);
+//    g_free(fhir);
 }
 
 void binc_service_handler_manager_add(ServiceHandlerManager *serviceHandlerManager, ServiceHandler *service_handler) {
@@ -73,4 +117,17 @@ ServiceHandler* binc_service_handler_manager_get(ServiceHandlerManager *serviceH
     g_assert(g_uuid_string_is_valid(service_uuid));
 
     return g_hash_table_lookup(serviceHandlerManager->service_handlers, service_uuid);
+}
+
+void binc_service_handler_manager_device_disconnected(ServiceHandlerManager *serviceHandlerManager, Device *device) {
+    g_assert(serviceHandlerManager != NULL);
+    g_assert(device != NULL);
+    GList *service_handlers = g_hash_table_get_values(serviceHandlerManager->service_handlers);
+    for (GList *iterator = service_handlers; iterator; iterator = iterator->next) {
+        ServiceHandler *handler = (ServiceHandler *) iterator->data;
+        if (handler->on_device_disconnected != NULL) {
+            handler->on_device_disconnected(handler, device);
+        }
+    }
+    g_list_free(service_handlers);
 }

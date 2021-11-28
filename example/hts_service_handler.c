@@ -77,8 +77,8 @@ void hts_measurement_free(TemperatureMeasurement *measurement) {
     g_free(measurement);
 }
 
-static void hts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
-    log_debug(TAG, "discovered HealthThermometerService");
+static void hts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device, GList *characteristics) {
+    log_debug(TAG, "discovered %d characteristics", g_list_length(characteristics));
     Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE_UUID, TEMPERATURE_CHAR_UUID);
     if (temperature != NULL && binc_characteristic_supports_notify(temperature)) {
         binc_characteristic_start_notify(temperature);
@@ -123,7 +123,8 @@ static void hts_onCharacteristicChanged(ServiceHandler *service_handler, Device 
 
         observation_list = g_list_append(observation_list, observation);
         if (service_handler->observations_callback != NULL) {
-            service_handler->observations_callback(observation_list);
+            DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
+            service_handler->observations_callback(observation_list, deviceInfo);
         }
         observation_list_free(observation_list);
     }
@@ -141,6 +142,7 @@ ServiceHandler *hts_service_handler_create() {
     handler->on_notification_state_updated = &hts_onNotificationStateUpdated;
     handler->on_characteristic_write = &hts_onCharacteristicWrite;
     handler->on_characteristic_changed = &hts_onCharacteristicChanged;
+    handler->on_device_disconnected = NULL;
     handler->service_handler_free = &hts_free;
     return handler;
 }

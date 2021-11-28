@@ -79,12 +79,12 @@ To disconnect a connected device, call `binc_device_disconnect(device)` and the 
 ## Reading and writing characteristics
 
 We can start using characteristics once the service discovery has been completed. 
-Typically, we read some characteristics like its model and manufacturer. In order to read or write, you first need to get the **Characteristic** by using `binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR)`. 
+Typically, we read some characteristics like its model and manufacturer. In order to read or write, you first need to get the **Characteristic** by using `binc_device_get_characteristic(device, DIS_SERVICE, DIS_MANUFACTURER_CHAR)`. 
 You need to provide the **service UUID** and **characteristic UUID** to find a characteristic:
 
 ```c
 void on_services_resolved(Device *device) {
-    Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, MANUFACTURER_CHAR);
+    Characteristic *manufacturer = binc_device_get_characteristic(device, DIS_SERVICE, DIS_MANUFACTURER_CHAR);
     if (manufacturer != NULL) {
         binc_characteristic_read(manufacturer);
     }
@@ -102,7 +102,7 @@ Like all BLE operations, reading and writing are **asynchronous** operations. So
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
     const char* uuid = binc_characteristic_get_uuid(characteristic);
     if (byteArray != NULL) {
-        if (g_str_equal(uuid, MANUFACTURER_CHAR)) {
+        if (g_str_equal(uuid, DIS_MANUFACTURER_CHAR)) {
             log_debug(TAG, "manufacturer = %s", byteArray->data);
         } else if (g_str_equal(uuid, MODEL_CHAR)) {
             log_debug(TAG, "model = %s", byteArray->data);

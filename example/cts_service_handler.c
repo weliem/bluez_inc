@@ -26,8 +26,8 @@ static gboolean isOmron(Device *device) {
            g_str_has_prefix(binc_device_get_name(device), "BLEsmart_");
 }
 
-static void cts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
-    log_debug(TAG, "discovered CurrentTimeService");
+static void cts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device, GList *characteristics) {
+    log_debug(TAG, "discovered %d characteristics", g_list_length(characteristics));
     Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
     if (current_time != NULL) {
         if (binc_characteristic_supports_notify(current_time)) {
@@ -113,6 +113,7 @@ ServiceHandler *cts_service_handler_create() {
     handler->on_notification_state_updated = &cts_onNotificationStateUpdated;
     handler->on_characteristic_write = &cts_onCharacteristicWrite;
     handler->on_characteristic_changed = &cts_onCharacteristicChanged;
+    handler->on_device_disconnected = NULL;
     handler->service_handler_free = &cts_free;
     return handler;
 }

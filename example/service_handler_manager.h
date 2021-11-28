@@ -7,10 +7,11 @@
 
 #include <glib.h>
 #include "../forward_decl.h"
+#include "device_info.h"
 
 typedef struct service_handler_entry ServiceHandler;
 
-typedef void (*onCharacteristicsDiscovered)(ServiceHandler *service_handler, Device *device);
+typedef void (*onCharacteristicsDiscovered)(ServiceHandler *service_handler, Device *device, GList *characteristics);
 
 typedef void (*onNotificationStateUpdated)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GError *error);
 
@@ -20,9 +21,11 @@ typedef void (*onCharacteristicWrite)(ServiceHandler *service_handler, Device *d
 typedef void (*onCharacteristicChanged)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
                                         GByteArray *byteArray, GError *error);
 
+typedef void (*onDeviceDisconnected)(ServiceHandler *service_handler, Device *device);
+
 typedef void (*serviceHandlerFree)(ServiceHandler *service_handler);
 
-typedef void (*observationsCallback)(GList *observations);
+typedef void (*observationsCallback)(GList *observations, DeviceInfo *deviceInfo);
 
 struct service_handler_entry {
     gpointer private_data;
@@ -31,6 +34,7 @@ struct service_handler_entry {
     onNotificationStateUpdated on_notification_state_updated;
     onCharacteristicWrite on_characteristic_write;
     onCharacteristicChanged on_characteristic_changed;
+    onDeviceDisconnected  on_device_disconnected;
     serviceHandlerFree service_handler_free;
     observationsCallback observations_callback;
 };
@@ -43,5 +47,7 @@ void binc_service_handler_manager_add(ServiceHandlerManager *serviceHandlerManag
 
 ServiceHandler *
 binc_service_handler_manager_get(ServiceHandlerManager *serviceHandlerManager, const char *service_uuid);
+
+void binc_service_handler_manager_device_disconnected(ServiceHandlerManager *serviceHandlerManager, Device *device);
 
 #endif //TEST_SERVICE_HANDLER_MANAGER_H

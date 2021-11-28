@@ -98,7 +98,8 @@ void blp_measurement_free(BloodPressureMeasurement *measurement) {
     g_free(measurement);
 }
 
-static void blp_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device) {
+static void blp_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device, GList *characteristics) {
+    log_debug(TAG, "discovered %d characteristics", g_list_length(characteristics));
     Characteristic *blp_measurement = binc_device_get_characteristic(device, BLP_SERVICE_UUID, BLOODPRESSURE_CHAR_UUID);
     if (blp_measurement != NULL && binc_characteristic_supports_notify(blp_measurement)) {
         binc_characteristic_start_notify(blp_measurement);
@@ -152,7 +153,8 @@ static void blp_onCharacteristicChanged(ServiceHandler *service_handler, Device 
             blp_measurement_free(measurement);
 
             if (service_handler->observations_callback != NULL) {
-                service_handler->observations_callback(observations_list);
+                DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
+                service_handler->observations_callback(observations_list, deviceInfo);
             }
 
             observation_list_free(observations_list);
@@ -174,6 +176,7 @@ ServiceHandler *blp_service_handler_create() {
     handler->on_notification_state_updated = &blp_onNotificationStateUpdated;
     handler->on_characteristic_write = &blp_onCharacteristicWrite;
     handler->on_characteristic_changed = &blp_onCharacteristicChanged;
+    handler->on_device_disconnected = NULL;
     handler->service_handler_free = &blp_free;
     return handler;
 }
