@@ -60,7 +60,9 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
 
     // Add device
     GString* device_full_url = g_string_new("urn:uuid:");
-    g_string_append(device_full_url, g_uuid_string_random());
+    gchar* device_full_url_uuid = g_uuid_string_random();
+    g_string_append(device_full_url, device_full_url_uuid);
+    g_free(device_full_url_uuid);
     cJSON *device_entry = cJSON_CreateObject();
     cJSON_AddStringToObject(device_entry, "fullUrl", device_full_url->str);
     cJSON_AddItemToObject(device_entry, "resource", device_info_to_fhir(deviceInfo) );
@@ -75,14 +77,20 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     g_string_append(ifNoneExist, mac_address->str);
     cJSON_AddStringToObject(device_request, "ifNoneExist", ifNoneExist->str);
     g_string_free(ifNoneExist, TRUE);
+    g_string_free(mac_address, TRUE);
     cJSON_AddItemToObject(device_entry, "request", device_request);
     cJSON_AddItemToArray(entries, device_entry);
 
     // Add observation
-    gchar* observation_full_url = g_uuid_string_random();
+    gchar* observation_full_url_uuid = g_uuid_string_random();
+    GString* observation_full_url = g_string_new("urn:uuid:");
+    g_string_append(observation_full_url, observation_full_url_uuid);
+    g_free(observation_full_url_uuid);
     cJSON *observation_entry = cJSON_CreateObject();
-    cJSON_AddStringToObject(observation_entry, "fullUrl", observation_full_url);
+    cJSON_AddStringToObject(observation_entry, "fullUrl", observation_full_url->str);
+    g_string_free(observation_full_url, TRUE);
     cJSON_AddItemToObject(observation_entry, "resource", observation_list_as_fhir(observations, device_full_url->str));
+    g_string_free(device_full_url, TRUE);
     cJSON *observation_request = cJSON_CreateObject();
     cJSON_AddStringToObject(observation_request, "method", "POST");
     cJSON_AddStringToObject(observation_request, "url", "Device");
@@ -94,11 +102,6 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     cJSON_Delete(fhir_json);
     postFhir(result);
     g_free(result);
-    g_string_free(device_full_url, TRUE);
-
-    //g_print("%s", fhir);
-//    postFhir(fhir);
-//    g_free(fhir);
 }
 
 void binc_service_handler_manager_add(ServiceHandlerManager *serviceHandlerManager, ServiceHandler *service_handler) {

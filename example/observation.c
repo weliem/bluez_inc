@@ -118,6 +118,7 @@ cJSON *observation_list_as_fhir(GList *observation_list, const char* device_refe
 
     char *time_string = binc_date_time_format_iso8601(first_observation->timestamp);
     cJSON_AddStringToObject(fhir_json, "effectiveDateTime", time_string);
+    g_free(time_string);
 
     if (device_reference != NULL) {
         cJSON *device_ref = cJSON_CreateObject();
