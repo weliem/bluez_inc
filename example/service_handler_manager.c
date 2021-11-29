@@ -29,7 +29,9 @@ void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerMana
         while (g_hash_table_iter_next(&iter, &key, &value)) {
             g_free(key);
             ServiceHandler *handler = (ServiceHandler *) value;
-            handler->service_handler_free(handler);
+            if (handler->service_handler_free != NULL) {
+                handler->service_handler_free(handler);
+            }
             g_free(handler);
         }
         g_hash_table_destroy(serviceHandlerManager->service_handlers);
