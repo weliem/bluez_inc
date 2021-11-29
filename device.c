@@ -39,12 +39,12 @@
 #define DEVICE_METHOD_PAIR "Pair"
 #define DEVICE_METHOD_DISCONNECT "Disconnect"
 
-char connection_state_names[4][16] =
-        {"DISCONNECTED",
-         "CONNECTED",
-         "CONNECTING",
-         "DISCONNECTING"
-        };
+const char *connection_state_names[] = {
+        [DISCONNECTED] = "DISCONNECTED",
+        [CONNECTED] = "CONNECTED",
+        [CONNECTING]  = "CONNECTING",
+        [DISCONNECTING]  = "DISCONNECTING"
+};
 
 struct binc_device {
     GDBusConnection *connection;

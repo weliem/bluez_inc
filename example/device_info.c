@@ -118,6 +118,14 @@ void device_info_set_serialnumber(DeviceInfo *deviceInfo, const char *serialnumb
     deviceInfo->serial_number = g_strdup(serialnumber);
 }
 
+void device_info_set_firmware_version(DeviceInfo *deviceInfo, const char *firmware_version) {
+    g_assert(firmware_version != NULL);
+    if (deviceInfo->firmware_version != NULL) {
+        g_free(deviceInfo->firmware_version);
+    }
+    deviceInfo->firmware_version = g_strdup(firmware_version);
+}
+
 const char *device_info_get_address(DeviceInfo *deviceInfo) {
     g_assert(deviceInfo != NULL);
     return deviceInfo->address;
@@ -136,6 +144,11 @@ const char *device_info_get_model(DeviceInfo *deviceInfo) {
 const char *device_info_get_serialnumber(DeviceInfo *deviceInfo) {
     g_assert(deviceInfo != NULL);
     return deviceInfo->serial_number;
+}
+
+const char *device_info_get_firmware_version(DeviceInfo *deviceInfo) {
+    g_assert(deviceInfo != NULL);
+    return deviceInfo->firmware_version;
 }
 
 cJSON *device_info_to_fhir(DeviceInfo *deviceInfo) {

@@ -11,7 +11,7 @@
 #define TAG "CTS_Service_Handler"
 
 typedef struct cts_internal {
-    GHashTable *currenttime_counter;
+    GHashTable *currenttime_is_set;
 } CtsInternal;
 
 static void write_current_time(Characteristic *current_time) {
@@ -83,10 +83,10 @@ static void cts_onCharacteristicChanged(ServiceHandler *service_handler, Device 
 
             if (isOmron(device)) {
                 CtsInternal *ctsInternal = (CtsInternal *) service_handler->private_data;
-                char *is_set = g_hash_table_lookup(ctsInternal->currenttime_counter, binc_device_get_address(device));
+                char *is_set = g_hash_table_lookup(ctsInternal->currenttime_is_set, binc_device_get_address(device));
                 if (is_set == NULL) {
                     write_current_time(characteristic);
-                    g_hash_table_insert(ctsInternal->currenttime_counter, g_strdup(binc_device_get_address(device)),
+                    g_hash_table_insert(ctsInternal->currenttime_is_set, g_strdup(binc_device_get_address(device)),
                                         g_strdup("set"));
                 }
             }
@@ -94,17 +94,25 @@ static void cts_onCharacteristicChanged(ServiceHandler *service_handler, Device 
     }
 }
 
+static void cts_onDeviceDisconnected(ServiceHandler *service_handler, Device *device) {
+    log_debug(TAG, "onDeviceDisconnected");
+    CtsInternal *ctsInternal = (CtsInternal *) service_handler->private_data;
+    char *is_set = g_hash_table_lookup(ctsInternal->currenttime_is_set, binc_device_get_address(device));
+    if (is_set != NULL) {
+        g_hash_table_remove(ctsInternal->currenttime_is_set, binc_device_get_address(device));
+    }
+}
 
 static void cts_free(ServiceHandler *service_handler) {
     CtsInternal *ctsInternal = (CtsInternal *) service_handler->private_data;
-    g_hash_table_destroy(ctsInternal->currenttime_counter);
+    g_hash_table_destroy(ctsInternal->currenttime_is_set);
     g_free(ctsInternal);
     log_debug(TAG, "freeing CTS private_data");
 }
 
 ServiceHandler *cts_service_handler_create() {
     CtsInternal *ctsInternal = g_new0(CtsInternal, 1);
-    ctsInternal->currenttime_counter = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+    ctsInternal->currenttime_is_set = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 
     ServiceHandler *handler = g_new0(ServiceHandler, 1);
     handler->private_data = ctsInternal;
@@ -113,7 +121,7 @@ ServiceHandler *cts_service_handler_create() {
     handler->on_notification_state_updated = &cts_onNotificationStateUpdated;
     handler->on_characteristic_write = &cts_onCharacteristicWrite;
     handler->on_characteristic_changed = &cts_onCharacteristicChanged;
-    handler->on_device_disconnected = NULL;
+    handler->on_device_disconnected = &cts_onDeviceDisconnected;
     handler->service_handler_free = &cts_free;
     return handler;
 }

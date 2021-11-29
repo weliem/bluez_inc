@@ -127,10 +127,6 @@ cJSON *observation_list_as_fhir(GList *observation_list, const char* device_refe
     }
 
     return fhir_json;
-//    char *result = cJSON_Print(fhir_json);
-//    cJSON_Delete(fhir_json);
-//    g_free(time_string);
-//    return result;
 }
 
 void observation_list_free(GList *observation_list) {

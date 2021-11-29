@@ -6,18 +6,10 @@
 #define TEST_OBSERVATION_H
 
 #include <glib.h>
+#include "observation_type.h"
 #include "observation_units.h"
 #include "observation_location.h"
 #include "cJSON.h"
-
-
-typedef enum observation_type {
-    BODY_TEMPERATURE = 0,
-    BLOOD_PRESSURE_SYSTOLIC = 1,
-    BLOOD_PRESSURE_DIASTOLIC = 2,
-    BLOOD_PRESSURE_MEAN = 3,
-    BLOOD_PRESSURE_PULSE = 4
-} ObservationType;
 
 typedef struct observation {
     float value;
