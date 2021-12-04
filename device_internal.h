@@ -22,5 +22,6 @@ void binc_device_set_uuids(Device *device, GList *uuids);
 void binc_device_set_manufacturer_data(Device *device, GHashTable *manufacturer_data);
 void binc_device_set_service_data(Device *device, GHashTable *service_data);
 void binc_device_set_bonding_state(Device *device, BondingState bonding_state);
+void binc_internal_device_update_property(Device *device, const char *property_name, GVariant *property_value);
 
 #endif //TEST_DEVICE_INTERNAL_H

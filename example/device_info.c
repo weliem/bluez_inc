@@ -24,7 +24,8 @@ DeviceInfo *get_device_info(const char *address) {
     g_assert(address != NULL);
 
     if (device_info_store == NULL) {
-        device_info_store = g_hash_table_new(g_str_hash, g_str_equal);
+        device_info_store = g_hash_table_new_full(g_str_hash, g_str_equal,
+                                                  g_free, (GDestroyNotify) device_info_free);
     }
 
     DeviceInfo *result = g_hash_table_lookup(device_info_store, address);
@@ -81,14 +82,6 @@ void device_info_free(DeviceInfo *deviceInfo) {
 
 void device_info_close() {
     if (device_info_store != NULL) {
-        GHashTableIter iter;
-        gpointer key, value;
-        g_hash_table_iter_init(&iter, device_info_store);
-        while (g_hash_table_iter_next(&iter, &key, &value)) {
-            g_free(key);
-            DeviceInfo *deviceInfo = (DeviceInfo *) value;
-            device_info_free(deviceInfo);
-        }
         g_hash_table_destroy(device_info_store);
         device_info_store = NULL;
     }

@@ -44,14 +44,7 @@
 #define ADAPTER_PROPERTY_ADDRESS "Address"
 #define ADAPTER_PROPERTY_DISCOVERABLE "Discoverable"
 
-#define DEVICE_PROPERTY_ADDRESS "Address"
-#define DEVICE_PROPERTY_ADDRESS_TYPE "AddressType"
-#define DEVICE_PROPERTY_ALIAS "Alias"
-#define DEVICE_PROPERTY_NAME "Name"
-#define DEVICE_PROPERTY_PAIRED "Paired"
 #define DEVICE_PROPERTY_RSSI "RSSI"
-#define DEVICE_PROPERTY_TRUSTED "Trusted"
-#define DEVICE_PROPERTY_TXPOWER "TxPower"
 #define DEVICE_PROPERTY_UUIDS "UUIDs"
 #define DEVICE_PROPERTY_MANUFACTURER_DATA "ManufacturerData"
 #define DEVICE_PROPERTY_SERVICE_DATA "ServiceData"
@@ -83,7 +76,7 @@ struct binc_adapter {
     GHashTable *devices_cache;
 };
 
-static void binc_internal_call_method_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_adapter_call_method_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
@@ -113,7 +106,7 @@ static void binc_internal_adapter_call_method(Adapter *adapter, const char *meth
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
-                           (GAsyncReadyCallback) binc_internal_call_method_cb,
+                           (GAsyncReadyCallback) binc_internal_adapter_call_method_cb,
                            adapter);
 }
 
@@ -195,69 +188,6 @@ static void binc_internal_device_disappeared(GDBusConnection *sig,
     }
 }
 
-static void binc_internal_device_update_property(Device *device, const char *property_name, GVariant *property_value) {
-    if (g_str_equal(property_name, DEVICE_PROPERTY_ADDRESS)) {
-        binc_device_set_address(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_ADDRESS_TYPE)) {
-        binc_device_set_address_type(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_ALIAS)) {
-        binc_device_set_alias(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_NAME)) {
-        binc_device_set_name(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
-        binc_device_set_paired(device, g_variant_get_boolean(property_value));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_RSSI)) {
-        binc_device_set_rssi(device, g_variant_get_int16(property_value));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_TRUSTED)) {
-        binc_device_set_trusted(device, g_variant_get_boolean(property_value));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_TXPOWER)) {
-        binc_device_set_txpower(device, g_variant_get_int16(property_value));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_UUIDS)) {
-        binc_device_set_uuids(device, g_variant_string_array_to_list(property_value));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_MANUFACTURER_DATA)) {
-        GVariantIter *iter;
-        g_variant_get(property_value, "a{qv}", &iter);
-
-        GVariant *array;
-        uint16_t key;
-        uint8_t val;
-        GHashTable *manufacturer_data = g_hash_table_new(g_int_hash, g_int_equal);
-        while (g_variant_iter_loop(iter, "{qv}", &key, &array)) {
-            GByteArray *byteArray = g_byte_array_new();
-            GVariantIter it_array;
-            g_variant_iter_init(&it_array, array);
-            while (g_variant_iter_loop(&it_array, "y", &val)) {
-                byteArray = g_byte_array_append(byteArray, &val, 1);
-            }
-            int *keyCopy = g_new0 (gint, 1);
-            *keyCopy = key;
-            g_hash_table_insert(manufacturer_data, keyCopy, byteArray);
-        }
-        binc_device_set_manufacturer_data(device, manufacturer_data);
-        g_variant_iter_free(iter);
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_SERVICE_DATA)) {
-        GVariantIter *iter;
-        g_variant_get(property_value, "a{sv}", &iter);
-
-        GVariant *array;
-        char *key;
-        uint8_t val;
-
-        GHashTable *service_data = g_hash_table_new(g_str_hash, g_str_equal);
-        while (g_variant_iter_loop(iter, "{sv}", &key, &array)) {
-            GByteArray *byteArray = g_byte_array_new();
-            GVariantIter it_array;
-            g_variant_iter_init(&it_array, array);
-            while (g_variant_iter_loop(&it_array, "y", &val)) {
-                byteArray = g_byte_array_append(byteArray, &val, 1);
-            }
-            gchar *keyCopy = g_strdup(key);
-            g_hash_table_insert(service_data, keyCopy, byteArray);
-        }
-        binc_device_set_service_data(device, service_data);
-        g_variant_iter_free(iter);
-    }
-}
 
 static void binc_internal_device_appeared(GDBusConnection *sig,
                                           const gchar *sender_name,
@@ -471,7 +401,8 @@ static Adapter *binc_adapter_create(GDBusConnection *connection, const char *pat
     init_adapter(adapter);
     adapter->connection = connection;
     adapter->path = g_strdup(path);
-    adapter->devices_cache = g_hash_table_new(g_str_hash, g_str_equal);
+    adapter->devices_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
+                                                   g_free, (GDestroyNotify) binc_device_free);
     setup_signal_subscribers(adapter);
     return adapter;
 }
@@ -496,14 +427,6 @@ void binc_adapter_free(Adapter *adapter) {
 
     // Free devices cache
     if (adapter->devices_cache != NULL) {
-        GHashTableIter iter;
-        gpointer key, value;
-        g_hash_table_iter_init(&iter, adapter->devices_cache);
-        while (g_hash_table_iter_next(&iter, &key, &value)) {
-            g_free((char *) key);
-            Device *device = (Device *) value;
-            binc_device_free(device);
-        }
         g_hash_table_destroy(adapter->devices_cache);
     }
     adapter->devices_cache = NULL;
