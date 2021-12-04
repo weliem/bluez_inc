@@ -330,8 +330,15 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
     const gchar *object_path;
     GVariant *ifaces_and_properties;
     if (result) {
+        if (device->services != NULL) {
+            g_hash_table_destroy(device->services);
+        }
         device->services = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                  g_free, (GDestroyNotify) binc_service_free);
+
+        if (device->characteristics != NULL) {
+            g_hash_table_destroy(device->characteristics);
+        }
         device->characteristics = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                         g_free,(GDestroyNotify) binc_characteristic_free);
         GVariant *innerResult = g_variant_get_child_value(result, 0);
@@ -403,7 +410,11 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
         g_variant_unref(result);
     }
 
+    if (device->services_list != NULL) {
+        g_list_free(device->services_list);
+    }
     device->services_list = g_hash_table_get_values(device->services);
+
     log_debug(TAG, "found %d services", g_list_length(device->services_list));
     if (device->services_resolved_callback != NULL) {
         device->services_resolved_callback(device);
