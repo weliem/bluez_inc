@@ -78,11 +78,13 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (!strcmp(method, "RequestPasskey")) {
         g_variant_get(params, "(o)", &object_path);
-        g_free(object_path);
         Device *device = binc_adapter_get_device_by_path(adapter, object_path);
+        g_free(object_path);
+
         if (device != NULL) {
             binc_device_set_bonding_state(device, BONDING);
         }
+
         if (agent->request_passkey_callback != NULL) {
             pass = agent->request_passkey_callback(device);
             g_dbus_method_invocation_return_value(invocation, g_variant_new("(u)", pass));
