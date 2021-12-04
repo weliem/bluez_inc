@@ -122,10 +122,7 @@ Device *binc_create_device(const char *path, Adapter *adapter) {
 
 static void binc_device_free_uuids(Device *device) {
     if (device->uuids != NULL) {
-        for (GList *iterator = device->uuids; iterator; iterator = iterator->next) {
-            g_free((char *) iterator->data);
-        }
-        g_list_free(device->uuids);
+        g_list_free_full(device->uuids, g_free);
     }
     device->uuids = NULL;
 }

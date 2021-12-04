@@ -11,17 +11,27 @@
 
 #define TAG "DIS_Service_Handler"
 
+#define DIS_MANUFACTURER_CHAR "00002a29-0000-1000-8000-00805f9b34fb"
+#define DIS_MODEL_CHAR "00002a24-0000-1000-8000-00805f9b34fb"
+#define DIS_SERIAL_NUMBER_CHAR "00002a25-0000-1000-8000-00805f9b34fb"
+#define DIS_FIRMWARE_REVISION_CHAR "00002a26-0000-1000-8000-00805f9b34fb"
+#define DIS_HARDWARE_REVISION_CHAR "00002a27-0000-1000-8000-00805f9b34fb"
+#define DIS_SOFTWARE_REVISION_CHAR "00002a28-0000-1000-8000-00805f9b34fb"
+
 // Array to define which characteristics to read and in which order
-const char *dis_characteristics[] = {
+static const char *dis_characteristics[] = {
         DIS_MANUFACTURER_CHAR,
         DIS_MODEL_CHAR,
         DIS_SERIAL_NUMBER_CHAR,
-        DIS_FIRMWARE_REVISION_CHAR
+        DIS_FIRMWARE_REVISION_CHAR,
+        DIS_HARDWARE_REVISION_CHAR,
+        DIS_SOFTWARE_REVISION_CHAR
 };
 
 static void dis_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device, GList *characteristics) {
     log_debug(TAG, "discovered %d characteristics", g_list_length(characteristics));
 
+    // Read all 'supported' characteristics
     int characteristics_len = sizeof(dis_characteristics) / sizeof(char *);
     for (int i = 0; i < characteristics_len; i++) {
         Characteristic *characteristic = binc_device_get_characteristic(device, DIS_SERVICE, dis_characteristics[i]);
@@ -34,35 +44,42 @@ static void dis_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
 static void dis_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
                                         GByteArray *byteArray, GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
+
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
 
-    if (byteArray != NULL) {
-        DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
-        Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
-        GString *parsed_string = parser_get_string(parser);
+    if (byteArray == NULL) return;
 
-        if (g_str_equal(uuid, DIS_MANUFACTURER_CHAR)) {
-            log_debug(TAG, "manufacturer = %s", parsed_string->str);
-            device_info_set_manufacturer(deviceInfo, parsed_string->str);
-        } else if (g_str_equal(uuid, DIS_MODEL_CHAR)) {
-            log_debug(TAG, "model = %s", parsed_string->str);
-            device_info_set_model(deviceInfo, parsed_string->str);
-        } else if (g_str_equal(uuid, DIS_SERIAL_NUMBER_CHAR)) {
-            log_debug(TAG, "serial = %s", parsed_string->str);
-            device_info_set_serialnumber(deviceInfo, parsed_string->str);
-        } else if (g_str_equal(uuid, DIS_FIRMWARE_REVISION_CHAR)) {
-            log_debug(TAG, "firmware = %s", parsed_string->str);
-            device_info_set_firmware_version(deviceInfo, parsed_string->str);
-        }
+    DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
+    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+    GString *parsed_string = parser_get_string(parser);
 
-        if (parsed_string != NULL) {
-            g_string_free(parsed_string, TRUE);
-        }
-        parser_free(parser);
+    if (g_str_equal(uuid, DIS_MANUFACTURER_CHAR)) {
+        log_debug(TAG, "manufacturer = %s", parsed_string->str);
+        device_info_set_manufacturer(deviceInfo, parsed_string->str);
+    } else if (g_str_equal(uuid, DIS_MODEL_CHAR)) {
+        log_debug(TAG, "model = %s", parsed_string->str);
+        device_info_set_model(deviceInfo, parsed_string->str);
+    } else if (g_str_equal(uuid, DIS_SERIAL_NUMBER_CHAR)) {
+        log_debug(TAG, "serial = %s", parsed_string->str);
+        device_info_set_serialnumber(deviceInfo, parsed_string->str);
+    } else if (g_str_equal(uuid, DIS_FIRMWARE_REVISION_CHAR)) {
+        log_debug(TAG, "firmware = %s", parsed_string->str);
+        device_info_set_firmware_version(deviceInfo, parsed_string->str);
+    } else if (g_str_equal(uuid, DIS_HARDWARE_REVISION_CHAR)) {
+        log_debug(TAG, "hardware = %s", parsed_string->str);
+        device_info_set_hardware_version(deviceInfo, parsed_string->str);
+    } else if (g_str_equal(uuid, DIS_SOFTWARE_REVISION_CHAR)) {
+        log_debug(TAG, "software = %s", parsed_string->str);
+        device_info_set_software_version(deviceInfo, parsed_string->str);
     }
+
+    if (parsed_string != NULL) {
+        g_string_free(parsed_string, TRUE);
+    }
+    parser_free(parser);
 }
 
 ServiceHandler *dis_service_handler_create() {

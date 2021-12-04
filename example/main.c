@@ -60,7 +60,7 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
     }
 
     if (state == CONNECTED) {
-        binc_adapter_start_discovery(default_adapter);
+        binc_adapter_stop_discovery(default_adapter);
     }
 }
 
@@ -194,7 +194,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
 
     const char *name = binc_device_get_name(device);
 //    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
-    binc_adapter_stop_discovery(adapter);
+
 
     binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
     binc_device_set_services_resolved_callback(device, &on_services_resolved);

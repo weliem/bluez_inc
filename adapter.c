@@ -117,7 +117,6 @@ static void binc_internal_adapter_call_method(Adapter *adapter, const char *meth
                            adapter);
 }
 
-
 static void binc_internal_set_discovery_state(Adapter *adapter, DiscoveryState discovery_state) {
     adapter->discovery_state = discovery_state;
     if (adapter->discoveryStateCallback != NULL) {
@@ -195,7 +194,6 @@ static void binc_internal_device_disappeared(GDBusConnection *sig,
         g_variant_iter_free(interfaces);
     }
 }
-
 
 static void binc_internal_device_update_property(Device *device, const char *property_name, GVariant *property_value) {
     if (g_str_equal(property_name, DEVICE_PROPERTY_ADDRESS)) {
@@ -378,11 +376,14 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
         binc_internal_device_getall_properties(adapter, device);
     } else {
-        if (binc_device_get_connection_state(device) == DISCONNECTED) {
-            g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-            while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
-                if (g_str_equal(key, DEVICE_PROPERTY_RSSI) || g_str_equal(key, DEVICE_PROPERTY_MANUFACTURER_DATA)) {
-                    binc_internal_device_update_property(device, key, value);
+        g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
+        while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
+            binc_internal_device_update_property(device, key, value);
+            if (g_str_equal(key, DEVICE_PROPERTY_RSSI) ||
+                g_str_equal(key, DEVICE_PROPERTY_MANUFACTURER_DATA) ||
+                g_str_equal(key, DEVICE_PROPERTY_SERVICE_DATA)) {
+
+                if (binc_device_get_connection_state(device) == DISCONNECTED) {
                     if (adapter->discoveryResultCallback != NULL) {
                         adapter->discoveryResultCallback(adapter, device);
                     }
@@ -595,7 +596,7 @@ Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
     return adapter;
 }
 
-static void binc_internal_start_discovery_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_start_discovery_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
@@ -631,7 +632,7 @@ void binc_adapter_start_discovery(Adapter *adapter) {
                                G_DBUS_CALL_FLAGS_NONE,
                                -1,
                                NULL,
-                               (GAsyncReadyCallback) binc_internal_start_discovery_callback,
+                               (GAsyncReadyCallback) binc_internal_start_discovery_cb,
                                adapter);
     }
 }
@@ -707,7 +708,7 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, G
     binc_internal_adapter_call_method(adapter, METHOD_SET_DISCOVERY_FILTER, g_variant_new_tuple(&device_dict, 1));
 }
 
-static void binc_internal_set_property(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_set_property_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
@@ -734,7 +735,7 @@ void adapter_set_property(Adapter *adapter, const char *prop, GVariant *value) {
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
-                           (GAsyncReadyCallback) binc_internal_set_property,
+                           (GAsyncReadyCallback) binc_internal_set_property_cb,
                            adapter);
 }
 
@@ -792,7 +793,7 @@ GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter) {
     return adapter->connection;
 }
 
-const char* binc_adapter_get_discovery_state_name(const Adapter *adapter) {
+const char *binc_adapter_get_discovery_state_name(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return discovery_state_names[adapter->discovery_state];
 }

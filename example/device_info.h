@@ -27,6 +27,10 @@ void device_info_set_model(DeviceInfo *deviceInfo, const char *model);
 void device_info_set_serialnumber(DeviceInfo *deviceInfo, const char *serialnumber);
 
 void device_info_set_firmware_version(DeviceInfo *deviceInfo, const char *firmware_version);
+void device_info_set_hardware_version(DeviceInfo *deviceInfo, const char *hardware_version);
+void device_info_set_software_version(DeviceInfo *deviceInfo, const char *software_version);
+
+void device_info_set_device_time(DeviceInfo *deviceInfo, GDateTime *device_time);
 
 const char *device_info_get_address(DeviceInfo *deviceInfo);
 
@@ -37,6 +41,12 @@ const char *device_info_get_model(DeviceInfo *deviceInfo);
 const char *device_info_get_serialnumber(DeviceInfo *deviceInfo);
 
 const char *device_info_get_firmware_version(DeviceInfo *deviceInfo);
+
+const char *device_info_get_hardware_version(DeviceInfo *deviceInfo);
+
+const char *device_info_get_software_version(DeviceInfo *deviceInfo);
+
+GDateTime *device_info_get_device_time(DeviceInfo *deviceInfo);
 
 cJSON *device_info_to_fhir(DeviceInfo *deviceInfo);
 

@@ -126,6 +126,30 @@ void device_info_set_firmware_version(DeviceInfo *deviceInfo, const char *firmwa
     deviceInfo->firmware_version = g_strdup(firmware_version);
 }
 
+void device_info_set_hardware_version(DeviceInfo *deviceInfo, const char *hardware_version) {
+    g_assert(hardware_version != NULL);
+    if (deviceInfo->hardware_version != NULL) {
+        g_free(deviceInfo->hardware_version);
+    }
+    deviceInfo->hardware_version = g_strdup(hardware_version);
+}
+
+void device_info_set_software_version(DeviceInfo *deviceInfo, const char *software_version) {
+    g_assert(software_version != NULL);
+    if (deviceInfo->software_version != NULL) {
+        g_free(deviceInfo->software_version);
+    }
+    deviceInfo->software_version = g_strdup(software_version);
+}
+
+void device_info_set_device_time(DeviceInfo *deviceInfo, GDateTime *device_time) {
+    g_assert(device_time != NULL);
+    if (deviceInfo->device_time != NULL) {
+        g_date_time_unref(deviceInfo->device_time);
+    }
+    deviceInfo->device_time = g_date_time_ref(device_time);
+}
+
 const char *device_info_get_address(DeviceInfo *deviceInfo) {
     g_assert(deviceInfo != NULL);
     return deviceInfo->address;
@@ -149,6 +173,21 @@ const char *device_info_get_serialnumber(DeviceInfo *deviceInfo) {
 const char *device_info_get_firmware_version(DeviceInfo *deviceInfo) {
     g_assert(deviceInfo != NULL);
     return deviceInfo->firmware_version;
+}
+
+const char *device_info_get_hardware_version(DeviceInfo *deviceInfo) {
+    g_assert(deviceInfo != NULL);
+    return deviceInfo->hardware_version;
+}
+
+const char *device_info_get_software_version(DeviceInfo *deviceInfo) {
+    g_assert(deviceInfo != NULL);
+    return deviceInfo->software_version;
+}
+
+GDateTime *device_info_get_device_time(DeviceInfo *deviceInfo) {
+    g_assert(deviceInfo != NULL);
+    return deviceInfo->device_time;
 }
 
 cJSON *device_info_to_fhir(DeviceInfo *deviceInfo) {
@@ -180,7 +219,4 @@ cJSON *device_info_to_fhir(DeviceInfo *deviceInfo) {
     }
 
     return fhir_json;
-//    char *result = cJSON_Print(fhir_json);
-//    cJSON_Delete(fhir_json);
-//    return result;
 }

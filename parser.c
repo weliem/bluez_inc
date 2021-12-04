@@ -69,6 +69,15 @@ guint8 parser_get_uint8(Parser *parser) {
     return result;
 }
 
+gint8 parser_get_sint8(Parser *parser) {
+    g_assert(parser != NULL);
+    g_assert(parser->offset < parser->bytes->len);
+
+    gint8 result = parser->bytes->data[parser->offset];
+    parser->offset = parser->offset + 1;
+    return result;
+}
+
 guint16 parser_get_uint16(Parser *parser) {
     g_assert(parser != NULL);
     g_assert((parser->offset+1) < parser->bytes->len);

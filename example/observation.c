@@ -129,16 +129,16 @@ cJSON *observation_list_as_fhir(GList *observation_list, const char* device_refe
     return fhir_json;
 }
 
-void observation_list_free(GList *observation_list) {
-    for (GList *iterator = observation_list; iterator; iterator = iterator->next) {
-        Observation *observation = (Observation *) iterator->data;
-        if (observation->received != NULL) {
-            g_date_time_unref(observation->received);
-        }
-        if (observation->timestamp != NULL) {
-            g_date_time_unref(observation->timestamp);
-        }
-        g_free(observation);
+static void observation_free(Observation *observation) {
+    if (observation->received != NULL) {
+        g_date_time_unref(observation->received);
     }
-    g_list_free(observation_list);
+    if (observation->timestamp != NULL) {
+        g_date_time_unref(observation->timestamp);
+    }
+    g_free(observation);
+}
+
+void observation_list_free(GList *observation_list) {
+    g_list_free_full(observation_list, (GDestroyNotify) observation_free);
 }
