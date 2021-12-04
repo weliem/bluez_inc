@@ -174,11 +174,8 @@ static void binc_internal_device_disappeared(GDBusConnection *sig,
     while (g_variant_iter_loop(interfaces, "s", &interface_name)) {
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
             log_debug(TAG, "Device %s removed", object);
-            gpointer key, value;
-            if (g_hash_table_lookup_extended(adapter->devices_cache, object, &key, &value)) {
+            if (g_hash_table_lookup(adapter->devices_cache, object) != NULL) {
                 g_hash_table_remove(adapter->devices_cache, object);
-                g_free(key);
-                binc_device_free(value);
             }
         }
     }
