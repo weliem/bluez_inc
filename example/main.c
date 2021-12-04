@@ -58,10 +58,6 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
             binc_adapter_remove_device(default_adapter, device);
         }
     }
-
-    if (state == CONNECTED) {
-        binc_adapter_stop_discovery(default_adapter);
-    }
 }
 
 void on_bonding_state_changed(Device *device, BondingState new_state, BondingState old_state, GError *error) {
@@ -203,7 +199,8 @@ void on_scan_result(Adapter *adapter, Device *device) {
     binc_device_set_write_char_callback(device, &on_write);
     binc_device_set_notify_char_callback(device, &on_notify);
     binc_device_set_notify_state_callback(device, &on_notification_state_changed);
-    g_timeout_add(CONNECT_DELAY, delayed_connect, device);
+    binc_device_connect(device);
+//    g_timeout_add(CONNECT_DELAY, delayed_connect, device);
 //    }
 }
 
@@ -289,7 +286,7 @@ int main(void) {
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(60, callback, loop);
+    g_timeout_add_seconds(100, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
