@@ -23,7 +23,6 @@
 
 #include "parser.h"
 #include "math.h"
-#include "logger.h"
 #include <time.h>
 
 // IEEE 11073 Reserved float values
@@ -59,6 +58,7 @@ void parser_free(Parser *parser) {
 
 void parser_set_offset(Parser *parser, guint offset) {
     g_assert(parser != NULL);
+    g_assert(offset >= 0);
     parser->offset = offset;
 }
 
@@ -137,8 +137,7 @@ float fround(float n, int d)
     return  (float) rounded/ (float) divider;
 }
 
-float parser_get_float(Parser *parser)
-{
+float parser_get_float(Parser *parser) {
     g_assert(parser != NULL);
     guint32 int_data = parser_get_uint32(parser);
 
@@ -163,9 +162,7 @@ GString *parser_get_string(Parser *parser) {
     g_assert(parser != NULL);
     g_assert(parser->bytes != NULL);
 
-    const char* bytes = (const char*) parser->bytes->data;
-    GString *result = g_string_new_len(bytes, parser->bytes->len);
-    return result;
+    return g_string_new_len((const char*) parser->bytes->data, parser->bytes->len);
 }
 
 GDateTime* parser_get_date_time(Parser *parser) {
