@@ -50,7 +50,7 @@ struct binc_characteristic {
     GList *flags;
     guint properties;
 
-    guint signal_changed;
+    guint characteristic_prop_changed;
     OnNotifyingStateChangedCallback notify_state_callback;
     OnReadCallback on_read_callback;
     OnWriteCallback on_write_callback;
@@ -62,35 +62,21 @@ Characteristic *binc_characteristic_create(Device *device, const char *path) {
     characteristic->device = device;
     characteristic->connection = binc_device_get_dbus_connection(device);
     characteristic->path = g_strdup(path);
-    characteristic->uuid = NULL;
-    characteristic->service_path = NULL;
-    characteristic->service_uuid = NULL;
-    characteristic->notifying = FALSE;
-    characteristic->flags = NULL;
-    characteristic->properties = 0;
-    characteristic->signal_changed = 0;
-    characteristic->notify_state_callback = NULL;
-    characteristic->on_read_callback = NULL;
-    characteristic->on_write_callback = NULL;
-    characteristic->on_notify_callback = NULL;
     return characteristic;
-}
-
-static void binc_characteristic_free_flags(Characteristic *characteristic) {
-    if (characteristic->flags != NULL) {
-        g_list_free_full(characteristic->flags, g_free);
-    }
-    characteristic->flags = NULL;
 }
 
 void binc_characteristic_free(Characteristic *characteristic) {
     g_assert(characteristic != NULL);
 
-    // Unsubscribe signal
-    if (characteristic->signal_changed != 0) {
-        g_dbus_connection_signal_unsubscribe(characteristic->connection, characteristic->signal_changed);
-        characteristic->signal_changed = 0;
+    if (characteristic->characteristic_prop_changed != 0) {
+        g_dbus_connection_signal_unsubscribe(characteristic->connection, characteristic->characteristic_prop_changed);
+        characteristic->characteristic_prop_changed = 0;
     }
+
+    if (characteristic->flags != NULL) {
+        g_list_free_full(characteristic->flags, g_free);
+    }
+    characteristic->flags = NULL;
 
     g_free((char *) characteristic->uuid);
     characteristic->uuid = NULL;
@@ -101,16 +87,13 @@ void binc_characteristic_free(Characteristic *characteristic) {
     g_free((char *) characteristic->service_uuid);
     characteristic->service_uuid = NULL;
 
-    // Free flags
-    binc_characteristic_free_flags(characteristic);
-
     g_free(characteristic);
 }
 
 char *binc_characteristic_to_string(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
 
-    // Build up flags
+    // Build up flags string
     GString *flags = g_string_new("[");
     if (g_list_length(characteristic->flags) > 0) {
         for (GList *iterator = characteristic->flags; iterator; iterator = iterator->next) {
@@ -311,9 +294,9 @@ static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
             }
 
             if (characteristic->notifying == FALSE) {
-                if (characteristic->signal_changed != 0) {
-                    g_dbus_connection_signal_unsubscribe(characteristic->connection, characteristic->signal_changed);
-                    characteristic->signal_changed = 0;
+                if (characteristic->characteristic_prop_changed != 0) {
+                    g_dbus_connection_signal_unsubscribe(characteristic->connection, characteristic->characteristic_prop_changed);
+                    characteristic->characteristic_prop_changed = 0;
                 }
             }
         } else if (g_str_equal(key, CHARACTERISTIC_PROPERTY_VALUE)) {
@@ -363,16 +346,16 @@ void binc_characteristic_start_notify(Characteristic *characteristic) {
     g_assert(binc_characteristic_supports_notify(characteristic));
 
     log_debug(TAG, "start notify for <%s>", characteristic->uuid);
-    characteristic->signal_changed = g_dbus_connection_signal_subscribe(characteristic->connection,
-                                                                        BLUEZ_DBUS,
-                                                                        "org.freedesktop.DBus.Properties",
-                                                                        "PropertiesChanged",
-                                                                        characteristic->path,
-                                                                        INTERFACE_CHARACTERISTIC,
-                                                                        G_DBUS_SIGNAL_FLAGS_NONE,
-                                                                        binc_internal_signal_characteristic_changed,
-                                                                        characteristic,
-                                                                        NULL);
+    characteristic->characteristic_prop_changed = g_dbus_connection_signal_subscribe(characteristic->connection,
+                                                                                     BLUEZ_DBUS,
+                                                                                     "org.freedesktop.DBus.Properties",
+                                                                                     "PropertiesChanged",
+                                                                                     characteristic->path,
+                                                                                     INTERFACE_CHARACTERISTIC,
+                                                                                     G_DBUS_SIGNAL_FLAGS_NONE,
+                                                                                     binc_internal_signal_characteristic_changed,
+                                                                                     characteristic,
+                                                                                     NULL);
 
 
     g_dbus_connection_call(characteristic->connection,
@@ -540,7 +523,7 @@ void binc_characteristic_set_flags(Characteristic *characteristic, GList *flags)
     g_assert(flags != NULL);
 
     if (characteristic->flags != NULL) {
-        binc_characteristic_free_flags(characteristic);
+        g_list_free_full(characteristic->flags, g_free);
     }
     characteristic->flags = flags;
     characteristic->properties = binc_characteristic_flags_to_int(flags);

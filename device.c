@@ -50,12 +50,22 @@
 #define DEVICE_PROPERTY_SERVICE_DATA "ServiceData"
 #define DEVICE_PROPERTY_TRUSTED "Trusted"
 #define DEVICE_PROPERTY_TXPOWER "TxPower"
+#define DEVICE_PROPERTY_CONNECTED "Connected"
+#define DEVICE_PROPERTY_SERVICES_RESOLVED "ServicesResolved"
 
+#define INTERFACE_SERVICE "org.bluez.GattService1"
+#define INTERFACE_CHARACTERISTIC "org.bluez.GattCharacteristic1"
 const char *connection_state_names[] = {
         [DISCONNECTED] = "DISCONNECTED",
         [CONNECTED] = "CONNECTED",
         [CONNECTING]  = "CONNECTING",
         [DISCONNECTING]  = "DISCONNECTING"
+};
+
+const char *bonding_state_names[] = {
+        [BOND_NONE] = "BOND_NONE",
+        [BONDING] = "BONDING",
+        [BONDED]  = "BONDED"
 };
 
 struct binc_device {
@@ -79,7 +89,6 @@ struct binc_device {
     GHashTable *service_data;
     GList *uuids;
 
-    // Internal
     guint device_prop_changed;
     ConnectionStateChangedCallback connection_state_callback;
     ServicesResolvedCallback services_resolved_callback;
@@ -95,32 +104,10 @@ struct binc_device {
 };
 
 static void binc_init_device(Device *device) {
-    device->adapter = NULL;
-    device->address = NULL;
-    device->address_type = NULL;
-    device->alias = NULL;
     device->bondingState = BOND_NONE;
-    device->bonding_state_callback = NULL;
     device->connection_state = DISCONNECTED;
-    device->connection_state_callback = NULL;
-    device->connection = NULL;
-    device->manufacturer_data = NULL;
-    device->name = NULL;
-    device->paired = FALSE;
-    device->path = NULL;
     device->rssi = -255;
-    device->service_data = NULL;
-    device->services_resolved_callback = NULL;
-    device->trusted = FALSE;
-    device->txpower = 0;
-    device->uuids = NULL;
-    device->services = NULL;
-    device->services_list = NULL;
-    device->service_discovery_started = FALSE;
-    device->on_notify_state_callback = NULL;
-    device->on_notify_callback = NULL;
-    device->on_read_callback = NULL;
-    device->on_write_callback = NULL;
+    device->txpower = -255;
 }
 
 Device *binc_create_device(const char *path, Adapter *adapter) {
@@ -160,13 +147,11 @@ void binc_device_free(Device *device) {
 
     log_debug(TAG, "freeing %s", device->path);
 
-    // Unsubscribe properties changed if needed
     if (device->device_prop_changed != 0) {
         g_dbus_connection_signal_unsubscribe(device->connection, device->device_prop_changed);
         device->device_prop_changed = 0;
     }
 
-    // Free strings
     g_free((char *) device->path);
     device->path = NULL;
     g_free((char *) device->address_type);
@@ -178,28 +163,20 @@ void binc_device_free(Device *device) {
     g_free((char *) device->name);
     device->name = NULL;
 
-    // Free characteristics hash table
     if (device->characteristics != NULL) {
         g_hash_table_destroy(device->characteristics);
     }
     device->characteristics = NULL;
 
-    // Free services hash table
     if (device->services != NULL) {
         g_hash_table_destroy(device->services);
     }
     device->services = NULL;
 
-    // Free manufacturer data hash table
     binc_device_free_manufacturer_data(device);
-
-    // Free service data hash table
     binc_device_free_service_data(device);
-
-    // Free uuids
     binc_device_free_uuids(device);
 
-    // Free services list
     if (device->services_list != NULL) {
         g_list_free(device->services_list);
     }
@@ -309,7 +286,7 @@ static void binc_device_internal_set_conn_state(Device *device, ConnectionState 
     }
 }
 
-static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
@@ -350,21 +327,21 @@ static void binc_internal_gatt_tree(GObject *source_object, GAsyncResult *res, g
                 GVariantIter iter2;
                 g_variant_iter_init(&iter2, ifaces_and_properties);
                 while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
-                    if(g_str_equal(interface_name, "org.bluez.GattService1" )) {
+                    if(g_str_equal(interface_name, INTERFACE_SERVICE )) {
                         char *uuid = NULL;
                         const gchar *property_name;
                         GVariantIter iter3;
                         GVariant *prop_val;
                         g_variant_iter_init(&iter3, properties);
                         while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &prop_val)) {
-                            if (g_strcmp0(property_name, "UUID") == 0) {
+                            if (g_str_equal(property_name, "UUID")) {
                                 uuid = g_strdup(g_variant_get_string(prop_val, NULL));
                             }
                         }
                         Service *service = binc_service_create(device, object_path, uuid);
                         g_hash_table_insert(device->services, g_strdup(object_path), service);
                         g_free(uuid);
-                    } else if(g_str_equal(interface_name, "org.bluez.GattCharacteristic1" )) {
+                    } else if(g_str_equal(interface_name, INTERFACE_CHARACTERISTIC )) {
                         Characteristic *characteristic = binc_characteristic_create(device, object_path);
                         binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
                         binc_characteristic_set_write_callback(characteristic, &binc_on_characteristic_write);
@@ -435,7 +412,7 @@ static void binc_collect_gatt_tree(Device *device) {
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
-                           (GAsyncReadyCallback) binc_internal_gatt_tree,
+                           (GAsyncReadyCallback) binc_internal_collect_gatt_tree_cb,
                            device);
 }
 
@@ -478,13 +455,13 @@ static void binc_device_changed(GDBusConnection *conn,
     g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
-        if (g_str_equal(key, "Connected")) {
+        if (g_str_equal(key, DEVICE_PROPERTY_CONNECTED)) {
             binc_device_internal_set_conn_state(device, g_variant_get_boolean(value), NULL);
             if (device->connection_state == DISCONNECTED) {
                 g_dbus_connection_signal_unsubscribe(device->connection, device->device_prop_changed);
                 device->device_prop_changed = 0;
             }
-        } else if (g_str_equal(key, "ServicesResolved")) {
+        } else if (g_str_equal(key, DEVICE_PROPERTY_SERVICES_RESOLVED)) {
             device->services_resolved = g_variant_get_boolean(value);
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
             if (device->services_resolved == TRUE && device->bondingState != BONDING) {
@@ -494,7 +471,7 @@ static void binc_device_changed(GDBusConnection *conn,
             if (device->services_resolved == FALSE) {
                 binc_device_internal_set_conn_state(device, DISCONNECTING, NULL);
             }
-        } else if (g_str_equal(key, "Paired")) {
+        } else if (g_str_equal(key, DEVICE_PROPERTY_PAIRED)) {
             device->paired = g_variant_get_boolean(value);
             log_debug(TAG, "Paired %s", device->paired ? "true" : "false");
             binc_device_set_bonding_state(device, device->paired ? BONDED : BOND_NONE);
@@ -512,7 +489,7 @@ static void binc_device_changed(GDBusConnection *conn,
         g_variant_iter_free(unknown);
 }
 
-static void binc_internal_device_connect(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_device_connect_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
@@ -567,11 +544,11 @@ void binc_device_connect(Device *device) {
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
-                           (GAsyncReadyCallback) binc_internal_device_connect,
+                           (GAsyncReadyCallback) binc_internal_device_connect_cb,
                            device);
 }
 
-static void binc_internal_device_pair(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_device_pair_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
@@ -612,11 +589,11 @@ void binc_device_pair(Device *device) {
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
-                           (GAsyncReadyCallback) binc_internal_device_pair,
+                           (GAsyncReadyCallback) binc_internal_device_pair_cb,
                            device);
 }
 
-static void binc_internal_device_disconnect(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_device_disconnect_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
@@ -654,7 +631,7 @@ void binc_device_disconnect(Device *device) {
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
                            NULL,
-                           (GAsyncReadyCallback) binc_internal_device_disconnect,
+                           (GAsyncReadyCallback) binc_internal_device_disconnect_cb,
                            device);
 }
 
@@ -922,7 +899,9 @@ void binc_internal_device_update_property(Device *device, const char *property_n
         binc_device_set_address_type(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_ALIAS)) {
         binc_device_set_alias(device, g_variant_get_string(property_value, NULL));
-    } else if (g_str_equal(property_name, DEVICE_PROPERTY_NAME)) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_CONNECTED)) {
+        device->connection_state = g_variant_get_boolean(property_value) ? CONNECTED : DISCONNECTED;
+    }else if (g_str_equal(property_name, DEVICE_PROPERTY_NAME)) {
         binc_device_set_name(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
         binc_device_set_paired(device, g_variant_get_boolean(property_value));
