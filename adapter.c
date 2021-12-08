@@ -170,6 +170,7 @@ static void binc_internal_device_disappeared(GDBusConnection *sig,
     Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
+    g_assert(g_str_equal(g_variant_get_type_string(parameters), "(oas)"));
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
     while (g_variant_iter_loop(interfaces, "s", &interface_name)) {
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
@@ -202,6 +203,7 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
     Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
+    g_assert(g_str_equal(g_variant_get_type_string(parameters), "(oa{sa{sv}})"));
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     while (g_variant_iter_loop(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
@@ -291,18 +293,13 @@ static void binc_internal_device_changed(GDBusConnection *conn,
     Adapter *adapter = (Adapter *) userdata;
     g_assert(adapter != NULL);
 
-    // If we are not scanning we're bailing out
-    if (adapter->discovery_state != STARTED) return;
-
-    g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
-
-    // Look up device
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
     if (device == NULL) {
         device = binc_create_device(path, adapter);
         g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
         binc_internal_device_getall_properties(adapter, device);
     } else {
+        g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
         g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
         while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
             binc_internal_device_update_property(device, key, value);
@@ -310,9 +307,11 @@ static void binc_internal_device_changed(GDBusConnection *conn,
                 g_str_equal(key, DEVICE_PROPERTY_MANUFACTURER_DATA) ||
                 g_str_equal(key, DEVICE_PROPERTY_SERVICE_DATA)) {
 
-                if (binc_device_get_connection_state(device) == DISCONNECTED) {
-                    if (adapter->discoveryResultCallback != NULL) {
-                        adapter->discoveryResultCallback(adapter, device);
+                if (adapter->discovery_state == STARTED) {
+                    if (binc_device_get_connection_state(device) == DISCONNECTED) {
+                        if (adapter->discoveryResultCallback != NULL) {
+                            adapter->discoveryResultCallback(adapter, device);
+                        }
                     }
                 }
             }
@@ -371,31 +370,12 @@ static void setup_signal_subscribers(Adapter *adapter) {
                                                                 NULL);
 }
 
-static void init_adapter(Adapter *adapter) {
-    g_assert(adapter != NULL);
-
-    adapter->address = NULL;
-    adapter->connection = NULL;
-    adapter->discoverable = FALSE;
-    adapter->discovery_state = STOPPED;
-    adapter->path = NULL;
-    adapter->powered = FALSE;
-    adapter->device_prop_changed = 0;
-    adapter->adapter_prop_changed = 0;
-    adapter->iface_added = 0;
-    adapter->iface_removed = 0;
-    adapter->discoveryResultCallback = NULL;
-    adapter->discoveryStateCallback = NULL;
-    adapter->poweredStateCallback = NULL;
-    adapter->devices_cache = NULL;
-}
 
 static Adapter *binc_adapter_create(GDBusConnection *connection, const char *path) {
     g_assert(connection != NULL);
     g_assert(path != NULL);
 
     Adapter *adapter = g_new0(Adapter, 1);
-    init_adapter(adapter);
     adapter->connection = connection;
     adapter->path = g_strdup(path);
     adapter->devices_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
@@ -422,11 +402,10 @@ void binc_adapter_free(Adapter *adapter) {
 
     remove_signal_subscribers(adapter);
 
-    // Free devices cache
     if (adapter->devices_cache != NULL) {
         g_hash_table_destroy(adapter->devices_cache);
+        adapter->devices_cache = NULL;
     }
-    adapter->devices_cache = NULL;
 
     g_free(adapter->path);
     adapter->path = NULL;
