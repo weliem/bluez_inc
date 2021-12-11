@@ -243,15 +243,19 @@ static void binc_internal_device_getall_properties_cb(GObject *source_object, GA
     }
 
     if (result != NULL) {
-        GVariant *innerResult = g_variant_get_child_value(result, 0);
+        GVariantIter *iter;
         const gchar *property_name;
-        GVariantIter i;
         GVariant *property_value;
-        g_variant_iter_init(&i, innerResult);
-        while (g_variant_iter_loop(&i, "{&sv}", &property_name, &property_value)) {
+
+        g_assert(g_str_equal(g_variant_get_type_string(result), "(a{sv})"));
+        g_variant_get(result, "(a{sv})", &iter );
+        while (g_variant_iter_loop(iter, "{&sv}", &property_name, &property_value)) {
             binc_internal_device_update_property(device, property_name, property_value);
         }
-        g_variant_unref(innerResult);
+
+        if (iter != NULL) {
+            g_variant_iter_free(iter);
+        }
         g_variant_unref(result);
 
         Adapter *adapter = binc_device_get_adapter(device);
@@ -433,19 +437,18 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                                                    NULL,
                                                    NULL);
 
-    if (result == NULL)
-        g_print("Unable to get result for GetManagedObjects\n");
-
-    GVariantIter iter;
-    const gchar *object_path;
-    GVariant *ifaces_and_properties;
     if (result) {
-        GVariant *innerResult = g_variant_get_child_value(result, 0);
-        g_variant_iter_init(&iter, innerResult);
-        while (g_variant_iter_loop(&iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
+        GVariantIter *iter;
+        const gchar *object_path;
+        GVariant *ifaces_and_properties;
+
+        g_assert(g_str_equal(g_variant_get_type_string(result), "(a{oa{sa{sv}}})"));
+        g_variant_get(result, "(a{oa{sa{sv}}})", &iter );
+        while (g_variant_iter_loop(iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
             const gchar *interface_name;
             GVariant *properties;
             GVariantIter iter2;
+
             g_variant_iter_init(&iter2, ifaces_and_properties);
             while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
                 if (g_str_equal(interface_name, INTERFACE_ADAPTER)) {
@@ -469,8 +472,12 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                 }
             }
         }
-        g_variant_unref(innerResult);
+        if (iter != NULL) {
+            g_variant_iter_free(iter);
+        }
         g_variant_unref(result);
+    } else {
+        g_print("Unable to get result for GetManagedObjects\n");
     }
 
     log_debug(TAG, "found %d adapter%s", binc_adapters->len, binc_adapters->len > 1 ? "s" : "");
