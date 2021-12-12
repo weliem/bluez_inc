@@ -21,33 +21,32 @@
  *
  */
 
-#include <stdint-gcc.h>
 #include "adapter.h"
 #include "device.h"
 #include "device_internal.h"
 #include "logger.h"
 #include "utility.h"
 
-#define TAG "Adapter"
-#define BLUEZ_DBUS "org.bluez"
-#define INTERFACE_ADAPTER "org.bluez.Adapter1"
-#define INTERFACE_DEVICE "org.bluez.Device1"
-#define INTERFACE_OBJECT_MANAGER "org.freedesktop.DBus.ObjectManager"
+static const char * const TAG = "ADAPTER";
+static const char * const BLUEZ_DBUS = "org.bluez";
+static const char * const INTERFACE_ADAPTER = "org.bluez.Adapter1";
+static const char * const INTERFACE_DEVICE = "org.bluez.Device1";
+static const char * const INTERFACE_OBJECT_MANAGER = "org.freedesktop.DBus.ObjectManager";
 
-#define METHOD_START_DISCOVERY "StartDiscovery"
-#define METHOD_STOP_DISCOVERY "StopDiscovery"
-#define METHOD_REMOVE_DEVICE "RemoveDevice"
-#define METHOD_SET_DISCOVERY_FILTER "SetDiscoveryFilter"
+static const char * const METHOD_START_DISCOVERY = "StartDiscovery";
+static const char * const METHOD_STOP_DISCOVERY = "StopDiscovery";
+static const char * const METHOD_REMOVE_DEVICE = "RemoveDevice";
+static const char * const METHOD_SET_DISCOVERY_FILTER = "SetDiscoveryFilter";
 
-#define ADAPTER_PROPERTY_POWERED "Powered"
-#define ADAPTER_PROPERTY_DISCOVERING "Discovering"
-#define ADAPTER_PROPERTY_ADDRESS "Address"
-#define ADAPTER_PROPERTY_DISCOVERABLE "Discoverable"
+static const char * const ADAPTER_PROPERTY_POWERED = "Powered";
+static const char * const ADAPTER_PROPERTY_DISCOVERING = "Discovering";
+static const char * const ADAPTER_PROPERTY_ADDRESS = "Address";
+static const char * const ADAPTER_PROPERTY_DISCOVERABLE = "Discoverable";
 
-#define DEVICE_PROPERTY_RSSI "RSSI"
-#define DEVICE_PROPERTY_UUIDS "UUIDs"
-#define DEVICE_PROPERTY_MANUFACTURER_DATA "ManufacturerData"
-#define DEVICE_PROPERTY_SERVICE_DATA "ServiceData"
+static const char * const DEVICE_PROPERTY_RSSI = "RSSI";
+static const char * const DEVICE_PROPERTY_UUIDS = "UUIDs";
+static const char * const DEVICE_PROPERTY_MANUFACTURER_DATA = "ManufacturerData";
+static const char * const DEVICE_PROPERTY_SERVICE_DATA = "ServiceData";
 
 const char *discovery_state_names[] = {
         [STOPPED] = "stopped",
