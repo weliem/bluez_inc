@@ -27,26 +27,29 @@
 #include "logger.h"
 #include "utility.h"
 
-static const char * const TAG = "ADAPTER";
-static const char * const BLUEZ_DBUS = "org.bluez";
-static const char * const INTERFACE_ADAPTER = "org.bluez.Adapter1";
-static const char * const INTERFACE_DEVICE = "org.bluez.Device1";
-static const char * const INTERFACE_OBJECT_MANAGER = "org.freedesktop.DBus.ObjectManager";
+static const char *const TAG = "ADAPTER";
+static const char *const BLUEZ_DBUS = "org.bluez";
+static const char *const INTERFACE_ADAPTER = "org.bluez.Adapter1";
+static const char *const INTERFACE_DEVICE = "org.bluez.Device1";
+static const char *const INTERFACE_OBJECT_MANAGER = "org.freedesktop.DBus.ObjectManager";
+static const char *const INTERFACE_PROPERTIES = "org.freedesktop.DBus.Properties";
 
-static const char * const METHOD_START_DISCOVERY = "StartDiscovery";
-static const char * const METHOD_STOP_DISCOVERY = "StopDiscovery";
-static const char * const METHOD_REMOVE_DEVICE = "RemoveDevice";
-static const char * const METHOD_SET_DISCOVERY_FILTER = "SetDiscoveryFilter";
+static const char *const METHOD_START_DISCOVERY = "StartDiscovery";
+static const char *const METHOD_STOP_DISCOVERY = "StopDiscovery";
+static const char *const METHOD_REMOVE_DEVICE = "RemoveDevice";
+static const char *const METHOD_SET_DISCOVERY_FILTER = "SetDiscoveryFilter";
 
-static const char * const ADAPTER_PROPERTY_POWERED = "Powered";
-static const char * const ADAPTER_PROPERTY_DISCOVERING = "Discovering";
-static const char * const ADAPTER_PROPERTY_ADDRESS = "Address";
-static const char * const ADAPTER_PROPERTY_DISCOVERABLE = "Discoverable";
+static const char *const ADAPTER_PROPERTY_POWERED = "Powered";
+static const char *const ADAPTER_PROPERTY_DISCOVERING = "Discovering";
+static const char *const ADAPTER_PROPERTY_ADDRESS = "Address";
+static const char *const ADAPTER_PROPERTY_DISCOVERABLE = "Discoverable";
 
-static const char * const DEVICE_PROPERTY_RSSI = "RSSI";
-static const char * const DEVICE_PROPERTY_UUIDS = "UUIDs";
-static const char * const DEVICE_PROPERTY_MANUFACTURER_DATA = "ManufacturerData";
-static const char * const DEVICE_PROPERTY_SERVICE_DATA = "ServiceData";
+static const char *const DEVICE_PROPERTY_RSSI = "RSSI";
+static const char *const DEVICE_PROPERTY_UUIDS = "UUIDs";
+static const char *const DEVICE_PROPERTY_MANUFACTURER_DATA = "ManufacturerData";
+static const char *const DEVICE_PROPERTY_SERVICE_DATA = "ServiceData";
+
+static const char *const SIGNAL_PROPERTIES_CHANGED = "PropertiesChanged";
 
 const char *discovery_state_names[] = {
         [STOPPED] = "stopped",
@@ -247,7 +250,7 @@ static void binc_internal_device_getall_properties_cb(GObject *source_object, GA
         GVariant *property_value;
 
         g_assert(g_str_equal(g_variant_get_type_string(result), "(a{sv})"));
-        g_variant_get(result, "(a{sv})", &iter );
+        g_variant_get(result, "(a{sv})", &iter);
         while (g_variant_iter_loop(iter, "{&sv}", &property_name, &property_value)) {
             binc_internal_device_update_property(device, property_name, property_value);
         }
@@ -268,7 +271,7 @@ static void binc_internal_device_getall_properties(Adapter *adapter, Device *dev
     g_dbus_connection_call(adapter->connection,
                            BLUEZ_DBUS,
                            binc_device_get_path(device),
-                           "org.freedesktop.DBus.Properties",
+                           INTERFACE_PROPERTIES,
                            "GetAll",
                            g_variant_new("(s)", INTERFACE_DEVICE),
                            G_VARIANT_TYPE("(a{sv})"),
@@ -330,8 +333,8 @@ static void binc_internal_device_changed(GDBusConnection *conn,
 static void setup_signal_subscribers(Adapter *adapter) {
     adapter->device_prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
                                                                       BLUEZ_DBUS,
-                                                                      "org.freedesktop.DBus.Properties",
-                                                                      "PropertiesChanged",
+                                                                      INTERFACE_PROPERTIES,
+                                                                      SIGNAL_PROPERTIES_CHANGED,
                                                                       NULL,
                                                                       INTERFACE_DEVICE,
                                                                       G_DBUS_SIGNAL_FLAGS_NONE,
@@ -341,8 +344,8 @@ static void setup_signal_subscribers(Adapter *adapter) {
 
     adapter->adapter_prop_changed = g_dbus_connection_signal_subscribe(adapter->connection,
                                                                        BLUEZ_DBUS,
-                                                                       "org.freedesktop.DBus.Properties",
-                                                                       "PropertiesChanged",
+                                                                       INTERFACE_PROPERTIES,
+                                                                       SIGNAL_PROPERTIES_CHANGED,
                                                                        adapter->path,
                                                                        INTERFACE_ADAPTER,
                                                                        G_DBUS_SIGNAL_FLAGS_NONE,
@@ -442,7 +445,7 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
         GVariant *ifaces_and_properties;
 
         g_assert(g_str_equal(g_variant_get_type_string(result), "(a{oa{sa{sv}}})"));
-        g_variant_get(result, "(a{oa{sa{sv}}})", &iter );
+        g_variant_get(result, "(a{oa{sa{sv}}})", &iter);
         while (g_variant_iter_loop(iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
             const gchar *interface_name;
             GVariant *properties;
@@ -633,7 +636,7 @@ void adapter_set_property(Adapter *adapter, const char *prop, GVariant *value) {
     g_dbus_connection_call(adapter->connection,
                            BLUEZ_DBUS,
                            adapter->path,
-                           "org.freedesktop.DBus.Properties",
+                           INTERFACE_PROPERTIES,
                            "Set",
                            g_variant_new("(ssv)", INTERFACE_ADAPTER, prop, value),
                            NULL,
