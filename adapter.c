@@ -27,7 +27,7 @@
 #include "logger.h"
 #include "utility.h"
 
-static const char *const TAG = "ADAPTER";
+static const char *const TAG = "Adapter";
 static const char *const BLUEZ_DBUS = "org.bluez";
 static const char *const INTERFACE_ADAPTER = "org.bluez.Adapter1";
 static const char *const INTERFACE_DEVICE = "org.bluez.Device1";
@@ -51,7 +51,7 @@ static const char *const DEVICE_PROPERTY_SERVICE_DATA = "ServiceData";
 
 static const char *const SIGNAL_PROPERTIES_CHANGED = "PropertiesChanged";
 
-const char *discovery_state_names[] = {
+static const char *discovery_state_names[] = {
         [STOPPED] = "stopped",
         [STARTED] = "started",
         [STARTING]  = "starting",

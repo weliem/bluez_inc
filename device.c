@@ -31,38 +31,39 @@
 #include "characteristic_internal.h"
 #include "adapter.h"
 
-#define TAG "Device"
-#define BLUEZ_DBUS "org.bluez"
-#define INTERFACE_DEVICE "org.bluez.Device1"
+static const char *const TAG = "Device";
+static const char *const BLUEZ_DBUS = "org.bluez";
+static const char *const INTERFACE_DEVICE = "org.bluez.Device1";
 
-#define DEVICE_METHOD_CONNECT "Connect"
-#define DEVICE_METHOD_PAIR "Pair"
-#define DEVICE_METHOD_DISCONNECT "Disconnect"
+static const char *const DEVICE_METHOD_CONNECT = "Connect";
+static const char *const DEVICE_METHOD_PAIR = "Pair";
+static const char *const DEVICE_METHOD_DISCONNECT = "Disconnect";
 
-#define DEVICE_PROPERTY_ADDRESS "Address"
-#define DEVICE_PROPERTY_ADDRESS_TYPE "AddressType"
-#define DEVICE_PROPERTY_ALIAS "Alias"
-#define DEVICE_PROPERTY_NAME "Name"
-#define DEVICE_PROPERTY_PAIRED "Paired"
-#define DEVICE_PROPERTY_RSSI "RSSI"
-#define DEVICE_PROPERTY_UUIDS "UUIDs"
-#define DEVICE_PROPERTY_MANUFACTURER_DATA "ManufacturerData"
-#define DEVICE_PROPERTY_SERVICE_DATA "ServiceData"
-#define DEVICE_PROPERTY_TRUSTED "Trusted"
-#define DEVICE_PROPERTY_TXPOWER "TxPower"
-#define DEVICE_PROPERTY_CONNECTED "Connected"
-#define DEVICE_PROPERTY_SERVICES_RESOLVED "ServicesResolved"
+static const char *const DEVICE_PROPERTY_ADDRESS = "Address";
+static const char *const DEVICE_PROPERTY_ADDRESS_TYPE = "AddressType";
+static const char *const DEVICE_PROPERTY_ALIAS = "Alias";
+static const char *const DEVICE_PROPERTY_NAME = "Name";
+static const char *const DEVICE_PROPERTY_PAIRED = "Paired";
+static const char *const DEVICE_PROPERTY_RSSI = "RSSI";
+static const char *const DEVICE_PROPERTY_UUIDS = "UUIDs";
+static const char *const DEVICE_PROPERTY_MANUFACTURER_DATA = "ManufacturerData";
+static const char *const DEVICE_PROPERTY_SERVICE_DATA = "ServiceData";
+static const char *const DEVICE_PROPERTY_TRUSTED = "Trusted";
+static const char *const DEVICE_PROPERTY_TXPOWER = "TxPower";
+static const char *const DEVICE_PROPERTY_CONNECTED = "Connected";
+static const char *const DEVICE_PROPERTY_SERVICES_RESOLVED = "ServicesResolved";
 
-#define INTERFACE_SERVICE "org.bluez.GattService1"
-#define INTERFACE_CHARACTERISTIC "org.bluez.GattCharacteristic1"
-const char *connection_state_names[] = {
+static const char *const INTERFACE_SERVICE = "org.bluez.GattService1";
+static const char *const INTERFACE_CHARACTERISTIC = "org.bluez.GattCharacteristic1";
+
+static const char *connection_state_names[] = {
         [DISCONNECTED] = "DISCONNECTED",
         [CONNECTED] = "CONNECTED",
         [CONNECTING]  = "CONNECTING",
         [DISCONNECTING]  = "DISCONNECTING"
 };
 
-const char *bonding_state_names[] = {
+static const char *bonding_state_names[] = {
         [BOND_NONE] = "BOND_NONE",
         [BONDING] = "BONDING",
         [BONDED]  = "BONDED"
@@ -122,8 +123,8 @@ Device *binc_create_device(const char *path, Adapter *adapter) {
 static void binc_device_free_uuids(Device *device) {
     if (device->uuids != NULL) {
         g_list_free_full(device->uuids, g_free);
+        device->uuids = NULL;
     }
-    device->uuids = NULL;
 }
 
 static void byte_array_free(GByteArray *byteArray) { g_byte_array_free(byteArray, TRUE); }
@@ -131,15 +132,15 @@ static void byte_array_free(GByteArray *byteArray) { g_byte_array_free(byteArray
 static void binc_device_free_manufacturer_data(Device *device) {
     if (device->manufacturer_data != NULL) {
         g_hash_table_destroy(device->manufacturer_data);
+        device->manufacturer_data = NULL;
     }
-    device->manufacturer_data = NULL;
 }
 
 static void binc_device_free_service_data(Device *device) {
     if (device->service_data != NULL) {
         g_hash_table_destroy(device->service_data);
+        device->service_data = NULL;
     }
-    device->service_data = NULL;
 }
 
 void binc_device_free(Device *device) {
@@ -165,13 +166,13 @@ void binc_device_free(Device *device) {
 
     if (device->characteristics != NULL) {
         g_hash_table_destroy(device->characteristics);
+        device->characteristics = NULL;
     }
-    device->characteristics = NULL;
 
     if (device->services != NULL) {
         g_hash_table_destroy(device->services);
+        device->services = NULL;
     }
-    device->services = NULL;
 
     binc_device_free_manufacturer_data(device);
     binc_device_free_service_data(device);
@@ -179,14 +180,13 @@ void binc_device_free(Device *device) {
 
     if (device->services_list != NULL) {
         g_list_free(device->services_list);
+        device->services_list = NULL;
     }
-    device->services_list = NULL;
 
     g_free(device);
 }
 
 char *binc_device_to_string(const Device *device) {
-
     // First build up uuids string
     GString *uuids = g_string_new("[");
     if (g_list_length(device->uuids) > 0) {
@@ -302,8 +302,7 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
         }
     }
 
-    /* Parse the result */
-    GVariantIter iter;
+    GVariantIter *iter;
     const gchar *object_path;
     GVariant *ifaces_and_properties;
     if (result) {
@@ -318,9 +317,10 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
         }
         device->characteristics = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                         g_free,(GDestroyNotify) binc_characteristic_free);
-        GVariant *innerResult = g_variant_get_child_value(result, 0);
-        g_variant_iter_init(&iter, innerResult);
-        while (g_variant_iter_loop(&iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
+
+        g_assert(g_str_equal(g_variant_get_type_string(result), "(a{oa{sa{sv}}})"));
+        g_variant_get(result, "(a{oa{sa{sv}}})", &iter);
+        while (g_variant_iter_loop(iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
             if (g_str_has_prefix(object_path, device->path)) {
                 const gchar *interface_name;
                 GVariant *properties;
@@ -383,7 +383,9 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                 }
             }
         }
-        g_variant_unref(innerResult);
+        if (iter != NULL) {
+            g_variant_iter_free(iter);
+        }
         g_variant_unref(result);
     }
 

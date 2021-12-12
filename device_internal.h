@@ -5,6 +5,8 @@
 #ifndef TEST_DEVICE_INTERNAL_H
 #define TEST_DEVICE_INTERNAL_H
 
+#include "device.h"
+
 Device *binc_create_device(const char *path, Adapter *adapter);
 void binc_device_free(Device *device);
 GDBusConnection *binc_device_get_dbus_connection(const Device *device);

@@ -25,19 +25,18 @@
 #include "characteristic.h"
 #include "logger.h"
 #include "utility.h"
-#include "device.h"
 #include "device_internal.h"
 
-#define TAG "Characteristic"
-#define INTERFACE_CHARACTERISTIC "org.bluez.GattCharacteristic1"
-#define BLUEZ_DBUS "org.bluez"
+static const char *const TAG = "Characteristic";
+static const char *const INTERFACE_CHARACTERISTIC = "org.bluez.GattCharacteristic1";
+static const char *const BLUEZ_DBUS = "org.bluez";
 
-#define CHARACTERISTIC_METHOD_READ_VALUE "ReadValue"
-#define CHARACTERISTIC_METHOD_WRITE_VALUE "WriteValue"
-#define CHARACTERISTIC_METHOD_STOP_NOTIFY "StopNotify"
-#define CHARACTERISTIC_METHOD_START_NOTIFY "StartNotify"
-#define CHARACTERISTIC_PROPERTY_NOTIFYING "Notifying"
-#define CHARACTERISTIC_PROPERTY_VALUE "Value"
+static const char *const CHARACTERISTIC_METHOD_READ_VALUE = "ReadValue";
+static const char *const CHARACTERISTIC_METHOD_WRITE_VALUE = "WriteValue";
+static const char *const CHARACTERISTIC_METHOD_STOP_NOTIFY = "StopNotify";
+static const char *const CHARACTERISTIC_METHOD_START_NOTIFY = "StartNotify";
+static const char *const CHARACTERISTIC_PROPERTY_NOTIFYING = "Notifying";
+static const char *const CHARACTERISTIC_PROPERTY_VALUE = "Value";
 
 struct binc_characteristic {
     Device *device;
@@ -75,8 +74,8 @@ void binc_characteristic_free(Characteristic *characteristic) {
 
     if (characteristic->flags != NULL) {
         g_list_free_full(characteristic->flags, g_free);
+        characteristic->flags = NULL;
     }
-    characteristic->flags = NULL;
 
     g_free((char *) characteristic->uuid);
     characteristic->uuid = NULL;
@@ -295,7 +294,8 @@ static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
 
             if (characteristic->notifying == FALSE) {
                 if (characteristic->characteristic_prop_changed != 0) {
-                    g_dbus_connection_signal_unsubscribe(characteristic->connection, characteristic->characteristic_prop_changed);
+                    g_dbus_connection_signal_unsubscribe(characteristic->connection,
+                                                         characteristic->characteristic_prop_changed);
                     characteristic->characteristic_prop_changed = 0;
                 }
             }
