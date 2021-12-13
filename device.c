@@ -447,24 +447,24 @@ static void binc_device_changed(GDBusConnection *conn,
 
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
-    const char *iface;
-    const char *key;
-    GVariant *value = NULL;
+    const char *iface = NULL;
+    const char *property_name = NULL;
+    GVariant *property_value = NULL;
 
     Device *device = (Device *) userdata;
     g_assert(device != NULL);
 
     g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
-        if (g_str_equal(key, DEVICE_PROPERTY_CONNECTED)) {
-            binc_device_internal_set_conn_state(device, g_variant_get_boolean(value), NULL);
+    while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
+        if (g_str_equal(property_name, DEVICE_PROPERTY_CONNECTED)) {
+            binc_device_internal_set_conn_state(device, g_variant_get_boolean(property_value), NULL);
             if (device->connection_state == DISCONNECTED) {
                 g_dbus_connection_signal_unsubscribe(device->connection, device->device_prop_changed);
                 device->device_prop_changed = 0;
             }
-        } else if (g_str_equal(key, DEVICE_PROPERTY_SERVICES_RESOLVED)) {
-            device->services_resolved = g_variant_get_boolean(value);
+        } else if (g_str_equal(property_name, DEVICE_PROPERTY_SERVICES_RESOLVED)) {
+            device->services_resolved = g_variant_get_boolean(property_value);
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
             if (device->services_resolved == TRUE && device->bondingState != BONDING) {
                 binc_collect_gatt_tree(device);
@@ -473,8 +473,8 @@ static void binc_device_changed(GDBusConnection *conn,
             if (device->services_resolved == FALSE) {
                 binc_device_internal_set_conn_state(device, DISCONNECTING, NULL);
             }
-        } else if (g_str_equal(key, DEVICE_PROPERTY_PAIRED)) {
-            device->paired = g_variant_get_boolean(value);
+        } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
+            device->paired = g_variant_get_boolean(property_value);
             log_debug(TAG, "Paired %s", device->paired ? "true" : "false");
             binc_device_set_bonding_state(device, device->paired ? BONDED : BOND_NONE);
 
@@ -497,15 +497,14 @@ static void binc_internal_device_connect_cb(GObject *source_object, GAsyncResult
     g_assert(device != NULL);
 
     GVariant *value = g_dbus_connection_call_finish(device->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
 
     if (error != NULL) {
         log_debug(TAG, "Connect failed (error %d: %s)", error->code, error->message);
         binc_device_internal_set_conn_state(device, DISCONNECTED, error);
         g_clear_error(&error);
-    }
-
-    if (value != NULL) {
-        g_variant_unref(value);
     }
 }
 
@@ -551,20 +550,19 @@ void binc_device_connect(Device *device) {
 }
 
 static void binc_internal_device_pair_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
-    GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
 
+    GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(device->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", DEVICE_METHOD_PAIR, error->code, error->message);
         binc_device_internal_set_conn_state(device, DISCONNECTED, error);
         g_clear_error(&error);
-    }
-
-    if (value != NULL) {
-        g_variant_unref(value);
     }
 }
 
@@ -596,20 +594,19 @@ void binc_device_pair(Device *device) {
 }
 
 static void binc_internal_device_disconnect_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
-    GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
 
+    GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(device->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", DEVICE_METHOD_DISCONNECT, error->code, error->message);
         binc_device_internal_set_conn_state(device, CONNECTED, error);
         g_clear_error(&error);
-    }
-
-    if (value != NULL) {
-        g_variant_unref(value);
     }
 }
 
