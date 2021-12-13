@@ -124,8 +124,8 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
                                           const gchar *path,
                                           const gchar *interface,
                                           const gchar *signal,
-                                          GVariant *params,
-                                          void *userdata) {
+                                          GVariant *parameters,
+                                          void *user_data) {
 
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
@@ -133,11 +133,11 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
     char *property_name = NULL;
     GVariant *property_value = NULL;
 
-    Adapter *adapter = (Adapter *) userdata;
+    Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
-    g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
-    g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
+    g_assert(g_str_equal(g_variant_get_type_string(parameters), "(sa{sv}as)"));
+    g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties, &unknown);
     while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
         if (g_str_equal(property_name, ADAPTER_PROPERTY_POWERED)) {
             adapter->powered = g_variant_get_boolean(property_value);
@@ -197,7 +197,7 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
                                           GVariant *parameters,
                                           gpointer user_data) {
 
-    GVariantIter *interfaces;
+    GVariantIter *interfaces = NULL;
     const char *object = NULL;
     const gchar *interface_name = NULL;
     GVariant *properties = NULL;
@@ -211,9 +211,9 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
             Device *device = binc_create_device(object, adapter);
 
-            gchar *property_name;
+            gchar *property_name = NULL;
             GVariantIter iter;
-            GVariant *property_value;
+            GVariant *property_value = NULL;
             g_variant_iter_init(&iter, properties);
             while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &property_value)) {
                 binc_internal_device_update_property(device, property_name, property_value);
@@ -245,9 +245,9 @@ static void binc_internal_device_getall_properties_cb(GObject *source_object, GA
     }
 
     if (result != NULL) {
-        GVariantIter *iter;
-        const gchar *property_name;
-        GVariant *property_value;
+        GVariantIter *iter = NULL;
+        const gchar *property_name = NULL;
+        GVariant *property_value = NULL;
 
         g_assert(g_str_equal(g_variant_get_type_string(result), "(a{sv})"));
         g_variant_get(result, "(a{sv})", &iter);
@@ -287,16 +287,16 @@ static void binc_internal_device_changed(GDBusConnection *conn,
                                          const gchar *path,
                                          const gchar *interface,
                                          const gchar *signal,
-                                         GVariant *params,
-                                         void *userdata) {
+                                         GVariant *parameters,
+                                         void *user_data) {
 
     GVariantIter *properties = NULL;
     GVariantIter *unknown = NULL;
     const char *iface = NULL;
-    char *key = NULL;
-    GVariant *value = NULL;
+    char *property_name = NULL;
+    GVariant *property_value = NULL;
 
-    Adapter *adapter = (Adapter *) userdata;
+    Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
 
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
@@ -305,13 +305,13 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
         binc_internal_device_getall_properties(adapter, device);
     } else {
-        g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
-        g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-        while (g_variant_iter_loop(properties, "{&sv}", &key, &value)) {
-            binc_internal_device_update_property(device, key, value);
-            if (g_str_equal(key, DEVICE_PROPERTY_RSSI) ||
-                g_str_equal(key, DEVICE_PROPERTY_MANUFACTURER_DATA) ||
-                g_str_equal(key, DEVICE_PROPERTY_SERVICE_DATA)) {
+        g_assert(g_str_equal(g_variant_get_type_string(parameters), "(sa{sv}as)"));
+        g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties, &unknown);
+        while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
+            binc_internal_device_update_property(device, property_name, property_value);
+            if (g_str_equal(property_name, DEVICE_PROPERTY_RSSI) ||
+                g_str_equal(property_name, DEVICE_PROPERTY_MANUFACTURER_DATA) ||
+                g_str_equal(property_name, DEVICE_PROPERTY_SERVICE_DATA)) {
 
                 if (adapter->discovery_state == STARTED) {
                     if (binc_device_get_connection_state(device) == DISCONNECTED) {
@@ -457,17 +457,17 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                     Adapter *adapter = binc_adapter_create(dbusConnection, object_path);
                     gchar *property_name;
                     GVariantIter iter3;
-                    GVariant *prop_val;
+                    GVariant *property_value;
                     g_variant_iter_init(&iter3, properties);
-                    while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &prop_val)) {
-                        if (g_strcmp0(property_name, ADAPTER_PROPERTY_ADDRESS) == 0) {
-                            adapter->address = g_strdup(g_variant_get_string(prop_val, NULL));
-                        } else if (g_strcmp0(property_name, ADAPTER_PROPERTY_POWERED) == 0) {
-                            adapter->powered = g_variant_get_boolean(prop_val);
-                        } else if (g_strcmp0(property_name, ADAPTER_PROPERTY_DISCOVERING) == 0) {
-                            adapter->discovery_state = g_variant_get_boolean(prop_val);
-                        } else if (g_strcmp0(property_name, ADAPTER_PROPERTY_DISCOVERABLE) == 0) {
-                            adapter->discoverable = g_variant_get_boolean(prop_val);
+                    while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &property_value)) {
+                        if (g_str_equal(property_name, ADAPTER_PROPERTY_ADDRESS)) {
+                            adapter->address = g_strdup(g_variant_get_string(property_value, NULL));
+                        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_POWERED)) {
+                            adapter->powered = g_variant_get_boolean(property_value);
+                        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
+                            adapter->discovery_state = g_variant_get_boolean(property_value);
+                        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERABLE)) {
+                            adapter->discoverable = g_variant_get_boolean(property_value);
                         }
                     }
                     g_ptr_array_add(binc_adapters, adapter);
@@ -595,25 +595,25 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
 }
 
 void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids) {
-    GVariantBuilder *b = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
-    g_variant_builder_add(b, "{sv}", "Transport", g_variant_new_string("le"));
-    g_variant_builder_add(b, "{sv}", DEVICE_PROPERTY_RSSI, g_variant_new_int16(rssi_threshold));
-    g_variant_builder_add(b, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
+    GVariantBuilder *arguments = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
+    g_variant_builder_add(arguments, "{sv}", "Transport", g_variant_new_string("le"));
+    g_variant_builder_add(arguments, "{sv}", DEVICE_PROPERTY_RSSI, g_variant_new_int16(rssi_threshold));
+    g_variant_builder_add(arguments, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
 
     if (service_uuids != NULL && service_uuids->len > 0) {
-        GVariantBuilder *u = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
+        GVariantBuilder *uuids = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
         for (int i = 0; i < service_uuids->len; i++) {
-            char *uuid = g_ptr_array_index(service_uuids, i);
+            const char *uuid = g_ptr_array_index(service_uuids, i);
             g_assert(g_uuid_string_is_valid(uuid));
-            g_variant_builder_add(u, "s", uuid);
+            g_variant_builder_add(uuids, "s", uuid);
         }
-        g_variant_builder_add(b, "{sv}", DEVICE_PROPERTY_UUIDS, g_variant_builder_end(u));
-        g_variant_builder_unref(u);
+        g_variant_builder_add(arguments, "{sv}", DEVICE_PROPERTY_UUIDS, g_variant_builder_end(uuids));
+        g_variant_builder_unref(uuids);
     }
 
-    GVariant *device_dict = g_variant_builder_end(b);
-    g_variant_builder_unref(b);
-    binc_internal_adapter_call_method(adapter, METHOD_SET_DISCOVERY_FILTER, g_variant_new_tuple(&device_dict, 1));
+    GVariant *filter = g_variant_builder_end(arguments);
+    g_variant_builder_unref(arguments);
+    binc_internal_adapter_call_method(adapter, METHOD_SET_DISCOVERY_FILTER, g_variant_new_tuple(&filter, 1));
 }
 
 static void binc_internal_set_property_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
