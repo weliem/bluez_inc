@@ -5,13 +5,8 @@
 #ifndef TEST_CHARACTERISTIC_INTERNAL_H
 #define TEST_CHARACTERISTIC_INTERNAL_H
 
-/**
- * Create a characteristic
- *
- * @param connection dbus connection
- * @param path the path of the object on the dbus
- * @return the newly create characteristic. Free by calling binc_characteristic_free()
- */
+#include "characteristic.h"
+
 Characteristic *binc_characteristic_create(Device *device, const char *path);
 
 void binc_characteristic_free(Characteristic *characteristic);
@@ -30,8 +25,6 @@ void binc_characteristic_set_service_uuid(Characteristic *characteristic, const 
 void binc_characteristic_set_service_path(Characteristic *characteristic, const char *service_path);
 
 void binc_characteristic_set_flags(Characteristic *characteristic, GList *flags);
-
-void binc_characteristic_set_properties(Characteristic *characteristic, guint properties);
 
 void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uuid);
 

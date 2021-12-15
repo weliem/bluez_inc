@@ -21,7 +21,6 @@
  *
  */
 
-#include <stdint-gcc.h>
 #include "characteristic.h"
 #include "logger.h"
 #include "utility.h"
@@ -115,7 +114,7 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
 /**
  * Get a byte array that wraps the data inside the variant.
  *
- * Only the GByteArray should be freed and not the content as it doesn't make a copy.
+ * Only the GByteArray should be freed but not the content as it doesn't make a copy.
  * Content will be freed automatically when the variant is unref-ed.
  *
  * @param variant byte array of format 'ay'
@@ -126,7 +125,7 @@ static GByteArray *g_variant_get_byte_array(GVariant *variant) {
     g_assert(g_str_equal(g_variant_get_type_string(variant), "ay"));
 
     size_t data_length = 0;
-    guint8* data = (guint8*) g_variant_get_fixed_array(variant, &data_length, sizeof(guchar));
+    guint8 *data = (guint8 *) g_variant_get_fixed_array(variant, &data_length, sizeof(guchar));
     return g_byte_array_new_take(data, data_length);
 }
 
@@ -194,10 +193,10 @@ void binc_characteristic_read(Characteristic *characteristic) {
 }
 
 static void binc_internal_char_write_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
-    GError *error = NULL;
     Characteristic *characteristic = (Characteristic *) user_data;
     g_assert(characteristic != NULL);
 
+    GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
     if (value != NULL) {
         g_variant_unref(value);
@@ -223,22 +222,20 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
     log_debug(TAG, "writing <%s> to <%s>", byteArrayStr->str, characteristic->uuid);
     g_string_free(byteArrayStr, TRUE);
 
-    // Convert byte array to variant
-    GVariantBuilder *builder1 = g_variant_builder_new(G_VARIANT_TYPE("ay"));
+    GVariantBuilder *valueBuilder = g_variant_builder_new(G_VARIANT_TYPE("ay"));
     for (int i = 0; i < byteArray->len; i++) {
-        g_variant_builder_add(builder1, "y", byteArray->data[i]);
+        g_variant_builder_add(valueBuilder, "y", byteArray->data[i]);
     }
-    GVariant *value = g_variant_new("ay", builder1);
+    GVariant *value = g_variant_builder_end(valueBuilder);
+    g_variant_builder_unref(valueBuilder);
 
-    // Convert options to variant
     guint16 offset = 0;
     const char *writeTypeString = writeType == WITH_RESPONSE ? "request" : "command";
-    GVariantBuilder *builder2 = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-    g_variant_builder_add(builder2, "{sv}", "offset", g_variant_new_uint16(offset));
-    g_variant_builder_add(builder2, "{sv}", "type", g_variant_new_string(writeTypeString));
-    GVariant *options = g_variant_new("a{sv}", builder2);
-    g_variant_builder_unref(builder1);
-    g_variant_builder_unref(builder2);
+    GVariantBuilder *optionsBuilder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+    g_variant_builder_add(optionsBuilder, "{sv}", "offset", g_variant_new_uint16(offset));
+    g_variant_builder_add(optionsBuilder, "{sv}", "type", g_variant_new_string(writeTypeString));
+    GVariant *options = g_variant_builder_end(optionsBuilder);
+    g_variant_builder_unref(optionsBuilder);
 
     g_dbus_connection_call(characteristic->connection,
                            BLUEZ_DBUS,
@@ -253,8 +250,6 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
                            (GAsyncReadyCallback) binc_internal_char_write_cb,
                            characteristic);
 }
-
-
 
 static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
                                                         const gchar *sender,
@@ -522,11 +517,6 @@ void binc_characteristic_set_flags(Characteristic *characteristic, GList *flags)
 guint binc_characteristic_get_properties(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->properties;
-}
-
-void binc_characteristic_set_properties(Characteristic *characteristic, guint properties) {
-    g_assert(characteristic != NULL);
-    characteristic->properties = properties;
 }
 
 gboolean binc_characteristic_is_notifying(const Characteristic *characteristic) {
