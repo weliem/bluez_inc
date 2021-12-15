@@ -112,35 +112,37 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
     return result;
 }
 
-static GByteArray *g_variant_get_byte_array_for_read(GVariant *variant) {
+/**
+ * Get a pointer to the byte array inside the variant.
+ *
+ * Does not have to be freed as it doesn't make a copy. Will be freed automatically when the variant is unref-ed
+ *
+ * @param variant byte array of format 'ay'
+ * @return pointer to byte array
+ */
+static GByteArray *g_variant_get_byte_array(GVariant *variant) {
     g_assert(variant != NULL);
+    g_assert(g_str_equal(g_variant_get_type_string(variant), "ay"));
 
-    const gchar *type = g_variant_get_type_string(variant);
-    if (!g_str_equal(type, "(ay)")) return NULL;
+    size_t data_length = 0;
+    guint8* data = (guint8*) g_variant_get_fixed_array(variant, &data_length, sizeof(guchar));
+    GByteArray *byteArray = g_byte_array_new_take(data, data_length);
 
-    GByteArray *byteArray = g_byte_array_new();
-    uint8_t val;
-    GVariantIter *iter;
-
-    g_variant_get(variant, "(ay)", &iter);
-    while (g_variant_iter_loop(iter, "y", &val)) {
-        byteArray = g_byte_array_append(byteArray, &val, 1);
-    }
-
-    g_variant_iter_free(iter);
     return byteArray;
 }
 
 static void binc_internal_char_read_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     GByteArray *byteArray = NULL;
+    GVariant *innerArray = NULL;
     Characteristic *characteristic = (Characteristic *) user_data;
     g_assert(characteristic != NULL);
 
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
     if (value != NULL) {
-        byteArray = g_variant_get_byte_array_for_read(value);
-        g_variant_unref(value);
+        g_assert(g_str_equal(g_variant_get_type_string(value), "(ay)"));
+        innerArray = g_variant_get_child_value(value, 0);
+        byteArray = g_variant_get_byte_array(innerArray);
     }
 
     if (characteristic->on_read_callback != NULL) {
@@ -148,7 +150,15 @@ static void binc_internal_char_read_cb(GObject *source_object, GAsyncResult *res
     }
 
     if (byteArray != NULL) {
-        g_byte_array_free(byteArray, TRUE);
+        g_byte_array_free(byteArray, FALSE);
+    }
+
+    if (innerArray != NULL) {
+        g_variant_unref(innerArray);
+    }
+
+    if (value != NULL) {
+        g_variant_unref(value);
     }
 
     if (error != NULL) {
@@ -245,24 +255,7 @@ void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteA
                            characteristic);
 }
 
-static GByteArray *g_variant_get_byte_array_for_notify(GVariant *variant) {
-    g_assert(variant != NULL);
 
-    const gchar *type = g_variant_get_type_string(variant);
-    if (!g_str_equal(type, "ay")) return NULL;
-
-    GByteArray *byteArray = g_byte_array_new();
-    uint8_t val;
-    GVariantIter *iter;
-
-    g_variant_get(variant, "ay", &iter);
-    while (g_variant_iter_loop(iter, "y", &val)) {
-        byteArray = g_byte_array_append(byteArray, &val, 1);
-    }
-
-    g_variant_iter_free(iter);
-    return byteArray;
-}
 
 static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
                                                         const gchar *sender,
@@ -300,7 +293,7 @@ static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
                 }
             }
         } else if (g_str_equal(property_name, CHARACTERISTIC_PROPERTY_VALUE)) {
-            GByteArray *byteArray = g_variant_get_byte_array_for_notify(property_value);
+            GByteArray *byteArray = g_variant_get_byte_array(property_value);
             GString *result = g_byte_array_as_hex(byteArray);
             log_debug(TAG, "notification <%s> on <%s>", result->str, characteristic->uuid);
             g_string_free(result, TRUE);
@@ -308,7 +301,7 @@ static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
             if (characteristic->on_notify_callback != NULL) {
                 characteristic->on_notify_callback(characteristic, byteArray);
             }
-            g_byte_array_free(byteArray, TRUE);
+            g_byte_array_free(byteArray, FALSE);
         }
     }
 
