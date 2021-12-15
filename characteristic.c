@@ -113,12 +113,13 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
 }
 
 /**
- * Get a pointer to the byte array inside the variant.
+ * Get a byte array that wraps the data inside the variant.
  *
- * Does not have to be freed as it doesn't make a copy. Will be freed automatically when the variant is unref-ed
+ * Only the GByteArray should be freed and not the content as it doesn't make a copy.
+ * Content will be freed automatically when the variant is unref-ed.
  *
  * @param variant byte array of format 'ay'
- * @return pointer to byte array
+ * @return GByteArray wrapping the data in the variant
  */
 static GByteArray *g_variant_get_byte_array(GVariant *variant) {
     g_assert(variant != NULL);
@@ -126,9 +127,7 @@ static GByteArray *g_variant_get_byte_array(GVariant *variant) {
 
     size_t data_length = 0;
     guint8* data = (guint8*) g_variant_get_fixed_array(variant, &data_length, sizeof(guchar));
-    GByteArray *byteArray = g_byte_array_new_take(data, data_length);
-
-    return byteArray;
+    return g_byte_array_new_take(data, data_length);
 }
 
 static void binc_internal_char_read_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
