@@ -41,7 +41,7 @@ Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 ServiceHandlerManager *serviceHandlerManager = NULL;
 
-void on_connection_state_changed(Device *device, ConnectionState state, GError *error) {
+void on_connection_state_changed(Device *device, ConnectionState state, const GError *error) {
     if (error != NULL) {
         log_debug(TAG, "(dis)connect failed (error %d: %s)", error->code, error->message);
         return;
@@ -50,21 +50,21 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
     log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device),
               binc_device_get_connection_state_name(device), state);
 
-
-    // Remove devices immediately of they are not bonded
     if (state == DISCONNECTED) {
         binc_service_handler_manager_device_disconnected(serviceHandlerManager, device);
+
+        // Remove devices immediately of they are not bonded
         if (binc_device_get_bonding_state(device) != BONDED) {
             binc_adapter_remove_device(default_adapter, device);
         }
     }
 }
 
-void on_bonding_state_changed(Device *device, BondingState new_state, BondingState old_state, GError *error) {
+void on_bonding_state_changed(Device *device, BondingState new_state, BondingState old_state, const GError *error) {
     log_debug(TAG, "bonding state changed from %d to %d", old_state, new_state);
 }
 
-void on_notification_state_changed(Characteristic *characteristic, GError *error) {
+void on_notification_state_changed(Characteristic *characteristic, const GError *error) {
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_notification_state_updated != NULL) {
@@ -76,7 +76,7 @@ void on_notification_state_changed(Characteristic *characteristic, GError *error
     }
 }
 
-void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
+void on_notify(Characteristic *characteristic, const GByteArray *byteArray) {
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
@@ -89,7 +89,7 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     }
 }
 
-void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+void on_read(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
@@ -102,7 +102,7 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
     }
 }
 
-void on_write(Characteristic *characteristic, GError *error) {
+void on_write(Characteristic *characteristic, const GError *error) {
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_write != NULL) {
@@ -204,7 +204,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
 //    }
 }
 
-void on_discovery_state_changed(Adapter *adapter, DiscoveryState state, GError *error) {
+void on_discovery_state_changed(Adapter *adapter, DiscoveryState state, const GError *error) {
     if (error != NULL) {
         log_debug(TAG, "discovery error (error %d: %s)", error->code, error->message);
         return;

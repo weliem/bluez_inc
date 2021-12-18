@@ -54,7 +54,7 @@ static Observation *hts_measurement_as_observation(TemperatureMeasurement *measu
     return observation;
 }
 
-static TemperatureMeasurement *hts_create_measurement(GByteArray *byteArray) {
+static TemperatureMeasurement *hts_create_measurement(const GByteArray *byteArray) {
     TemperatureMeasurement *measurement = g_new0(TemperatureMeasurement, 1);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
 
@@ -85,8 +85,10 @@ static void hts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
     }
 }
 
-static void hts_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device,
-                                           Characteristic *characteristic,GError *error) {
+static void hts_onNotificationStateUpdated(ServiceHandler *service_handler,
+                                           Device *device,
+                                           Characteristic *characteristic,
+                                           const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
@@ -97,13 +99,13 @@ static void hts_onNotificationStateUpdated(ServiceHandler *service_handler, Devi
     log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
-static void hts_onCharacteristicWrite(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                                      GByteArray *byteArray, GError *error) {
 
-}
+static void hts_onCharacteristicChanged(ServiceHandler *service_handler,
+                                        Device *device,
+                                        Characteristic *characteristic,
+                                        const GByteArray *byteArray,
+                                        const GError *error) {
 
-static void hts_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                                        GByteArray *byteArray, GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     GList *observation_list = NULL;
 
@@ -140,7 +142,7 @@ ServiceHandler *hts_service_handler_create() {
     handler->uuid = HTS_SERVICE_UUID;
     handler->on_characteristics_discovered = &hts_onCharacteristicsDiscovered;
     handler->on_notification_state_updated = &hts_onNotificationStateUpdated;
-    handler->on_characteristic_write = &hts_onCharacteristicWrite;
+    handler->on_characteristic_write = NULL;
     handler->on_characteristic_changed = &hts_onCharacteristicChanged;
     handler->on_device_disconnected = NULL;
     handler->service_handler_free = &hts_free;

@@ -13,13 +13,13 @@ typedef struct service_handler_entry ServiceHandler;
 
 typedef void (*onCharacteristicsDiscovered)(ServiceHandler *service_handler, Device *device, GList *characteristics);
 
-typedef void (*onNotificationStateUpdated)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, GError *error);
+typedef void (*onNotificationStateUpdated)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, const GError *error);
 
 typedef void (*onCharacteristicWrite)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                                      GByteArray *byteArray, GError *error);
+                                      GByteArray *byteArray, const GError *error);
 
 typedef void (*onCharacteristicChanged)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                                        GByteArray *byteArray, GError *error);
+                                        const GByteArray *byteArray, const GError *error);
 
 typedef void (*onDeviceDisconnected)(ServiceHandler *service_handler, Device *device);
 

@@ -36,12 +36,12 @@ typedef enum BondingState {
     BOND_NONE = 0, BONDING = 1, BONDED = 2
 } BondingState;
 
-typedef void (*ConnectionStateChangedCallback)(Device *device, ConnectionState state, GError *error);
+typedef void (*ConnectionStateChangedCallback)(Device *device, ConnectionState state, const GError *error);
 
 typedef void (*ServicesResolvedCallback)(Device *device);
 
 typedef void (*BondingStateChangedCallback)(Device *device, BondingState new_state, BondingState old_state,
-                                            GError *error);
+                                            const GError *error);
 
 
 

@@ -35,14 +35,14 @@ typedef enum {
 } ReservedFloatValues;
 
 struct parser_instance {
-    GByteArray *bytes;
+    const GByteArray *bytes;
     guint offset;
     int byteOrder;
 };
 
 static const double reserved_float_values[5] = {MDER_POSITIVE_INFINITY, MDER_NaN, MDER_NaN, MDER_NaN, MDER_NEGATIVE_INFINITY};
 
-Parser* parser_create(GByteArray *bytes, int byteOrder) {
+Parser* parser_create(const GByteArray *bytes, int byteOrder) {
     Parser* parser = g_new0(Parser, 1);
     parser->bytes = bytes;
     parser->offset = 0;

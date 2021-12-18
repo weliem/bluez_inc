@@ -50,13 +50,13 @@ typedef enum WriteType {
     WITH_RESPONSE = 0, WITHOUT_RESPONSE = 1
 } WriteType;
 
-typedef void (*OnNotifyingStateChangedCallback)(Characteristic *characteristic, GError *error);
+typedef void (*OnNotifyingStateChangedCallback)(Characteristic *characteristic, const GError *error);
 
-typedef void (*OnNotifyCallback)(Characteristic *characteristic, GByteArray *byteArray);
+typedef void (*OnNotifyCallback)(Characteristic *characteristic, const GByteArray *byteArray);
 
-typedef void (*OnReadCallback)(Characteristic *characteristic, GByteArray *byteArray, GError *error);
+typedef void (*OnReadCallback)(Characteristic *characteristic, const GByteArray *byteArray, const GError *error);
 
-typedef void (*OnWriteCallback)(Characteristic *characteristic, GError *error);
+typedef void (*OnWriteCallback)(Characteristic *characteristic, const GError *error);
 
 
 void binc_characteristic_read(Characteristic *characteristic);

@@ -69,7 +69,7 @@ static GList *blp_measurement_as_observations(BloodPressureMeasurement *measurem
     return observation_list;
 }
 
-static BloodPressureMeasurement *blp_create_measurement(GByteArray *byteArray) {
+static BloodPressureMeasurement *blp_create_measurement(const GByteArray *byteArray) {
     BloodPressureMeasurement *measurement = g_new0(BloodPressureMeasurement, 1);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
 
@@ -106,8 +106,10 @@ static void blp_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
     }
 }
 
-static void blp_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device,
-                                           Characteristic *characteristic, GError *error) {
+static void blp_onNotificationStateUpdated(ServiceHandler *service_handler,
+                                           Device *device,
+                                           Characteristic *characteristic,
+                                           const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
@@ -118,8 +120,10 @@ static void blp_onNotificationStateUpdated(ServiceHandler *service_handler, Devi
     log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
-static void blp_onCharacteristicWrite(ServiceHandler *service_handler, Device *device,
-                                      Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+static void blp_onCharacteristicWrite(ServiceHandler *service_handler,
+                                      Device *device,
+                                      Characteristic *characteristic,
+                                      GByteArray *byteArray, const GError *error) {
 
 }
 
@@ -135,8 +139,11 @@ static void log_measurement(BloodPressureMeasurement *measurement) {// Log the m
     g_free(time_string);
 }
 
-static void blp_onCharacteristicChanged(ServiceHandler *service_handler, Device *device,
-                                        Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+static void blp_onCharacteristicChanged(ServiceHandler *service_handler,
+                                        Device *device,
+                                        Characteristic *characteristic,
+                                        const GByteArray *byteArray,
+                                        const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
 

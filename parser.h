@@ -36,7 +36,7 @@ typedef struct parser_instance Parser;
  * @param byteOrder either LITTLE_ENDIAN or BIG_ENDIAN
  * @return parser object
  */
-Parser *parser_create(GByteArray *bytes, int byteOrder);
+Parser *parser_create(const GByteArray *bytes, int byteOrder);
 
 void parser_set_offset(Parser *parser, guint offset);
 

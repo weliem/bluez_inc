@@ -59,8 +59,11 @@ static void cts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
     }
 }
 
-static void cts_onNotificationStateUpdated(ServiceHandler *service_handler, Device *device,
-                                           Characteristic *characteristic, GError *error) {
+static void cts_onNotificationStateUpdated(ServiceHandler *service_handler,
+                                           Device *device,
+                                           Characteristic *characteristic,
+                                           const GError *error) {
+
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
@@ -71,8 +74,12 @@ static void cts_onNotificationStateUpdated(ServiceHandler *service_handler, Devi
     log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
-static void cts_onCharacteristicWrite(ServiceHandler *service_handler, Device *device,
-                                      Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+static void cts_onCharacteristicWrite(ServiceHandler *service_handler,
+                                      Device *device,
+                                      Characteristic *characteristic,
+                                      GByteArray *byteArray,
+                                      const GError *error) {
+
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to write to '%s' (error %d: %s)", uuid, error->code, error->message);
@@ -80,7 +87,7 @@ static void cts_onCharacteristicWrite(ServiceHandler *service_handler, Device *d
     }
 }
 
-static void handle_current_time(Device *device, GByteArray *byteArray) {
+static void handle_current_time(Device *device, const GByteArray *byteArray) {
     if (byteArray->len != CURRENT_TIME_LENGTH) {
         log_debug(TAG, "invalid current time received");
         return;
@@ -103,7 +110,7 @@ static void handle_current_time(Device *device, GByteArray *byteArray) {
     }
 }
 
-static void handle_local_time_info(Device *device, GByteArray *byteArray) {
+static void handle_local_time_info(Device *device, const GByteArray *byteArray) {
     if (byteArray->len != LOCAL_TIME_LENGTH) {
         log_debug(TAG, "invalid local time received");
         return;
@@ -117,8 +124,12 @@ static void handle_local_time_info(Device *device, GByteArray *byteArray) {
     log_debug(TAG, "local time info { timezone=%d, dst_offset=%d", cts_timezone, cts_raw_dst_offset);
 }
 
-static void cts_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                                        GByteArray *byteArray, GError *error) {
+static void cts_onCharacteristicChanged(ServiceHandler *service_handler,
+                                        Device *device,
+                                        Characteristic *characteristic,
+                                        const GByteArray *byteArray,
+                                        const GError *error) {
+
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);

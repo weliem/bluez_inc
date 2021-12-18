@@ -41,8 +41,12 @@ static void dis_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
     }
 }
 
-static void dis_onCharacteristicChanged(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                                        GByteArray *byteArray, GError *error) {
+static void dis_onCharacteristicChanged(ServiceHandler *service_handler,
+                                        Device *device,
+                                        Characteristic *characteristic,
+                                        const GByteArray *byteArray,
+                                        const GError *error) {
+
     const char *uuid = binc_characteristic_get_uuid(characteristic);
 
     if (error != NULL) {

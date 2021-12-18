@@ -251,28 +251,28 @@ char *binc_device_to_string(const Device *device) {
     return result;
 }
 
-static void binc_on_characteristic_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+static void binc_on_characteristic_read(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     Device *device = binc_characteristic_get_device(characteristic);
     if (device->on_read_callback != NULL) {
         device->on_read_callback(characteristic, byteArray, error);
     }
 }
 
-static void binc_on_characteristic_write(Characteristic *characteristic, GError *error) {
+static void binc_on_characteristic_write(Characteristic *characteristic, const GError *error) {
     Device *device = binc_characteristic_get_device(characteristic);
     if (device->on_write_callback != NULL) {
         device->on_write_callback(characteristic, error);
     }
 }
 
-static void binc_on_characteristic_notify(Characteristic *characteristic, GByteArray *byteArray) {
+static void binc_on_characteristic_notify(Characteristic *characteristic, const GByteArray *byteArray) {
     Device *device = binc_characteristic_get_device(characteristic);
     if (device->on_notify_callback != NULL) {
         device->on_notify_callback(characteristic, byteArray);
     }
 }
 
-static void binc_on_characteristic_notification_state_changed(Characteristic *characteristic, GError *error) {
+static void binc_on_characteristic_notification_state_changed(Characteristic *characteristic, const GError *error) {
     Device *device = binc_characteristic_get_device(characteristic);
     if (device->on_notify_state_callback != NULL) {
         device->on_notify_state_callback(characteristic, error);
