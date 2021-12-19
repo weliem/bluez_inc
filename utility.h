@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef TEST_UTILITY_H
-#define TEST_UTILITY_H
+#ifndef BINC_UTILITY_H
+#define BINC_UTILITY_H
 
 #include <glib.h>
 
@@ -34,4 +34,4 @@ float binc_round_with_precision(float value, guint8 precision);
 
 gchar *binc_date_time_format_iso8601(GDateTime *datetime);
 
-#endif //TEST_UTILITY_H
+#endif //BINC_UTILITY_H

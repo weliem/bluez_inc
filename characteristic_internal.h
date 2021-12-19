@@ -2,8 +2,8 @@
 // Created by martijn on 20-11-21.
 //
 
-#ifndef TEST_CHARACTERISTIC_INTERNAL_H
-#define TEST_CHARACTERISTIC_INTERNAL_H
+#ifndef BINC_CHARACTERISTIC_INTERNAL_H
+#define BINC_CHARACTERISTIC_INTERNAL_H
 
 #include "characteristic.h"
 
@@ -28,4 +28,4 @@ void binc_characteristic_set_flags(Characteristic *characteristic, GList *flags)
 
 void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uuid);
 
-#endif //TEST_CHARACTERISTIC_INTERNAL_H
+#endif //BINC_CHARACTERISTIC_INTERNAL_H

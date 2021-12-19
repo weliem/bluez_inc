@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef TEST_AGENT_H
-#define TEST_AGENT_H
+#ifndef BINC_AGENT_H
+#define BINC_AGENT_H
 
 #include <gio/gio.h>
 #include "adapter.h"
@@ -42,4 +42,4 @@ void binc_agent_set_request_passkey_callback(Agent *agent, AgentRequestPasskeyCa
 
 void binc_agent_free(Agent *agent);
 
-#endif //TEST_AGENT_H
+#endif //BINC_AGENT_H

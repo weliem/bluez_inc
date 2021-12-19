@@ -20,8 +20,8 @@
  *   SOFTWARE.
  *
  */
-#ifndef TEST_DEVICE_H
-#define TEST_DEVICE_H
+#ifndef BINC_DEVICE_H
+#define BINC_DEVICE_H
 
 #include <glib.h>
 #include <stdint-gcc.h>
@@ -115,4 +115,4 @@ Adapter *binc_device_get_adapter(const Device *device);
 
 char *binc_device_to_string(const Device *device);
 
-#endif //TEST_DEVICE_H
+#endif //BINC_DEVICE_H

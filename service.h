@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef TEST_SERVICE_H
-#define TEST_SERVICE_H
+#ifndef BINC_SERVICE_H
+#define BINC_SERVICE_H
 
 #include <gio/gio.h>
 #include "forward_decl.h"
@@ -36,4 +36,4 @@ GList *binc_service_get_characteristics(const Service *service);
 
 Characteristic *binc_service_get_characteristic(const Service *service, const char *char_uuid);
 
-#endif //TEST_SERVICE_H
+#endif //BINC_SERVICE_H

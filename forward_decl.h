@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef TEST_FORWARD_DECL_H
-#define TEST_FORWARD_DECL_H
+#ifndef BINC_FORWARD_DECL_H
+#define BINC_FORWARD_DECL_H
 
 typedef struct binc_adapter Adapter;
 typedef struct binc_device Device;
@@ -30,4 +30,4 @@ typedef struct binc_service Service;
 typedef struct binc_characteristic Characteristic;
 typedef struct binc_service_handler_manager ServiceHandlerManager;
 
-#endif //TEST_FORWARD_DECL_H
+#endif //BINC_FORWARD_DECL_H

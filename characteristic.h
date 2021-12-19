@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef TEST_CHARACTERISTIC_H
-#define TEST_CHARACTERISTIC_H
+#ifndef BINC_CHARACTERISTIC_H
+#define BINC_CHARACTERISTIC_H
 
 #include <gio/gio.h>
 #include "service.h"
@@ -95,4 +95,4 @@ gboolean binc_characteristic_supports_notify(const Characteristic *characteristi
  */
 char *binc_characteristic_to_string(const Characteristic *characteristic);
 
-#endif //TEST_CHARACTERISTIC_H
+#endif //BINC_CHARACTERISTIC_H

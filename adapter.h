@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef TEST_ADAPTER_H
-#define TEST_ADAPTER_H
+#ifndef BINC_ADAPTER_H
+#define BINC_ADAPTER_H
 
 #include <gio/gio.h>
 #include "forward_decl.h"
@@ -77,4 +77,4 @@ void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredSta
 
 GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter);
 
-#endif //TEST_ADAPTER_H
+#endif //BINC_ADAPTER_H

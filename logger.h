@@ -21,12 +21,12 @@
  *
  */
 
-#ifndef TEST_LOGGER_H
-#define TEST_LOGGER_H
+#ifndef BINC_LOGGER_H
+#define BINC_LOGGER_H
 
 void log_debug(const char *tag, const char *format, ...);
 
 void log_info(const char *tag, const char *format, ...);
 
 
-#endif //TEST_LOGGER_H
+#endif //BINC_LOGGER_H

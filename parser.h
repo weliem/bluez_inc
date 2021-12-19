@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef TEST_PARSER_H
-#define TEST_PARSER_H
+#ifndef BINC_PARSER_H
+#define BINC_PARSER_H
 
 #include <glib.h>
 #include <endian.h>
@@ -60,4 +60,4 @@ GByteArray *binc_get_current_time();
 
 GString *parser_get_string(Parser *parser);
 
-#endif //TEST_PARSER_H
+#endif //BINC_PARSER_H
