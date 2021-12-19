@@ -305,6 +305,7 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
         binc_internal_device_getall_properties(adapter, device);
     } else {
+        gboolean isDiscoveryResult = FALSE;
         g_assert(g_str_equal(g_variant_get_type_string(parameters), "(sa{sv}as)"));
         g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties, &unknown);
         while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
@@ -312,13 +313,13 @@ static void binc_internal_device_changed(GDBusConnection *conn,
             if (g_str_equal(property_name, DEVICE_PROPERTY_RSSI) ||
                 g_str_equal(property_name, DEVICE_PROPERTY_MANUFACTURER_DATA) ||
                 g_str_equal(property_name, DEVICE_PROPERTY_SERVICE_DATA)) {
-
-                if (adapter->discovery_state == STARTED) {
-                    if (binc_device_get_connection_state(device) == DISCONNECTED) {
-                        if (adapter->discoveryResultCallback != NULL) {
-                            adapter->discoveryResultCallback(adapter, device);
-                        }
-                    }
+                isDiscoveryResult = TRUE;
+            }
+        }
+        if (adapter->discovery_state == STARTED && isDiscoveryResult) {
+            if (binc_device_get_connection_state(device) == DISCONNECTED) {
+                if (adapter->discoveryResultCallback != NULL) {
+                    adapter->discoveryResultCallback(adapter, device);
                 }
             }
         }
