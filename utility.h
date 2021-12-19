@@ -26,7 +26,7 @@
 
 #include <glib.h>
 
-GString *g_byte_array_as_hex(GByteArray *byteArray);
+GString *g_byte_array_as_hex(const GByteArray *byteArray);
 
 GList *g_variant_string_array_to_list(GVariant *value);
 

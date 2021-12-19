@@ -61,7 +61,7 @@ typedef void (*OnWriteCallback)(Characteristic *characteristic, const GError *er
 
 void binc_characteristic_read(Characteristic *characteristic);
 
-void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType);
+void binc_characteristic_write(Characteristic *characteristic, const GByteArray *byteArray, WriteType writeType);
 
 void binc_characteristic_start_notify(Characteristic *characteristic);
 

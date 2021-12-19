@@ -213,7 +213,7 @@ static void binc_internal_char_write_cb(GObject *source_object, GAsyncResult *re
     }
 }
 
-void binc_characteristic_write(Characteristic *characteristic, GByteArray *byteArray, WriteType writeType) {
+void binc_characteristic_write(Characteristic *characteristic, const GByteArray *byteArray, WriteType writeType) {
     g_assert(characteristic != NULL);
     g_assert(byteArray != NULL);
     g_assert(binc_characteristic_supports_write(characteristic, writeType));
