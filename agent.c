@@ -62,7 +62,7 @@ static void bluez_agent_method_call(GDBusConnection *conn,
     Adapter *adapter = agent->adapter;
     g_assert(adapter != NULL);
 
-    if (!strcmp(method, "RequestPinCode")) {
+    if (g_str_equal(method, "RequestPinCode")) {
         g_variant_get(params, "(o)", &object_path);
         log_debug(TAG, "request pincode for %s", object_path);
         g_free(object_path);
@@ -70,13 +70,13 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         // add code to request pin
         pin = "123";
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", pin));
-    } else if (!strcmp(method, "DisplayPinCode")) {
+    } else if (g_str_equal(method, "DisplayPinCode")) {
         g_variant_get(params, "(os)", &object_path, &pin);
         log_debug(TAG, "displaying pincode %s", pin);
         g_free(object_path);
         g_free(pin);
         g_dbus_method_invocation_return_value(invocation, NULL);
-    } else if (!strcmp(method, "RequestPasskey")) {
+    } else if (g_str_equal(method, "RequestPasskey")) {
         g_variant_get(params, "(o)", &object_path);
         Device *device = binc_adapter_get_device_by_path(adapter, object_path);
         g_free(object_path);
@@ -91,17 +91,17 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         } else {
             g_dbus_method_invocation_return_dbus_error(invocation, "org.bluez.Error.Rejected", "No passkey inputted");
         }
-    } else if (!strcmp(method, "DisplayPasskey")) {
+    } else if (g_str_equal(method, "DisplayPasskey")) {
         g_variant_get(params, "(ouq)", &object_path, &pass, &entered);
         log_debug(TAG, "passkey: %u, entered: %u", pass, entered);
         g_free(object_path);
         g_dbus_method_invocation_return_value(invocation, NULL);
-    } else if (!strcmp(method, "RequestConfirmation")) {
+    } else if (g_str_equal(method, "RequestConfirmation")) {
         g_variant_get(params, "(ou)", &object_path, &pass);
         g_free(object_path);
         log_debug(TAG, "request confirmation for %u", pass);
         g_dbus_method_invocation_return_value(invocation, NULL);
-    } else if (!strcmp(method, "RequestAuthorization")) {
+    } else if (g_str_equal(method, "RequestAuthorization")) {
         g_variant_get(params, "(o)", &object_path);
         log_debug(TAG, "request for authorization %s", object_path);
         Device *device = binc_adapter_get_device_by_path(adapter, object_path);
@@ -119,16 +119,16 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         } else {
             g_dbus_method_invocation_return_value(invocation, NULL);
         }
-    } else if (!strcmp(method, "AuthorizeService")) {
+    } else if (g_str_equal(method, "AuthorizeService")) {
         g_variant_get(params, "(os)", &object_path, &uuid);
         log_debug(TAG, "authorize service");
         g_free(object_path);
         g_free(uuid);
         g_dbus_method_invocation_return_value(invocation, NULL);
-    } else if (!strcmp(method, "Cancel")) {
+    } else if (g_str_equal(method, "Cancel")) {
         log_debug(TAG, "cancelling pairing");
         g_dbus_method_invocation_return_value(invocation, NULL);
-    } else if (!strcmp(method, "Release")) {
+    } else if (g_str_equal(method, "Release")) {
         log_debug(TAG, "agent released");
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else

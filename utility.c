@@ -40,9 +40,7 @@ GString *g_byte_array_as_hex(const GByteArray *byteArray) {
 
 GList *g_variant_string_array_to_list(GVariant *value) {
     g_assert(value != NULL);
-
-    const gchar *type = g_variant_get_type_string(value);
-    if (g_strcmp0(type, "as")) return NULL;
+    g_assert(g_str_equal(g_variant_get_type_string(value), "as"));
 
     GList *list = NULL;
     gchar *data;
