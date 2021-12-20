@@ -32,6 +32,8 @@ void device_info_set_software_version(DeviceInfo *deviceInfo, const char *softwa
 
 void device_info_set_device_time(DeviceInfo *deviceInfo, GDateTime *device_time);
 
+void device_info_set_last_observation_timestamp(DeviceInfo *deviceInfo, GDateTime *timestamp);
+
 const char *device_info_get_address(DeviceInfo *deviceInfo);
 
 const char *device_info_get_manufacturer(DeviceInfo *deviceInfo);
@@ -47,6 +49,9 @@ const char *device_info_get_hardware_version(DeviceInfo *deviceInfo);
 const char *device_info_get_software_version(DeviceInfo *deviceInfo);
 
 GDateTime *device_info_get_device_time(DeviceInfo *deviceInfo);
+
+GDateTime* device_info_get_last_observation_timestamp(const DeviceInfo *deviceInfo);
+
 
 cJSON *device_info_to_fhir(DeviceInfo *deviceInfo);
 

@@ -299,7 +299,7 @@ int main(void) {
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(100, callback, loop);
+    g_timeout_add_seconds(200, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);

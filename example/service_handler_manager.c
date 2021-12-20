@@ -40,18 +40,49 @@ void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerMana
     g_free(serviceHandlerManager);
 }
 
+
+static void log_observation(Observation *observation) {
+    char* time_string = binc_date_time_format_iso8601(observation->timestamp);
+    log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
+              observation->value,
+              observation_unit_str(observation->unit),
+              observation_get_display_str(observation),
+              time_string,
+              observation_location_str(observation->location));
+    g_free(time_string);
+}
+
+static gboolean g_date_time_is_later_than(GDateTime *end, GDateTime *begin) {
+    return g_date_time_compare(end, begin) > 0;
+}
+
 static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
+    GDateTime *latest_timestamp = device_info_get_last_observation_timestamp(deviceInfo);
+    GDateTime *last_observation_timestamp = latest_timestamp;
+    GList *filtered_observations = NULL;
+
     for (GList *iterator = observations; iterator; iterator = iterator->next) {
         Observation *observation = (Observation *) iterator->data;
 
-        char* time_string = binc_date_time_format_iso8601(observation->timestamp);
-        log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
-                  observation->value,
-                  observation_unit_str(observation->unit),
-                  observation_get_display_str(observation),
-                  time_string,
-                  observation_location_str(observation->location));
-        g_free(time_string);
+        // Filter out the new observations and find the last one
+        if (latest_timestamp == NULL) {
+            latest_timestamp = observation->timestamp;
+            filtered_observations = g_list_append(filtered_observations, observation);
+            log_observation(observation);
+        } else if(g_date_time_is_later_than(observation->timestamp, last_observation_timestamp)) {
+            filtered_observations = g_list_append(filtered_observations, observation);
+            log_observation(observation);
+
+            if (g_date_time_is_later_than(observation->timestamp, last_observation_timestamp)) {
+                latest_timestamp = observation->timestamp;
+            }
+        } else {
+            log_debug(TAG, "ignoring old observation");
+        }
+
+        if (latest_timestamp != NULL) {
+            device_info_set_last_observation_timestamp(deviceInfo, latest_timestamp);
+        }
     }
 
     // Build bundle
@@ -91,7 +122,7 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     cJSON *observation_entry = cJSON_CreateObject();
     cJSON_AddStringToObject(observation_entry, "fullUrl", observation_full_url->str);
     g_string_free(observation_full_url, TRUE);
-    cJSON_AddItemToObject(observation_entry, "resource", observation_list_as_fhir(observations, device_full_url->str));
+    cJSON_AddItemToObject(observation_entry, "resource", observation_list_as_fhir(filtered_observations, device_full_url->str));
     g_string_free(device_full_url, TRUE);
     cJSON *observation_request = cJSON_CreateObject();
     cJSON_AddStringToObject(observation_request, "method", "POST");
@@ -102,8 +133,9 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     char *result = cJSON_Print(fhir_json);
     g_print("%s", result);
     cJSON_Delete(fhir_json);
-    postFhir(result);
+  //  postFhir(result);
     g_free(result);
+    g_list_free(filtered_observations);
 }
 
 void binc_service_handler_manager_add(ServiceHandlerManager *serviceHandlerManager, ServiceHandler *service_handler) {

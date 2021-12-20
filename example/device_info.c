@@ -18,6 +18,8 @@ struct device_info {
     char *hardware_version;
     guint8 battery_level;
     GDateTime *device_time;
+    GDateTime *created;
+    GDateTime *last_observation_timestamp;
 };
 
 DeviceInfo *get_device_info(const char *address) {
@@ -32,6 +34,7 @@ DeviceInfo *get_device_info(const char *address) {
     if (result == NULL) {
         result = g_new0(DeviceInfo, 1);
         result->address = g_strdup(address);
+        result->created = g_date_time_new_now_local();
         g_hash_table_insert(device_info_store, g_strdup(address), result);
     }
     return result;
@@ -75,6 +78,14 @@ void device_info_free(DeviceInfo *deviceInfo) {
 
     if (deviceInfo->device_time != NULL) {
         g_date_time_unref(deviceInfo->device_time);
+    }
+
+    if (deviceInfo->created != NULL) {
+        g_date_time_unref(deviceInfo->created);
+    }
+
+    if (deviceInfo->last_observation_timestamp != NULL) {
+        g_date_time_unref(deviceInfo->last_observation_timestamp);
     }
 
     g_free(deviceInfo);
@@ -143,6 +154,17 @@ void device_info_set_device_time(DeviceInfo *deviceInfo, GDateTime *device_time)
     deviceInfo->device_time = g_date_time_ref(device_time);
 }
 
+void device_info_set_last_observation_timestamp(DeviceInfo *deviceInfo, GDateTime *timestamp) {
+    g_assert(timestamp != NULL);
+
+    if (deviceInfo->last_observation_timestamp == timestamp) return;
+
+    if (deviceInfo->last_observation_timestamp != NULL) {
+        g_date_time_unref(deviceInfo->last_observation_timestamp);
+    }
+    deviceInfo->last_observation_timestamp = g_date_time_ref(timestamp);
+}
+
 const char *device_info_get_address(DeviceInfo *deviceInfo) {
     g_assert(deviceInfo != NULL);
     return deviceInfo->address;
@@ -181,6 +203,11 @@ const char *device_info_get_software_version(DeviceInfo *deviceInfo) {
 GDateTime *device_info_get_device_time(DeviceInfo *deviceInfo) {
     g_assert(deviceInfo != NULL);
     return deviceInfo->device_time;
+}
+
+GDateTime* device_info_get_last_observation_timestamp(const DeviceInfo *deviceInfo) {
+    g_assert(deviceInfo != NULL);
+    return deviceInfo->last_observation_timestamp;
 }
 
 cJSON *device_info_to_fhir(DeviceInfo *deviceInfo) {
