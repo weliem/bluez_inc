@@ -7,6 +7,7 @@
 #include "../parser.h"
 #include "../logger.h"
 #include "../device.h"
+#include "../utility.h"
 
 #define TAG "CTS_Service_Handler"
 
@@ -77,7 +78,7 @@ static void cts_onNotificationStateUpdated(ServiceHandler *service_handler,
 static void cts_onCharacteristicWrite(ServiceHandler *service_handler,
                                       Device *device,
                                       Characteristic *characteristic,
-                                      GByteArray *byteArray,
+                                      const GByteArray *byteArray,
                                       const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
@@ -85,6 +86,10 @@ static void cts_onCharacteristicWrite(ServiceHandler *service_handler,
         log_debug(TAG, "failed to write to '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
+
+    GString *byteArrayStr = g_byte_array_as_hex(byteArray);
+    log_debug(TAG, "success writing <%s> to <%s>", byteArrayStr->str, binc_characteristic_get_uuid(characteristic));
+    g_string_free(byteArrayStr, TRUE);
 }
 
 static void handle_current_time(Device *device, const GByteArray *byteArray) {

@@ -16,7 +16,7 @@ typedef void (*onCharacteristicsDiscovered)(ServiceHandler *service_handler, Dev
 typedef void (*onNotificationStateUpdated)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic, const GError *error);
 
 typedef void (*onCharacteristicWrite)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
-                                      GByteArray *byteArray, const GError *error);
+                                      const GByteArray *byteArray, const GError *error);
 
 typedef void (*onCharacteristicChanged)(ServiceHandler *service_handler, Device *device, Characteristic *characteristic,
                                         const GByteArray *byteArray, const GError *error);

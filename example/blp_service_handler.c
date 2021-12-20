@@ -123,7 +123,8 @@ static void blp_onNotificationStateUpdated(ServiceHandler *service_handler,
 static void blp_onCharacteristicWrite(ServiceHandler *service_handler,
                                       Device *device,
                                       Characteristic *characteristic,
-                                      GByteArray *byteArray, const GError *error) {
+                                      const GByteArray *byteArray,
+                                      const GError *error) {
 
 }
 

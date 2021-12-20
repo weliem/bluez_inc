@@ -104,7 +104,7 @@ void on_read(Characteristic *characteristic, const GByteArray *byteArray, const 
     }
 }
 
-void on_write(Characteristic *characteristic, const GError *error) {
+void on_write(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_write != NULL) {
@@ -112,7 +112,7 @@ void on_write(Characteristic *characteristic, const GError *error) {
                 serviceHandler,
                 binc_characteristic_get_device(characteristic),
                 characteristic,
-                NULL,
+                byteArray,
                 error);
     }
 }

@@ -56,7 +56,7 @@ typedef void (*OnNotifyCallback)(Characteristic *characteristic, const GByteArra
 
 typedef void (*OnReadCallback)(Characteristic *characteristic, const GByteArray *byteArray, const GError *error);
 
-typedef void (*OnWriteCallback)(Characteristic *characteristic, const GError *error);
+typedef void (*OnWriteCallback)(Characteristic *characteristic, const GByteArray *byteArray, const GError *error);
 
 
 void binc_characteristic_read(Characteristic *characteristic);

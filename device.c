@@ -251,17 +251,19 @@ char *binc_device_to_string(const Device *device) {
     return result;
 }
 
-static void binc_on_characteristic_read(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
+static void
+binc_on_characteristic_read(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     Device *device = binc_characteristic_get_device(characteristic);
     if (device->on_read_callback != NULL) {
         device->on_read_callback(characteristic, byteArray, error);
     }
 }
 
-static void binc_on_characteristic_write(Characteristic *characteristic, const GError *error) {
+static void
+binc_on_characteristic_write(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     Device *device = binc_characteristic_get_device(characteristic);
     if (device->on_write_callback != NULL) {
-        device->on_write_callback(characteristic, error);
+        device->on_write_callback(characteristic, byteArray, error);
     }
 }
 
@@ -316,7 +318,7 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
             g_hash_table_destroy(device->characteristics);
         }
         device->characteristics = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                                        g_free,(GDestroyNotify) binc_characteristic_free);
+                                                        g_free, (GDestroyNotify) binc_characteristic_free);
 
         g_assert(g_str_equal(g_variant_get_type_string(result), "(a{oa{sa{sv}}})"));
         g_variant_get(result, "(a{oa{sa{sv}}})", &iter);
@@ -327,7 +329,7 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                 GVariantIter iter2;
                 g_variant_iter_init(&iter2, ifaces_and_properties);
                 while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
-                    if(g_str_equal(interface_name, INTERFACE_SERVICE )) {
+                    if (g_str_equal(interface_name, INTERFACE_SERVICE)) {
                         char *uuid = NULL;
                         const gchar *property_name;
                         GVariantIter iter3;
@@ -341,7 +343,7 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                         Service *service = binc_service_create(device, object_path, uuid);
                         g_hash_table_insert(device->services, g_strdup(object_path), service);
                         g_free(uuid);
-                    } else if(g_str_equal(interface_name, INTERFACE_CHARACTERISTIC )) {
+                    } else if (g_str_equal(interface_name, INTERFACE_CHARACTERISTIC)) {
                         Characteristic *characteristic = binc_characteristic_create(device, object_path);
                         binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
                         binc_characteristic_set_write_callback(characteristic, &binc_on_characteristic_write);
@@ -719,7 +721,7 @@ ConnectionState binc_device_get_connection_state(const Device *device) {
     return device->connection_state;
 }
 
-const char* binc_device_get_connection_state_name(const Device *device) {
+const char *binc_device_get_connection_state_name(const Device *device) {
     g_assert(device != NULL);
     return connection_state_names[device->connection_state];
 }
@@ -900,7 +902,7 @@ void binc_internal_device_update_property(Device *device, const char *property_n
         binc_device_set_alias(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_CONNECTED)) {
         device->connection_state = g_variant_get_boolean(property_value) ? CONNECTED : DISCONNECTED;
-    }else if (g_str_equal(property_name, DEVICE_PROPERTY_NAME)) {
+    } else if (g_str_equal(property_name, DEVICE_PROPERTY_NAME)) {
         binc_device_set_name(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
         binc_device_set_paired(device, g_variant_get_boolean(property_value));

@@ -37,6 +37,11 @@ static const char *const CHARACTERISTIC_METHOD_START_NOTIFY = "StartNotify";
 static const char *const CHARACTERISTIC_PROPERTY_NOTIFYING = "Notifying";
 static const char *const CHARACTERISTIC_PROPERTY_VALUE = "Value";
 
+typedef struct binc_write_data {
+    GVariant *value;
+    Characteristic *characteristic;
+} WriteData;
+
 struct binc_characteristic {
     Device *device;
     GDBusConnection *connection;
@@ -122,6 +127,7 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
  */
 static GByteArray *g_variant_get_byte_array(GVariant *variant) {
     g_assert(variant != NULL);
+    g_assert(g_str_equal(g_variant_get_type_string(variant), "ay"));
 
     size_t data_length = 0;
     guint8 *data = (guint8 *) g_variant_get_fixed_array(variant, &data_length, sizeof(guchar));
@@ -192,17 +198,30 @@ void binc_characteristic_read(Characteristic *characteristic) {
 }
 
 static void binc_internal_char_write_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
-    Characteristic *characteristic = (Characteristic *) user_data;
+    WriteData *writeData = (WriteData*) user_data;
+    Characteristic *characteristic = writeData->characteristic;
     g_assert(characteristic != NULL);
 
+    GByteArray *byteArray = NULL;
     GError *error = NULL;
     GVariant *value = g_dbus_connection_call_finish(characteristic->connection, res, &error);
-    if (value != NULL) {
-        g_variant_unref(value);
+
+    if (writeData->value != NULL) {
+        byteArray = g_variant_get_byte_array(writeData->value);
     }
 
     if (characteristic->on_write_callback != NULL) {
-        characteristic->on_write_callback(characteristic, error);
+        characteristic->on_write_callback(characteristic, byteArray, error);
+    }
+
+    if (byteArray != NULL) {
+        g_byte_array_free(byteArray, FALSE);
+    }
+    g_variant_unref(writeData->value);
+    g_free(writeData);
+
+    if (value != NULL) {
+        g_variant_unref(value);
     }
 
     if (error != NULL) {
@@ -215,6 +234,7 @@ static void binc_internal_char_write_cb(GObject *source_object, GAsyncResult *re
 void binc_characteristic_write(Characteristic *characteristic, const GByteArray *byteArray, WriteType writeType) {
     g_assert(characteristic != NULL);
     g_assert(byteArray != NULL);
+    g_assert(byteArray->len > 0);
     g_assert(binc_characteristic_supports_write(characteristic, writeType));
 
     GString *byteArrayStr = g_byte_array_as_hex(byteArray);
@@ -227,6 +247,10 @@ void binc_characteristic_write(Characteristic *characteristic, const GByteArray 
     }
     GVariant *value = g_variant_builder_end(valueBuilder);
     g_variant_builder_unref(valueBuilder);
+
+    WriteData *writeData = g_new0(WriteData, 1);
+    writeData->value = g_variant_ref(value);
+    writeData->characteristic = characteristic;
 
     guint16 offset = 0;
     const char *writeTypeString = writeType == WITH_RESPONSE ? "request" : "command";
@@ -247,7 +271,7 @@ void binc_characteristic_write(Characteristic *characteristic, const GByteArray 
                            -1,
                            NULL,
                            (GAsyncReadyCallback) binc_internal_char_write_cb,
-                           characteristic);
+                           writeData);
 }
 
 static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
