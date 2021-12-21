@@ -58,12 +58,19 @@ static const char *discovery_state_names[] = {
         [STOPPING]  = "stopping"
 };
 
+typedef struct binc_discovery_filter {
+    short rssi;
+    GPtrArray *services;
+} DiscoveryFilter;
+
 struct binc_adapter {
     char *path;
     char *address;
     gboolean powered;
     gboolean discoverable;
+    gboolean discovering;
     DiscoveryState discovery_state;
+    DiscoveryFilter discovery_filter;
 
     GDBusConnection *connection;
     guint device_prop_changed;
@@ -146,8 +153,7 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
             }
         }
         if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
-            DiscoveryState discovery_state = g_variant_get_boolean(property_value);
-            binc_internal_set_discovery_state(adapter, discovery_state);
+            adapter->discovering = g_variant_get_boolean(property_value);
         }
     }
 
@@ -155,6 +161,34 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
         g_variant_iter_free(properties);
     if (unknown != NULL)
         g_variant_iter_free(unknown);
+}
+
+
+static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
+    if (binc_device_get_rssi(device) < adapter->discovery_filter.rssi) return FALSE;
+
+    GPtrArray *services_filter = adapter->discovery_filter.services;
+    if (services_filter != NULL) {
+        for (int i=0; i< services_filter->len; i++) {
+               const char* uuid_filter = g_ptr_array_index(services_filter, i);
+               if (binc_device_has_service(device, uuid_filter)) {
+                   return TRUE;
+               }
+        }
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void deliver_discovery_result(Adapter *adapter, Device *device) {
+    if (binc_device_get_connection_state(device) == DISCONNECTED) {
+        // Double check if the device matches the discovery filter
+        if (!matches_discovery_filter(adapter, device)) return;
+
+        if (adapter->discoveryResultCallback != NULL) {
+            adapter->discoveryResultCallback(adapter, device);
+        }
+    }
 }
 
 static void binc_internal_device_disappeared(GDBusConnection *sig,
@@ -219,10 +253,9 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
                 binc_internal_device_update_property(device, property_name, property_value);
             }
 
-            // Update cache and deliver Device to registered callback
             g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
-            if (adapter->discoveryResultCallback != NULL) {
-                adapter->discoveryResultCallback(adapter, device);
+            if (adapter->discovery_state == STARTED) {
+                deliver_discovery_result(adapter, device);
             }
         }
     }
@@ -259,11 +292,6 @@ static void binc_internal_device_getall_properties_cb(GObject *source_object, GA
             g_variant_iter_free(iter);
         }
         g_variant_unref(result);
-
-        Adapter *adapter = binc_device_get_adapter(device);
-        if (adapter != NULL && adapter->discoveryResultCallback != NULL) {
-            adapter->discoveryResultCallback(adapter, device);
-        }
     }
 }
 
@@ -281,6 +309,8 @@ static void binc_internal_device_getall_properties(Adapter *adapter, Device *dev
                            (GAsyncReadyCallback) binc_internal_device_getall_properties_cb,
                            device);
 }
+
+
 
 static void binc_internal_device_changed(GDBusConnection *conn,
                                          const gchar *sender,
@@ -317,11 +347,7 @@ static void binc_internal_device_changed(GDBusConnection *conn,
             }
         }
         if (adapter->discovery_state == STARTED && isDiscoveryResult) {
-            if (binc_device_get_connection_state(device) == DISCONNECTED) {
-                if (adapter->discoveryResultCallback != NULL) {
-                    adapter->discoveryResultCallback(adapter, device);
-                }
-            }
+            deliver_discovery_result(adapter, device);
         }
     }
 
@@ -385,6 +411,8 @@ static Adapter *binc_adapter_create(GDBusConnection *connection, const char *pat
     Adapter *adapter = g_new0(Adapter, 1);
     adapter->connection = connection;
     adapter->path = g_strdup(path);
+    adapter->discovery_filter.services = NULL;
+    adapter->discovery_filter.rssi = -255;
     adapter->devices_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                    g_free, (GDestroyNotify) binc_device_free);
     setup_signal_subscribers(adapter);
@@ -404,10 +432,23 @@ static void remove_signal_subscribers(Adapter *adapter) {
     adapter->iface_removed = 0;
 }
 
+void free_discovery_filter(Adapter *adapter) {
+    for (int i=0; i < adapter->discovery_filter.services->len; i++) {
+        char* uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
+        g_free(uuid_filter);
+    }
+    g_ptr_array_free(adapter->discovery_filter.services, TRUE);
+    adapter->discovery_filter.services = NULL;
+}
+
 void binc_adapter_free(Adapter *adapter) {
     g_assert(adapter != NULL);
 
     remove_signal_subscribers(adapter);
+
+    if (adapter->discovery_filter.services != NULL) {
+        free_discovery_filter(adapter);
+    }
 
     if (adapter->devices_cache != NULL) {
         g_hash_table_destroy(adapter->devices_cache);
@@ -466,7 +507,7 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_POWERED)) {
                             adapter->powered = g_variant_get_boolean(property_value);
                         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
-                            adapter->discovery_state = g_variant_get_boolean(property_value);
+                            adapter->discovering = g_variant_get_boolean(property_value);
                         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERABLE)) {
                             adapter->discoverable = g_variant_get_boolean(property_value);
                         }
@@ -519,6 +560,8 @@ static void binc_internal_start_discovery_cb(GObject *source_object, GAsyncResul
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
         g_clear_error(&error);
+    } else {
+        binc_internal_set_discovery_state(adapter, STARTED);
     }
 
     if (value != NULL) {
@@ -559,6 +602,8 @@ static void binc_internal_stop_discovery_cb(GObject *source_object, GAsyncResult
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
         g_clear_error(&error);
+    } else {
+        binc_internal_set_discovery_state(adapter, STOPPED);
     }
 
     if (value != NULL) {
@@ -595,7 +640,17 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
                                       g_variant_new("(o)", binc_device_get_path(device)));
 }
 
+
+
+
 void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids) {
+    // Setup discovery filter so we can double-check the results later
+    if (adapter->discovery_filter.services != NULL) {
+        free_discovery_filter(adapter);
+    }
+    adapter->discovery_filter.services = g_ptr_array_new();
+    adapter->discovery_filter.rssi = rssi_threshold;
+
     GVariantBuilder *arguments = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(arguments, "{sv}", "Transport", g_variant_new_string("le"));
     g_variant_builder_add(arguments, "{sv}", DEVICE_PROPERTY_RSSI, g_variant_new_int16(rssi_threshold));
@@ -604,9 +659,10 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, G
     if (service_uuids != NULL && service_uuids->len > 0) {
         GVariantBuilder *uuids = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
         for (int i = 0; i < service_uuids->len; i++) {
-            const char *uuid = g_ptr_array_index(service_uuids, i);
+            char *uuid = g_ptr_array_index(service_uuids, i);
             g_assert(g_uuid_string_is_valid(uuid));
             g_variant_builder_add(uuids, "s", uuid);
+            g_ptr_array_add(adapter->discovery_filter.services, g_strdup(uuid));
         }
         g_variant_builder_add(arguments, "{sv}", DEVICE_PROPERTY_UUIDS, g_variant_builder_end(uuids));
         g_variant_builder_unref(uuids);

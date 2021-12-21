@@ -893,6 +893,17 @@ Adapter *binc_device_get_adapter(const Device *device) {
     return device->adapter;
 }
 
+gboolean binc_device_has_service(const Device *device, const char* service_uuid) {
+    if (g_list_length(device->uuids) > 0) {
+        for (GList *iterator = device->uuids; iterator; iterator = iterator->next) {
+            if(g_str_equal(service_uuid, (char *) iterator->data)) {
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
 void binc_internal_device_update_property(Device *device, const char *property_name, GVariant *property_value) {
     if (g_str_equal(property_name, DEVICE_PROPERTY_ADDRESS)) {
         binc_device_set_address(device, g_variant_get_string(property_value, NULL));

@@ -74,6 +74,8 @@ void binc_device_set_services_resolved_callback(Device *device, ServicesResolved
 
 void binc_device_set_bonding_state_changed_callback(Device *device, BondingStateChangedCallback callback);
 
+gboolean binc_device_has_service(const Device *device, const char* service_uuid);
+
 GList *binc_device_get_services(const Device *device);
 
 Service *binc_device_get_service(const Device *device, const char *service_uuid);
