@@ -147,7 +147,9 @@ void device_info_set_software_version(DeviceInfo *deviceInfo, const char *softwa
 }
 
 void device_info_set_device_time(DeviceInfo *deviceInfo, GDateTime *device_time) {
+    g_assert(deviceInfo != NULL);
     g_assert(device_time != NULL);
+
     if (deviceInfo->device_time != NULL) {
         g_date_time_unref(deviceInfo->device_time);
     }
@@ -155,6 +157,7 @@ void device_info_set_device_time(DeviceInfo *deviceInfo, GDateTime *device_time)
 }
 
 void device_info_set_last_observation_timestamp(DeviceInfo *deviceInfo, GDateTime *timestamp) {
+    g_assert(deviceInfo != NULL);
     g_assert(timestamp != NULL);
 
     if (deviceInfo->last_observation_timestamp == timestamp) return;
@@ -162,7 +165,7 @@ void device_info_set_last_observation_timestamp(DeviceInfo *deviceInfo, GDateTim
     if (deviceInfo->last_observation_timestamp != NULL) {
         g_date_time_unref(deviceInfo->last_observation_timestamp);
     }
-    deviceInfo->last_observation_timestamp = g_date_time_ref(timestamp);
+    deviceInfo->last_observation_timestamp = g_date_time_new_from_unix_local(g_date_time_to_unix(timestamp));
 }
 
 const char *device_info_get_address(DeviceInfo *deviceInfo) {

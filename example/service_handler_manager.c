@@ -15,7 +15,7 @@ struct binc_service_handler_manager {
     GHashTable *service_handlers;
 };
 
-ServiceHandlerManager* binc_service_handler_manager_create() {
+ServiceHandlerManager *binc_service_handler_manager_create() {
     ServiceHandlerManager *serviceHandlerManager = g_new0(ServiceHandlerManager, 1);
     serviceHandlerManager->service_handlers = g_hash_table_new(g_str_hash, g_str_equal);
     return serviceHandlerManager;
@@ -42,7 +42,7 @@ void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerMana
 
 
 static void log_observation(Observation *observation) {
-    char* time_string = binc_date_time_format_iso8601(observation->timestamp);
+    char *time_string = binc_date_time_format_iso8601(observation->timestamp);
     log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
               observation->value,
               observation_unit_str(observation->unit),
@@ -54,39 +54,46 @@ static void log_observation(Observation *observation) {
 
 static gboolean g_date_time_is_later_or_equal_than(GDateTime *end, GDateTime *begin) {
     g_assert(end != NULL);
-    g_assert(begin != NULL);
+    if (begin == NULL) return TRUE;
 
     return g_date_time_compare(end, begin) >= 0;
 }
 
+static gboolean g_date_time_is_later_than(GDateTime *end, GDateTime *begin) {
+    g_assert(end != NULL);
+    if (begin == NULL) return TRUE;
+
+    return g_date_time_compare(end, begin) > 0;
+}
+
 static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
-    GDateTime *latest_timestamp = device_info_get_last_observation_timestamp(deviceInfo);
-    GDateTime *last_observation_timestamp = latest_timestamp;
+    GDateTime *last_observation_timestamp = device_info_get_last_observation_timestamp(deviceInfo);
+    GDateTime *latest_timestamp = NULL;
     GList *filtered_observations = NULL;
 
     for (GList *iterator = observations; iterator; iterator = iterator->next) {
         Observation *observation = (Observation *) iterator->data;
 
-        // Filter out the new observations and find the last one
-        if (latest_timestamp == NULL) {
-            latest_timestamp = observation->timestamp;
-            last_observation_timestamp = observation->timestamp;
-            filtered_observations = g_list_append(filtered_observations, observation);
-            log_observation(observation);
-        } else if(g_date_time_is_later_or_equal_than(observation->timestamp, last_observation_timestamp)) {
+        // Filter out the new observations and find the latest one
+        if (g_date_time_is_later_than(observation->timestamp, last_observation_timestamp)) {
             filtered_observations = g_list_append(filtered_observations, observation);
             log_observation(observation);
 
-            if (g_date_time_is_later_or_equal_than(observation->timestamp, last_observation_timestamp)) {
+            if (g_date_time_is_later_or_equal_than(observation->timestamp, latest_timestamp)) {
                 latest_timestamp = observation->timestamp;
             }
         } else {
             log_debug(TAG, "ignoring old observation");
         }
+    }
 
-        if (latest_timestamp != NULL) {
-            device_info_set_last_observation_timestamp(deviceInfo, latest_timestamp);
-        }
+    if (g_list_length(filtered_observations) == 0) {
+        g_list_free(filtered_observations);
+        return;
+    }
+
+    if (latest_timestamp != NULL) {
+        device_info_set_last_observation_timestamp(deviceInfo, latest_timestamp);
     }
 
     // Build bundle
@@ -96,13 +103,13 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     cJSON *entries = cJSON_AddArrayToObject(fhir_json, "entry");
 
     // Add device
-    GString* device_full_url = g_string_new("urn:uuid:");
-    gchar* device_full_url_uuid = g_uuid_string_random();
+    GString *device_full_url = g_string_new("urn:uuid:");
+    gchar *device_full_url_uuid = g_uuid_string_random();
     g_string_append(device_full_url, device_full_url_uuid);
     g_free(device_full_url_uuid);
     cJSON *device_entry = cJSON_CreateObject();
     cJSON_AddStringToObject(device_entry, "fullUrl", device_full_url->str);
-    cJSON_AddItemToObject(device_entry, "resource", device_info_to_fhir(deviceInfo) );
+    cJSON_AddItemToObject(device_entry, "resource", device_info_to_fhir(deviceInfo));
     cJSON *device_request = cJSON_CreateObject();
     cJSON_AddStringToObject(device_request, "method", "POST");
     cJSON_AddStringToObject(device_request, "url", "Device");
@@ -119,14 +126,15 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     cJSON_AddItemToArray(entries, device_entry);
 
     // Add observation
-    gchar* observation_full_url_uuid = g_uuid_string_random();
-    GString* observation_full_url = g_string_new("urn:uuid:");
+    gchar *observation_full_url_uuid = g_uuid_string_random();
+    GString *observation_full_url = g_string_new("urn:uuid:");
     g_string_append(observation_full_url, observation_full_url_uuid);
     g_free(observation_full_url_uuid);
     cJSON *observation_entry = cJSON_CreateObject();
     cJSON_AddStringToObject(observation_entry, "fullUrl", observation_full_url->str);
     g_string_free(observation_full_url, TRUE);
-    cJSON_AddItemToObject(observation_entry, "resource", observation_list_as_fhir(filtered_observations, device_full_url->str));
+    cJSON_AddItemToObject(observation_entry, "resource",
+                          observation_list_as_fhir(filtered_observations, device_full_url->str));
     g_string_free(device_full_url, TRUE);
     cJSON *observation_request = cJSON_CreateObject();
     cJSON_AddStringToObject(observation_request, "method", "POST");
@@ -137,7 +145,7 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
     char *result = cJSON_Print(fhir_json);
     g_print("%s", result);
     cJSON_Delete(fhir_json);
-  //  postFhir(result);
+    //  postFhir(result);
     g_free(result);
     g_list_free(filtered_observations);
 }
@@ -152,7 +160,8 @@ void binc_service_handler_manager_add(ServiceHandlerManager *serviceHandlerManag
     g_hash_table_insert(serviceHandlerManager->service_handlers, g_strdup(service_handler->uuid), service_handler);
 }
 
-ServiceHandler* binc_service_handler_manager_get(ServiceHandlerManager *serviceHandlerManager, const char* service_uuid) {
+ServiceHandler *
+binc_service_handler_manager_get(ServiceHandlerManager *serviceHandlerManager, const char *service_uuid) {
     g_assert(serviceHandlerManager != NULL);
     g_assert(service_uuid != NULL);
     g_assert(g_uuid_string_is_valid(service_uuid));
