@@ -52,8 +52,11 @@ static void log_observation(Observation *observation) {
     g_free(time_string);
 }
 
-static gboolean g_date_time_is_later_than(GDateTime *end, GDateTime *begin) {
-    return g_date_time_compare(end, begin) > 0;
+static gboolean g_date_time_is_later_or_equal_than(GDateTime *end, GDateTime *begin) {
+    g_assert(end != NULL);
+    g_assert(begin != NULL);
+
+    return g_date_time_compare(end, begin) >= 0;
 }
 
 static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
@@ -67,13 +70,14 @@ static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
         // Filter out the new observations and find the last one
         if (latest_timestamp == NULL) {
             latest_timestamp = observation->timestamp;
+            last_observation_timestamp = observation->timestamp;
             filtered_observations = g_list_append(filtered_observations, observation);
             log_observation(observation);
-        } else if(g_date_time_is_later_than(observation->timestamp, last_observation_timestamp)) {
+        } else if(g_date_time_is_later_or_equal_than(observation->timestamp, last_observation_timestamp)) {
             filtered_observations = g_list_append(filtered_observations, observation);
             log_observation(observation);
 
-            if (g_date_time_is_later_than(observation->timestamp, last_observation_timestamp)) {
+            if (g_date_time_is_later_or_equal_than(observation->timestamp, last_observation_timestamp)) {
                 latest_timestamp = observation->timestamp;
             }
         } else {
