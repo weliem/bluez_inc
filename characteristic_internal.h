@@ -28,4 +28,6 @@ void binc_characteristic_set_flags(Characteristic *characteristic, GList *flags)
 
 void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uuid);
 
+void binc_characteristic_set_notifying(Characteristic *characteristic, gboolean notifying);
+
 #endif //BINC_CHARACTERISTIC_INTERNAL_H

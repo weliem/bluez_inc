@@ -363,6 +363,8 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                                                                      g_variant_get_string(prop_val, NULL));
                             } else if (g_str_equal(property_name, "Flags")) {
                                 binc_characteristic_set_flags(characteristic, g_variant_string_array_to_list(prop_val));
+                            } else if (g_str_equal(property_name, "Notifying")) {
+                                binc_characteristic_set_notifying(characteristic, g_variant_get_boolean(prop_val));
                             }
                         }
 

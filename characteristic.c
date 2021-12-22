@@ -350,22 +350,27 @@ static void binc_internal_char_start_notify_cb(GObject *source_object, GAsyncRes
     }
 }
 
+void register_for_properties_changed_signal(Characteristic *characteristic) {
+    if (characteristic->characteristic_prop_changed == 0) {
+        characteristic->characteristic_prop_changed = g_dbus_connection_signal_subscribe(characteristic->connection,
+                                                                                         BLUEZ_DBUS,
+                                                                                         "org.freedesktop.DBus.Properties",
+                                                                                         "PropertiesChanged",
+                                                                                         characteristic->path,
+                                                                                         INTERFACE_CHARACTERISTIC,
+                                                                                         G_DBUS_SIGNAL_FLAGS_NONE,
+                                                                                         binc_internal_signal_characteristic_changed,
+                                                                                         characteristic,
+                                                                                         NULL);
+    }
+}
+
 void binc_characteristic_start_notify(Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     g_assert(binc_characteristic_supports_notify(characteristic));
 
     log_debug(TAG, "start notify for <%s>", characteristic->uuid);
-    characteristic->characteristic_prop_changed = g_dbus_connection_signal_subscribe(characteristic->connection,
-                                                                                     BLUEZ_DBUS,
-                                                                                     "org.freedesktop.DBus.Properties",
-                                                                                     "PropertiesChanged",
-                                                                                     characteristic->path,
-                                                                                     INTERFACE_CHARACTERISTIC,
-                                                                                     G_DBUS_SIGNAL_FLAGS_NONE,
-                                                                                     binc_internal_signal_characteristic_changed,
-                                                                                     characteristic,
-                                                                                     NULL);
-
+    register_for_properties_changed_signal(characteristic);
 
     g_dbus_connection_call(characteristic->connection,
                            BLUEZ_DBUS,
@@ -444,6 +449,15 @@ void binc_characteristic_set_notifying_state_change_callback(Characteristic *cha
     g_assert(callback != NULL);
 
     characteristic->notify_state_callback = callback;
+}
+
+void binc_characteristic_set_notifying(Characteristic *characteristic, gboolean notifying) {
+    g_assert(characteristic != NULL);
+    characteristic->notifying = notifying;
+
+    if(characteristic->notifying) {
+        register_for_properties_changed_signal(characteristic);
+    }
 }
 
 const char *binc_characteristic_get_uuid(const Characteristic *characteristic) {
