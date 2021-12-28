@@ -933,7 +933,6 @@ void binc_internal_device_update_property(Device *device, const char *property_n
 
         GVariant *array;
         uint16_t key;
-        uint8_t val;
         GHashTable *manufacturer_data = g_hash_table_new_full(g_int_hash, g_int_equal,
                                                               g_free, (GDestroyNotify) byte_array_free);
         while (g_variant_iter_loop(iter, "{qv}", &key, &array)) {

@@ -462,6 +462,16 @@ void binc_adapter_free(Adapter *adapter) {
     g_free(adapter);
 }
 
+static Adapter *binc_internal_get_adapter_by_path(GPtrArray *adapters, const char* path) {
+    for (int i = 0; i < adapters->len; i++) {
+        Adapter *adapter = g_ptr_array_index(adapters, i);
+        const char* adapter_path = binc_adapter_get_path(adapter);
+        if (g_str_has_prefix(path, adapter_path)) {
+            return adapter;
+        }
+    }
+    return NULL;
+}
 
 static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
     g_assert(dbusConnection != NULL);
@@ -513,6 +523,19 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                         }
                     }
                     g_ptr_array_add(binc_adapters, adapter);
+                } else if(g_str_equal(interface_name, INTERFACE_DEVICE)) {
+                    Adapter *adapter = binc_internal_get_adapter_by_path(binc_adapters, object_path);
+                    Device *device = binc_create_device(object_path, adapter);
+                    g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
+
+                    gchar *property_name;
+                    GVariantIter iter4;
+                    GVariant *property_value;
+                    g_variant_iter_init(&iter4, properties);
+                    while (g_variant_iter_loop(&iter4, "{&sv}", &property_name, &property_value)) {
+                        binc_internal_device_update_property(device, property_name, property_value);
+                    }
+                    log_debug(TAG, "found device %s '%s'", object_path, binc_device_get_name(device));
                 }
             }
         }
