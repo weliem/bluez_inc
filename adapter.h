@@ -55,7 +55,9 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, G
 
 void binc_adapter_remove_device(Adapter *adapter, Device *device);
 
-Device *binc_adapter_get_device_by_path(Adapter *adapter, const char *path);
+GList* binc_adapter_get_devices(const Adapter *adapter);
+
+Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path);
 
 void binc_adapter_power_on(Adapter *adapter);
 

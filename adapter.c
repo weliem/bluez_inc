@@ -664,7 +664,9 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
 }
 
 
-
+GList* binc_adapter_get_devices(const Adapter *adapter) {
+    return g_hash_table_get_values(adapter->devices_cache);
+}
 
 void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids) {
     // Setup discovery filter so we can double-check the results later
@@ -771,7 +773,7 @@ gboolean binc_adapter_get_powered_state(const Adapter *adapter) {
     return adapter->powered;
 }
 
-Device *binc_adapter_get_device_by_path(Adapter *adapter, const char *path) {
+Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path) {
     g_assert(adapter != NULL);
     return g_hash_table_lookup(adapter->devices_cache, path);
 }
