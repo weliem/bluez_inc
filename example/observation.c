@@ -11,7 +11,8 @@ const char *observation_type_loinc_codes[] = {
         [BLOOD_PRESSURE_DIASTOLIC] = "8462-4",
         [BLOOD_PRESSURE_MEAN]  = "8478-0",
         [BLOOD_PRESSURE_PULSE]  = "8867-4",
-        [BODY_TEMPERATURE]  = "8310-5"
+        [BODY_TEMPERATURE]  = "8310-5",
+        [BODY_WEIGHT] = "3141-9",
 };
 
 const char *observation_type_loinc_display[] = {
@@ -19,7 +20,8 @@ const char *observation_type_loinc_display[] = {
         [BLOOD_PRESSURE_DIASTOLIC] = "Diastolic blood pressure",
         [BLOOD_PRESSURE_MEAN]  = "Mean arterial blood pressure",
         [BLOOD_PRESSURE_PULSE]  = "Blood pressure pulse",
-        [BODY_TEMPERATURE]  = "Body temperature"
+        [BODY_TEMPERATURE]  = "Body temperature",
+        [BODY_WEIGHT] = "Body weight measured"
 };
 
 const char *observation_precision[] = {
@@ -27,7 +29,8 @@ const char *observation_precision[] = {
         [BLOOD_PRESSURE_DIASTOLIC] = "0",
         [BLOOD_PRESSURE_MEAN]  = "0",
         [BLOOD_PRESSURE_PULSE]  = "0",
-        [BODY_TEMPERATURE]  = "1"
+        [BODY_TEMPERATURE]  = "1",
+        [BODY_WEIGHT] = "1"
 };
 
 const char *observation_unit_ucum[] = {
@@ -35,7 +38,9 @@ const char *observation_unit_ucum[] = {
         [FAHRENHEIT] =  "[degF]",
         [MMHG] = "mm[Hg]",
         [KPA] = "kPa",
-        [BPM] = "/min"
+        [BPM] = "/min",
+        [KG] = "kg",
+        [LBS] = "[lb_av]"
 };
 
 const char *observation_get_loinc_code(Observation *observation) {

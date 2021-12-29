@@ -954,7 +954,6 @@ void binc_internal_device_update_property(Device *device, const char *property_n
 
         GVariant *array;
         char *key;
-        uint8_t val;
 
         GHashTable *service_data = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                          g_free, (GDestroyNotify) byte_array_free);

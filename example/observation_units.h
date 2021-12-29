@@ -10,7 +10,9 @@ typedef enum observation_unit {
     CELSIUS = 1,
     MMHG = 2,
     KPA = 3,
-    BPM = 4
+    BPM = 4,
+    LBS = 5,
+    KG = 6
 } ObservationUnit;
 
 const char* observation_unit_str(ObservationUnit unit);

@@ -10,7 +10,8 @@ typedef enum observation_type {
     BLOOD_PRESSURE_SYSTOLIC = 1,
     BLOOD_PRESSURE_DIASTOLIC = 2,
     BLOOD_PRESSURE_MEAN = 3,
-    BLOOD_PRESSURE_PULSE = 4
+    BLOOD_PRESSURE_PULSE = 4,
+    BODY_WEIGHT = 5
 } ObservationType;
 
 #endif //TEST_OBSERVATION_TYPE_H

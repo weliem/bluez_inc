@@ -9,7 +9,9 @@ const char *observation_unit_names[] = {
         [CELSIUS] = "Celsius",
         [MMHG]  = "mmHg",
         [KPA]  = "kPa",
-        [BPM]  = "bpm"
+        [BPM]  = "bpm",
+        [LBS] = "lbs",
+        [KG] = "Kg"
 };
 
 const char* observation_unit_str(ObservationUnit unit) {
