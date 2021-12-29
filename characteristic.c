@@ -241,12 +241,7 @@ void binc_characteristic_write(Characteristic *characteristic, const GByteArray 
     log_debug(TAG, "writing <%s> to <%s>", byteArrayStr->str, characteristic->uuid);
     g_string_free(byteArrayStr, TRUE);
 
-    GVariantBuilder *valueBuilder = g_variant_builder_new(G_VARIANT_TYPE("ay"));
-    for (int i = 0; i < byteArray->len; i++) {
-        g_variant_builder_add(valueBuilder, "y", byteArray->data[i]);
-    }
-    GVariant *value = g_variant_builder_end(valueBuilder);
-    g_variant_builder_unref(valueBuilder);
+    GVariant *value = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data, byteArray->len, sizeof(guint8));
 
     WriteData *writeData = g_new0(WriteData, 1);
     writeData->value = g_variant_ref(value);
