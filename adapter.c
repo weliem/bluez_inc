@@ -669,6 +669,10 @@ GList* binc_adapter_get_devices(const Adapter *adapter) {
 }
 
 void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids) {
+    g_assert(adapter != NULL);
+    g_assert(rssi_threshold >= -127);
+    g_assert(rssi_threshold <= 20);
+
     // Setup discovery filter so we can double-check the results later
     if (adapter->discovery_filter.services != NULL) {
         free_discovery_filter(adapter);
