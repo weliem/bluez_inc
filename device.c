@@ -937,7 +937,7 @@ void binc_internal_device_update_property(Device *device, const char *property_n
                                                               g_free, (GDestroyNotify) byte_array_free);
         while (g_variant_iter_loop(iter, "{qv}", &key, &array)) {
             size_t data_length = 0;
-            guint8 *data = (guint8 *) g_variant_get_fixed_array(array, &data_length, sizeof(guchar));
+            guint8 *data = (guint8 *) g_variant_get_fixed_array(array, &data_length, sizeof(guint8));
             GByteArray *byteArray = g_byte_array_sized_new(data_length);
             g_byte_array_append(byteArray, data, data_length);
 
@@ -959,7 +959,7 @@ void binc_internal_device_update_property(Device *device, const char *property_n
                                                          g_free, (GDestroyNotify) byte_array_free);
         while (g_variant_iter_loop(iter, "{sv}", &key, &array)) {
             size_t data_length = 0;
-            guint8 *data = (guint8 *) g_variant_get_fixed_array(array, &data_length, sizeof(guchar));
+            guint8 *data = (guint8 *) g_variant_get_fixed_array(array, &data_length, sizeof(guint8));
             GByteArray *byteArray = g_byte_array_sized_new(data_length);
             g_byte_array_append(byteArray, data, data_length);
 

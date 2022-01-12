@@ -130,7 +130,7 @@ static GByteArray *g_variant_get_byte_array(GVariant *variant) {
     g_assert(g_str_equal(g_variant_get_type_string(variant), "ay"));
 
     size_t data_length = 0;
-    guint8 *data = (guint8 *) g_variant_get_fixed_array(variant, &data_length, sizeof(guchar));
+    guint8 *data = (guint8 *) g_variant_get_fixed_array(variant, &data_length, sizeof(guint8));
     return g_byte_array_new_take(data, data_length);
 }
 
