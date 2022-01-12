@@ -11,7 +11,8 @@ const char *observation_unit_names[] = {
         [KPA]  = "kPa",
         [BPM]  = "bpm",
         [LBS] = "lbs",
-        [KG] = "Kg"
+        [KG] = "Kg",
+        [PERCENT] = "%"
 };
 
 const char* observation_unit_str(ObservationUnit unit) {

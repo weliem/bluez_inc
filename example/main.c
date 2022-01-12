@@ -29,12 +29,13 @@
 #include "../logger.h"
 #include "../agent.h"
 #include "service_handler_manager.h"
-#include "hts_service_handler.h"
-#include "dis_service_handler.h"
-#include "cts_service_handler.h"
-#include "blp_service_handler.h"
+#include "services/hts_service_handler.h"
+#include "services/dis_service_handler.h"
+#include "services/cts_service_handler.h"
+#include "services/blp_service_handler.h"
 #include "device_info.h"
-#include "wss_service_handler.h"
+#include "services/wss_service_handler.h"
+#include "services/plx_service_handler.h"
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
@@ -278,6 +279,7 @@ int main(void) {
         g_ptr_array_add(service_uuids, HTS_SERVICE_UUID);
         g_ptr_array_add(service_uuids, BLP_SERVICE_UUID);
         g_ptr_array_add(service_uuids, WSS_SERVICE_UUID);
+        g_ptr_array_add(service_uuids, PLX_SERVICE_UUID);
 
         // Setup service handlers
         serviceHandlerManager = binc_service_handler_manager_create();
@@ -286,11 +288,13 @@ int main(void) {
         ServiceHandler *cts_service_handler = cts_service_handler_create();
         ServiceHandler *blp_service_handler = blp_service_handler_create();
         ServiceHandler *wss_service_handler = wss_service_handler_create();
+        ServiceHandler *plx_service_handler = plx_service_handler_create();
         binc_service_handler_manager_add(serviceHandlerManager, hts_service_handler);
         binc_service_handler_manager_add(serviceHandlerManager, dis_service_handler);
         binc_service_handler_manager_add(serviceHandlerManager, cts_service_handler);
         binc_service_handler_manager_add(serviceHandlerManager, blp_service_handler);
         binc_service_handler_manager_add(serviceHandlerManager, wss_service_handler);
+        binc_service_handler_manager_add(serviceHandlerManager, plx_service_handler);
 
         // Set discovery callbacks and start discovery
         binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);

@@ -12,7 +12,8 @@ typedef enum observation_unit {
     KPA = 3,
     BPM = 4,
     LBS = 5,
-    KG = 6
+    KG = 6,
+    PERCENT = 7
 } ObservationUnit;
 
 const char* observation_unit_str(ObservationUnit unit);

@@ -3,13 +3,13 @@
 //
 
 #include "hts_service_handler.h"
-#include "../characteristic.h"
-#include "../parser.h"
-#include "../logger.h"
-#include "../device.h"
-#include "observation_units.h"
-#include "observation.h"
-#include "observation_location.h"
+#include "../../characteristic.h"
+#include "../../parser.h"
+#include "../../logger.h"
+#include "../../device.h"
+#include "../observation_units.h"
+#include "../observation.h"
+#include "../observation_location.h"
 
 #define TAG "HTS_Service_Handler"
 

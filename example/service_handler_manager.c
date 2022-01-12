@@ -43,7 +43,7 @@ void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerMana
 
 static void log_observation(Observation *observation) {
     char *time_string = binc_date_time_format_iso8601(observation->timestamp);
-    log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
+    log_debug(TAG, "observation{spo2_value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
               observation->value,
               observation_unit_str(observation->unit),
               observation_get_display_str(observation),

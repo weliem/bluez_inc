@@ -3,14 +3,14 @@
 //
 
 #include "wss_service_handler.h"
-#include "../characteristic.h"
-#include "../parser.h"
-#include "../logger.h"
-#include "../device.h"
-#include "observation_units.h"
-#include "observation.h"
-#include "observation_location.h"
-#include "../utility.h"
+#include "../../characteristic.h"
+#include "../../parser.h"
+#include "../../logger.h"
+#include "../../device.h"
+#include "../observation_units.h"
+#include "../observation.h"
+#include "../observation_location.h"
+#include "../../utility.h"
 
 #define TAG "WSS_Service_Handler"
 

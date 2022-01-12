@@ -3,11 +3,11 @@
 //
 
 #include "cts_service_handler.h"
-#include "../characteristic.h"
-#include "../parser.h"
-#include "../logger.h"
-#include "../device.h"
-#include "../utility.h"
+#include "../../characteristic.h"
+#include "../../parser.h"
+#include "../../logger.h"
+#include "../../device.h"
+#include "../../utility.h"
 
 #define TAG "CTS_Service_Handler"
 

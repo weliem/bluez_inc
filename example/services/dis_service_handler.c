@@ -3,11 +3,11 @@
 //
 
 #include "dis_service_handler.h"
-#include "../characteristic.h"
-#include "../parser.h"
-#include "../logger.h"
-#include "../device.h"
-#include "device_info.h"
+#include "../../characteristic.h"
+#include "../../parser.h"
+#include "../../logger.h"
+#include "../../device.h"
+#include "../device_info.h"
 
 #define TAG "DIS_Service_Handler"
 

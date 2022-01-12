@@ -3,12 +3,12 @@
 //
 
 #include "blp_service_handler.h"
-#include "../characteristic.h"
-#include "../parser.h"
-#include "../logger.h"
-#include "../device.h"
-#include "observation_units.h"
-#include "observation.h"
+#include "../../characteristic.h"
+#include "../../parser.h"
+#include "../../logger.h"
+#include "../../device.h"
+#include "../observation_units.h"
+#include "../observation.h"
 
 #define TAG "BLP_Service_Handler"
 
