@@ -43,7 +43,11 @@ static void plx_onNotificationStateUpdated(ServiceHandler *service_handler,
 typedef struct plx_spot_measurement {
     float spo2_value;
     float pulse_value;
+    float pulse_amplitude_index;
+    guint16 measurement_status;
+    guint16 sensor_status;
     GDateTime *timestamp;
+    gboolean is_device_clock_set;
 } SpotMeasurement;
 
 static Observation *plx_spot_measurement_as_observation(SpotMeasurement *measurement) {
@@ -67,15 +71,16 @@ static SpotMeasurement *plx_create_spot_measurement(const GByteArray *byteArray)
     gboolean measurementStatusPresent = (flags & 0x02) > 0;
     gboolean sensorStatusPresent = (flags & 0x04) > 0;
     gboolean pulseAmplitudeIndexPresent = (flags & 0x08) > 0;
-    gboolean isDeviceClockSet = (flags & 0x10) == 0;
+    measurement->is_device_clock_set = (flags & 0x10) == 0;
 
     measurement->spo2_value = parser_get_sfloat(parser);
     measurement->pulse_value = parser_get_sfloat(parser);
     measurement->timestamp = timestampPresent ? parser_get_date_time(parser) : NULL;
-//        val measurementStatus = if (measurementStatusPresent) parser.getIntValue(FORMAT_UINT16) else null
-//        val sensorStatus = if (sensorStatusPresent) parser.getIntValue(FORMAT_UINT16) else null
-//        if (sensorStatusPresent) parser.getIntValue(FORMAT_UINT8) // Reserved byte
-//    val pulseAmplitudeIndex = if (pulseAmplitudeIndexPresent) parser.getFloatValue(FORMAT_SFLOAT) else null
+    measurement->measurement_status = measurementStatusPresent ? parser_get_uint16(parser) : 0xFFFF;
+    measurement->sensor_status = sensorStatusPresent ? parser_get_uint16(parser) : 0xFFFF;
+    guint8 reserved_byte = sensorStatusPresent ? parser_get_uint8(parser) : 0xFF;
+    measurement->pulse_amplitude_index = pulseAmplitudeIndexPresent ? parser_get_sfloat(parser) : 0x00;
+
     parser_free(parser);
     return measurement;
 }
@@ -97,6 +102,11 @@ static void plx_onCharacteristicChanged(ServiceHandler *service_handler,
 
     if (g_str_equal(uuid, SPOT_MEASUREMENT_CHAR_UUID)) {
         SpotMeasurement *measurement = plx_create_spot_measurement(byteArray);
+
+        if (measurement->timestamp == NULL) {
+            log_debug(TAG, "Ignoring spot measurement without timestamp");
+            return;
+        }
 
         Observation *observation = plx_spot_measurement_as_observation(measurement);
         plx_spot_measurement_free(measurement);
