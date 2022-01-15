@@ -62,11 +62,15 @@ void binc_device_disconnect(Device *device);
 
 void binc_device_set_read_char_callback(Device *device, OnReadCallback callback);
 
+gboolean binc_device_read_char(const Device *device, const char* service_uuid, const char *characteristic_uuid);
+
 void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback);
 
 void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback);
 
 void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChangedCallback callback);
+
+gboolean binc_device_start_notify(const Device *device, const char* service_uuid, const char *characteristic_uuid);
 
 void binc_device_set_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 

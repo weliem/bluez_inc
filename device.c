@@ -700,6 +700,15 @@ void binc_device_set_read_char_callback(Device *device, OnReadCallback callback)
     device->on_read_callback = callback;
 }
 
+gboolean binc_device_read_char(const Device *device, const char* service_uuid, const char *characteristic_uuid) {
+    Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
+    if (characteristic != NULL && binc_characteristic_supports_read(characteristic)) {
+        binc_characteristic_read(characteristic);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
@@ -716,6 +725,15 @@ void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChang
     g_assert(device != NULL);
     g_assert(callback != NULL);
     device->on_notify_state_callback = callback;
+}
+
+gboolean binc_device_start_notify(const Device *device, const char* service_uuid, const char *characteristic_uuid) {
+    Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
+    if (characteristic != NULL && binc_characteristic_supports_notify(characteristic)) {
+        binc_characteristic_start_notify(characteristic);
+        return TRUE;
+    }
+    return FALSE;
 }
 
 ConnectionState binc_device_get_connection_state(const Device *device) {
