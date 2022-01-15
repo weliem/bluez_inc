@@ -19,11 +19,11 @@ static void plx_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
     if (spot_measurement_char != NULL && binc_characteristic_supports_notify(spot_measurement_char)) {
         binc_characteristic_start_notify(spot_measurement_char);
     }
-    Characteristic *continuous_measurement_char = binc_device_get_characteristic(device, PLX_SERVICE_UUID,
-                                                                                 CONTINUOUS_MEASUREMENT_CHAR_UUID);
-    if (continuous_measurement_char != NULL && binc_characteristic_supports_notify(continuous_measurement_char)) {
-        binc_characteristic_start_notify(continuous_measurement_char);
-    }
+//    Characteristic *continuous_measurement_char = binc_device_get_characteristic(device, PLX_SERVICE_UUID,
+//                                                                                 CONTINUOUS_MEASUREMENT_CHAR_UUID);
+//    if (continuous_measurement_char != NULL && binc_characteristic_supports_notify(continuous_measurement_char)) {
+//        binc_characteristic_start_notify(continuous_measurement_char);
+//    }
 }
 
 static void plx_onNotificationStateUpdated(ServiceHandler *service_handler,
@@ -40,11 +40,25 @@ static void plx_onNotificationStateUpdated(ServiceHandler *service_handler,
     log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
+typedef struct plx_measurement_status {
+    gboolean isMeasurementOngoing;
+    gboolean isEarlyEstimateData;
+    gboolean isValidatedData;
+    gboolean isFullyQualifiedData;
+    gboolean isDataMeasurementStorage;
+    gboolean isDataDemonstration;
+    gboolean isDataTesting;
+    gboolean isCalibrationOngoing;
+    gboolean isMeasurementUnavailable;
+    gboolean isQuestionableMeasurementDetected;
+    gboolean isInvalidMeasurementDetected;
+} MeasurementStatus;
+
 typedef struct plx_spot_measurement {
     float spo2_value;
     float pulse_value;
     float pulse_amplitude_index;
-    guint16 measurement_status;
+    MeasurementStatus* measurement_status;
     guint16 sensor_status;
     GDateTime *timestamp;
     gboolean is_device_clock_set;
@@ -62,6 +76,22 @@ static Observation *plx_spot_measurement_as_observation(SpotMeasurement *measure
     return observation;
 }
 
+static MeasurementStatus* plx_create_measurement_status(guint16 status) {
+    MeasurementStatus *measurementStatus = g_new0(MeasurementStatus, 1);
+    measurementStatus->isMeasurementOngoing = (status & 0x0020) > 0;
+    measurementStatus->isEarlyEstimateData = (status & 0x0040) > 0;
+    measurementStatus->isValidatedData = (status & 0x0080) > 0;
+    measurementStatus->isFullyQualifiedData = (status & 0x0100) > 0;
+    measurementStatus->isDataMeasurementStorage = (status & 0x0200) > 0;
+    measurementStatus->isDataDemonstration = (status & 0x0400) > 0;
+    measurementStatus->isDataTesting = (status & 0x0800) > 0;
+    measurementStatus->isCalibrationOngoing = (status & 0x1000) > 0;
+    measurementStatus->isMeasurementUnavailable = (status & 0x2000) > 0;
+    measurementStatus->isQuestionableMeasurementDetected = (status & 0x4000) > 0;
+    measurementStatus->isInvalidMeasurementDetected = (status & 0x8000) > 0;
+    return measurementStatus;
+}
+
 static SpotMeasurement *plx_create_spot_measurement(const GByteArray *byteArray) {
     SpotMeasurement *measurement = g_new0(SpotMeasurement, 1);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
@@ -76,7 +106,7 @@ static SpotMeasurement *plx_create_spot_measurement(const GByteArray *byteArray)
     measurement->spo2_value = parser_get_sfloat(parser);
     measurement->pulse_value = parser_get_sfloat(parser);
     measurement->timestamp = timestampPresent ? parser_get_date_time(parser) : NULL;
-    measurement->measurement_status = measurementStatusPresent ? parser_get_uint16(parser) : 0xFFFF;
+    measurement->measurement_status = plx_create_measurement_status(measurementStatusPresent ? parser_get_uint16(parser) : 0x0000);
     measurement->sensor_status = sensorStatusPresent ? parser_get_uint16(parser) : 0xFFFF;
     guint8 reserved_byte = sensorStatusPresent ? parser_get_uint8(parser) : 0xFF;
     measurement->pulse_amplitude_index = pulseAmplitudeIndexPresent ? parser_get_sfloat(parser) : 0x00;
@@ -88,6 +118,9 @@ static SpotMeasurement *plx_create_spot_measurement(const GByteArray *byteArray)
 void plx_spot_measurement_free(SpotMeasurement *measurement) {
     g_date_time_unref(measurement->timestamp);
     measurement->timestamp = NULL;
+    if (measurement->measurement_status != NULL) {
+        g_free(measurement->measurement_status);
+    }
     g_free(measurement);
 }
 
@@ -98,8 +131,6 @@ static void plx_onCharacteristicChanged(ServiceHandler *service_handler,
                                         const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
-    GList *observation_list = NULL;
-
     if (g_str_equal(uuid, SPOT_MEASUREMENT_CHAR_UUID)) {
         SpotMeasurement *measurement = plx_create_spot_measurement(byteArray);
 
@@ -108,9 +139,15 @@ static void plx_onCharacteristicChanged(ServiceHandler *service_handler,
             return;
         }
 
+        if (!measurement->measurement_status->isFullyQualifiedData) {
+            log_debug(TAG, "Ignoring spot measurement because it is not a valid measurement");
+            return;
+        }
+
         Observation *observation = plx_spot_measurement_as_observation(measurement);
         plx_spot_measurement_free(measurement);
 
+        GList *observation_list = NULL;
         observation_list = g_list_append(observation_list, observation);
         if (service_handler->observations_callback != NULL) {
             DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
