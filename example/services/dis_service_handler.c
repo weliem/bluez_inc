@@ -34,10 +34,7 @@ static void dis_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
     // Read all 'supported' characteristics
     int characteristics_len = sizeof(dis_characteristics) / sizeof(char *);
     for (int i = 0; i < characteristics_len; i++) {
-        Characteristic *characteristic = binc_device_get_characteristic(device, DIS_SERVICE, dis_characteristics[i]);
-        if (characteristic != NULL && binc_characteristic_supports_read(characteristic)) {
-            binc_characteristic_read(characteristic);
-        }
+        binc_device_read_char(device, DIS_SERVICE, dis_characteristics[i]);
     }
 }
 
