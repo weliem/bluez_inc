@@ -13,7 +13,8 @@ const char *observation_type_loinc_codes[] = {
         [BLOOD_PRESSURE_PULSE]  = "8867-4",
         [BODY_TEMPERATURE]  = "8310-5",
         [BODY_WEIGHT] = "3141-9",
-        [BLOOD_OXYGEN_SATURATION] = "59408-5"
+        [BLOOD_OXYGEN_SATURATION] = "59408-5",
+        [PULSE_OXIMETRY_PULSE] = "8889-8"
 };
 
 const char *observation_type_loinc_display[] = {
@@ -23,7 +24,8 @@ const char *observation_type_loinc_display[] = {
         [BLOOD_PRESSURE_PULSE]  = "Blood pressure pulse",
         [BODY_TEMPERATURE]  = "Body temperature",
         [BODY_WEIGHT] = "Body weight measured",
-        [BLOOD_OXYGEN_SATURATION] = "Blood oxygen saturation in arterial blood"
+        [BLOOD_OXYGEN_SATURATION] = "Blood oxygen saturation in arterial blood",
+        [PULSE_OXIMETRY_PULSE] = "Heart rate by Pulse oximetry"
 };
 
 const char *observation_precision[] = {
@@ -33,7 +35,8 @@ const char *observation_precision[] = {
         [BLOOD_PRESSURE_PULSE]  = "0",
         [BODY_TEMPERATURE]  = "1",
         [BODY_WEIGHT] = "1",
-        [BLOOD_OXYGEN_SATURATION] = "0"
+        [BLOOD_OXYGEN_SATURATION] = "0",
+        [PULSE_OXIMETRY_PULSE] = "0"
 };
 
 const char *observation_unit_ucum[] = {
@@ -71,9 +74,10 @@ static void add_observation(Observation *observation, cJSON *fhir_json) {
 
     // Build up value
     cJSON *value = cJSON_AddObjectToObject(fhir_json, "valueQuantity");
-    const char* precision = observation_precision[observation->type];
-    char* precision_string = g_strdup_printf("%%.%sf", precision );
-    char* value_string = g_strdup_printf(precision_string, binc_round_with_precision(observation->value,atoi(precision)));
+    const char *precision = observation_precision[observation->type];
+    char *precision_string = g_strdup_printf("%%.%sf", precision);
+    char *value_string = g_strdup_printf(precision_string,
+                                         binc_round_with_precision(observation->value, atoi(precision)));
     cJSON_AddRawToObject(value, "value", value_string);
     cJSON_AddStringToObject(value, "unit", observation_unit_str(observation->unit));
     cJSON_AddStringToObject(value, "system", "http://unitsofmeasure.org");
@@ -82,7 +86,7 @@ static void add_observation(Observation *observation, cJSON *fhir_json) {
     g_free(value_string);
 }
 
-cJSON *observation_list_as_fhir(GList *observation_list, const char* device_reference) {
+cJSON *observation_list_as_fhir(GList *observation_list, const char *device_reference) {
     g_assert(observation_list != NULL);
     if (g_list_length(observation_list) == 0) return NULL;
 
@@ -99,7 +103,9 @@ cJSON *observation_list_as_fhir(GList *observation_list, const char* device_refe
     cJSON_AddStringToObject(category_entry, "code", "vital-signs");
     cJSON_AddStringToObject(category_entry, "display", "Vital Signs");
     cJSON_AddItemToArray(category_coding, category_entry);
+    cJSON_AddStringToObject(category_item, "text", "Vital Signs");
     cJSON_AddItemToArray(category, category_item);
+
 
     // Build up coding
     Observation *first_observation = (Observation *) observation_list->data;
