@@ -39,6 +39,25 @@ static void plx_onNotificationStateUpdated(ServiceHandler *service_handler,
     log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
+typedef struct plx_sensor_status {
+    gboolean isExtendedDisplayUpdateOngoing;
+    gboolean isEquipmentMalfunctionDetected;
+    gboolean isSignalProcessingIrregularityDetected;
+    gboolean isInadequateSignalDetected;
+    gboolean isPoorSignalDetected;
+    gboolean isLowPerfusionDetected;
+    gboolean isErraticSignalDetected;
+    gboolean isNonpulsatileSignalDetected;
+    gboolean isQuestionablePulseDetected;
+    gboolean isSignalAnalysisOngoing;
+    gboolean isSensorInterfaceDetected;
+    gboolean isSensorUnconnectedDetected;
+    gboolean isUnknownSensorConnected;
+    gboolean isSensorDisplaced;
+    gboolean isSensorMalfunctioning;
+    gboolean isSensorDisconnected;
+} SensorStatus;
+
 typedef struct plx_measurement_status {
     gboolean isMeasurementOngoing;
     gboolean isEarlyEstimateData;
@@ -58,7 +77,7 @@ typedef struct plx_spot_measurement {
     float pulse_value;
     float pulse_amplitude_index;
     MeasurementStatus *measurement_status;
-    guint16 sensor_status;
+    SensorStatus *sensor_status;
     GDateTime *timestamp;
     gboolean is_device_clock_set;
 } SpotMeasurement;
@@ -91,6 +110,27 @@ static MeasurementStatus *plx_create_measurement_status(guint16 status) {
     return measurementStatus;
 }
 
+static SensorStatus *plx_create_sensor_status(guint16 status) {
+    SensorStatus *sensorStatus = g_new0(SensorStatus, 1);
+    sensorStatus->isExtendedDisplayUpdateOngoing = (status & 0x0001) > 0;
+    sensorStatus->isEquipmentMalfunctionDetected = (status & 0x0002) > 0;
+    sensorStatus->isSignalProcessingIrregularityDetected = (status & 0x0004) > 0;
+    sensorStatus->isInadequateSignalDetected = (status & 0x0008) > 0;
+    sensorStatus->isPoorSignalDetected = (status & 0x0010) > 0;
+    sensorStatus->isLowPerfusionDetected = (status & 0x0020) > 0;
+    sensorStatus->isErraticSignalDetected = (status & 0x0040) > 0;
+    sensorStatus->isNonpulsatileSignalDetected = (status & 0x0080) > 0;
+    sensorStatus->isQuestionablePulseDetected = (status & 0x0100) > 0;
+    sensorStatus->isSignalAnalysisOngoing = (status & 0x0200) > 0;
+    sensorStatus->isSensorInterfaceDetected = (status & 0x0400) > 0;
+    sensorStatus->isSensorUnconnectedDetected = (status & 0x0800) > 0;
+    sensorStatus->isUnknownSensorConnected = (status & 0x1000) > 0;
+    sensorStatus->isSensorDisplaced = (status & 0x2000) > 0;
+    sensorStatus->isSensorMalfunctioning = (status & 0x4000) > 0;
+    sensorStatus->isSensorDisconnected = (status & 0x8000) > 0;
+    return sensorStatus;
+}
+
 static SpotMeasurement *plx_create_spot_measurement(const GByteArray *byteArray) {
     SpotMeasurement *measurement = g_new0(SpotMeasurement, 1);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
@@ -107,7 +147,7 @@ static SpotMeasurement *plx_create_spot_measurement(const GByteArray *byteArray)
     measurement->timestamp = timestampPresent ? parser_get_date_time(parser) : NULL;
     measurement->measurement_status = measurementStatusPresent ? plx_create_measurement_status(
             parser_get_uint16(parser)) : NULL;
-    measurement->sensor_status = sensorStatusPresent ? parser_get_uint16(parser) : 0xFFFF;
+    measurement->sensor_status = sensorStatusPresent ? plx_create_sensor_status(parser_get_uint16(parser)) : NULL;
     guint8 reserved_byte = sensorStatusPresent ? parser_get_uint8(parser) : 0xFF;
     measurement->pulse_amplitude_index = pulseAmplitudeIndexPresent ? parser_get_sfloat(parser) : 0x00;
 
@@ -175,19 +215,29 @@ static void plx_onCharacteristicChanged(ServiceHandler *service_handler,
                                         const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
+    if (error != NULL) {
+        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
+        return;
+    }
+
     g_str_equal(uuid, PLX_FEATURE_CHAR_UUID) ? handleFeature(service_handler, device, byteArray) :
-    g_str_equal(uuid, PLX_SPOT_MEASUREMENT_CHAR_UUID) ? handleSpotMeasurement(service_handler, device, byteArray) : NULL;
+    g_str_equal(uuid, PLX_SPOT_MEASUREMENT_CHAR_UUID) ? handleSpotMeasurement(service_handler, device, byteArray)
+                                                      : NULL;
 }
 
 static void plx_free(ServiceHandler *service_handler) {
     PlxInternal *plxInternal = (PlxInternal *) service_handler->private_data;
+    g_assert(plxInternal != NULL);
+
     g_hash_table_destroy(plxInternal->features);
     g_free(plxInternal);
-    log_debug(TAG, "freeing HTS private_data");
+    log_debug(TAG, "freeing PLX private_data");
 }
 
 static void plx_onDeviceDisconnected(ServiceHandler *service_handler, Device *device) {
     PlxInternal *plxInternal = (PlxInternal *) service_handler->private_data;
+    g_assert(plxInternal != NULL);
+
     PlxFeatures *plxFeatures = g_hash_table_lookup(plxInternal->features, binc_device_get_address(device));
     if (plxFeatures != NULL) {
         g_hash_table_remove(plxInternal->features, binc_device_get_address(device));
