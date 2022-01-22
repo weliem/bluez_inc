@@ -34,12 +34,7 @@ static void plx_onNotificationStateUpdated(ServiceHandler *service_handler,
         log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
-
-    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
-    log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
-
-
 
 static void handleFeature(const ServiceHandler *service_handler, const Device *device, const GByteArray *byteArray) {
     PlxFeatures *plxFeatures = plx_create_features(byteArray);
@@ -77,10 +72,7 @@ static void handleSpotMeasurement(const ServiceHandler *service_handler, const D
     GList *observation_list = plx_spot_measurement_as_observations(measurement);
     plx_spot_measurement_free(measurement);
 
-    if (service_handler->observations_callback != NULL) {
-        DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
-        service_handler->observations_callback(observation_list, deviceInfo);
-    }
+    binc_service_handler_send_observations(service_handler, device, observation_list);
     observation_list_free(observation_list);
 }
 
@@ -95,6 +87,8 @@ static void plx_onCharacteristicChanged(ServiceHandler *service_handler,
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
+
+    if (byteArray == NULL) return;
 
     g_str_equal(uuid, PLX_FEATURE_CHAR_UUID) ? handleFeature(service_handler, device, byteArray) :
     g_str_equal(uuid, PLX_SPOT_MEASUREMENT_CHAR_UUID) ? handleSpotMeasurement(service_handler, device, byteArray)

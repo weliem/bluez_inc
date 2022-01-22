@@ -9,7 +9,6 @@
 #include "../../device.h"
 #include "../observation_units.h"
 #include "../observation.h"
-#include "../observation_location.h"
 #include "../../utility.h"
 
 #define TAG "WSS_Service_Handler"
@@ -24,10 +23,7 @@ static void wss_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
         g_byte_array_free(timeBytes, TRUE);
     }
 
-    Characteristic *measurement_char = binc_device_get_characteristic(device, WSS_SERVICE_UUID, WSS_MEASUREMENT_CHAR_UUID);
-    if (measurement_char != NULL && binc_characteristic_supports_notify(measurement_char)) {
-        binc_characteristic_start_notify(measurement_char);
-    }
+    binc_device_start_notify(device, WSS_SERVICE_UUID, WSS_MEASUREMENT_CHAR_UUID);
 }
 
 static void wss_onNotificationStateUpdated(ServiceHandler *service_handler,
@@ -36,12 +32,10 @@ static void wss_onNotificationStateUpdated(ServiceHandler *service_handler,
                                            const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
-    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
-    log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
 static void wss_onCharacteristicWrite(ServiceHandler *service_handler,
@@ -117,19 +111,27 @@ static void wss_onCharacteristicChanged(ServiceHandler *service_handler,
                                         const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
-    GList *observation_list = NULL;
+    if (error != NULL) {
+        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
+        return;
+    }
+
+    if (byteArray == NULL) return;
 
     if (g_str_equal(uuid, WSS_MEASUREMENT_CHAR_UUID)) {
         WeightMeasurement *measurement = wss_create_measurement(byteArray);
 
+        if (measurement->timestamp == NULL) {
+            log_debug(TAG, "Ignoring weight measurement without timestamp");
+            return;
+        }
+
         Observation *observation = wss_measurement_as_observation(measurement);
         wss_measurement_free(measurement);
 
+        GList *observation_list = NULL;
         observation_list = g_list_append(observation_list, observation);
-        if (service_handler->observations_callback != NULL) {
-            DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
-            service_handler->observations_callback(observation_list, deviceInfo);
-        }
+        binc_service_handler_send_observations(service_handler, device, observation_list);
         observation_list_free(observation_list);
     }
 }

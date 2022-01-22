@@ -9,10 +9,8 @@
 #include "../../device.h"
 #include "../observation_units.h"
 #include "../observation.h"
-#include "../observation_location.h"
 
 #define TAG "HTS_Service_Handler"
-
 
 typedef enum temperature_type {
     TT_UNKNOWN = 0, TT_ARMPIT = 1, TT_BODY = 2, TT_EAR = 3, TT_FINGER = 4, TT_GASTRO_INTESTINAL_TRACT = 5,
@@ -27,21 +25,34 @@ typedef struct hts_measurement {
 } TemperatureMeasurement;
 
 static ObservationLocation hts_get_location(TemperatureMeasurement *measurement) {
-    switch(measurement->temperature_type) {
-        case TT_UNKNOWN: return LOCATION_UNKNOWN;
-        case TT_ARMPIT: return LOCATION_ARMPIT;
-        case TT_BODY : return LOCATION_BODY;
-        case TT_EAR : return LOCATION_EAR;
-        case TT_FINGER : return LOCATION_FINGER;
-        case TT_GASTRO_INTESTINAL_TRACT : return LOCATION_GASTRO_INTESTINAL_TRACT;
-        case TT_MOUTH : return LOCATION_MOUTH;
-        case TT_RECTUM : return LOCATION_RECTUM;
-        case TT_TOE : return LOCATION_TOE;
-        case TT_TYMPANUM : return LOCATION_TYMPANUM;
-        case TT_FOREHEAD : return LOCATION_FOREHEAD;
-        default: return LOCATION_UNKNOWN;
+    switch (measurement->temperature_type) {
+        case TT_UNKNOWN:
+            return LOCATION_UNKNOWN;
+        case TT_ARMPIT:
+            return LOCATION_ARMPIT;
+        case TT_BODY :
+            return LOCATION_BODY;
+        case TT_EAR :
+            return LOCATION_EAR;
+        case TT_FINGER :
+            return LOCATION_FINGER;
+        case TT_GASTRO_INTESTINAL_TRACT :
+            return LOCATION_GASTRO_INTESTINAL_TRACT;
+        case TT_MOUTH :
+            return LOCATION_MOUTH;
+        case TT_RECTUM :
+            return LOCATION_RECTUM;
+        case TT_TOE :
+            return LOCATION_TOE;
+        case TT_TYMPANUM :
+            return LOCATION_TYMPANUM;
+        case TT_FOREHEAD :
+            return LOCATION_FOREHEAD;
+        default:
+            return LOCATION_UNKNOWN;
     }
 }
+
 static Observation *hts_measurement_as_observation(TemperatureMeasurement *measurement) {
     Observation *observation = g_new0(Observation, 1);
     observation->value = measurement->value;
@@ -79,10 +90,7 @@ void hts_measurement_free(TemperatureMeasurement *measurement) {
 
 static void hts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device, GList *characteristics) {
     log_debug(TAG, "discovered %d characteristics", g_list_length(characteristics));
-    Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE_UUID, TEMPERATURE_CHAR_UUID);
-    if (temperature != NULL && binc_characteristic_supports_notify(temperature)) {
-        binc_characteristic_start_notify(temperature);
-    }
+    binc_device_start_notify(device, HTS_SERVICE_UUID, TEMPERATURE_CHAR_UUID);
 }
 
 static void hts_onNotificationStateUpdated(ServiceHandler *service_handler,
@@ -91,14 +99,11 @@ static void hts_onNotificationStateUpdated(ServiceHandler *service_handler,
                                            const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
-    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
-    log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
-
 
 static void hts_onCharacteristicChanged(ServiceHandler *service_handler,
                                         Device *device,
@@ -107,13 +112,18 @@ static void hts_onCharacteristicChanged(ServiceHandler *service_handler,
                                         const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
-    GList *observation_list = NULL;
+    if (error != NULL) {
+        log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
+        return;
+    }
+
+    if (byteArray == NULL) return;
 
     if (g_str_equal(uuid, TEMPERATURE_CHAR_UUID)) {
         TemperatureMeasurement *measurement = hts_create_measurement(byteArray);
 
         // Device specific corrections
-        const char* device_name = binc_device_get_name(device);
+        const char *device_name = binc_device_get_name(device);
         if (g_str_has_prefix(device_name, "Philips ear thermometer")) {
             measurement->temperature_type = TT_TYMPANUM;
         } else if (g_str_has_prefix(device_name, "TAIDOC TD1242")) {
@@ -123,11 +133,10 @@ static void hts_onCharacteristicChanged(ServiceHandler *service_handler,
         Observation *observation = hts_measurement_as_observation(measurement);
         hts_measurement_free(measurement);
 
+        GList *observation_list = NULL;
         observation_list = g_list_append(observation_list, observation);
-        if (service_handler->observations_callback != NULL) {
-            DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
-            service_handler->observations_callback(observation_list, deviceInfo);
-        }
+
+        binc_service_handler_send_observations(service_handler, device, observation_list);
         observation_list_free(observation_list);
     }
 }

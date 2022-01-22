@@ -49,15 +49,8 @@ static void cts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
         }
     }
 
-    Characteristic *local_time_info = binc_device_get_characteristic(device, CTS_SERVICE, LOCAL_TIME_INFORMATION_CHAR);
-    if (local_time_info != NULL && binc_characteristic_supports_read(local_time_info)) {
-        binc_characteristic_read(local_time_info);
-    }
-
-    Characteristic *reference_time_info = binc_device_get_characteristic(device, CTS_SERVICE, REFERENCE_TIME_INFORMATION_CHAR);
-    if (reference_time_info != NULL && binc_characteristic_supports_read(reference_time_info)) {
-        binc_characteristic_read(reference_time_info);
-    }
+    binc_device_read_char(device, CTS_SERVICE, LOCAL_TIME_INFORMATION_CHAR);
+    binc_device_read_char(device, CTS_SERVICE, REFERENCE_TIME_INFORMATION_CHAR);
 }
 
 static void cts_onNotificationStateUpdated(ServiceHandler *service_handler,
@@ -70,9 +63,6 @@ static void cts_onNotificationStateUpdated(ServiceHandler *service_handler,
         log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
-
-    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
-    log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
 }
 
 static void cts_onCharacteristicWrite(ServiceHandler *service_handler,

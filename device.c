@@ -507,7 +507,11 @@ static void binc_internal_device_connect_cb(GObject *source_object, GAsyncResult
 
     if (error != NULL) {
         log_debug(TAG, "Connect failed (error %d: %s)", error->code, error->message);
+
+        // Maybe don't do this because connection changes may com later? See A&D scale testing
+        // Or send the current connection state?
         binc_device_internal_set_conn_state(device, DISCONNECTED, error);
+
         g_clear_error(&error);
     }
 }

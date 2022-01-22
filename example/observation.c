@@ -114,7 +114,7 @@ cJSON *observation_list_as_fhir(GList *observation_list, const char *device_refe
         cJSON *code = cJSON_AddObjectToObject(fhir_json, "code");
         cJSON *coding_loinc = cJSON_CreateObject();
         cJSON_AddStringToObject(coding_loinc, "system", "http://loinc.org");
-        cJSON_AddStringToObject(coding_loinc, "code", "35094-2");
+        cJSON_AddStringToObject(coding_loinc, "code", "35094-2");   // Or 85354-9????
         cJSON_AddStringToObject(coding_loinc, "display", "Blood pressure panel");
         cJSON *coding_array = cJSON_CreateArray();
         cJSON_AddItemToArray(coding_array, coding_loinc);

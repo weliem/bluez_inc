@@ -25,7 +25,7 @@ typedef void (*onDeviceDisconnected)(ServiceHandler *service_handler, Device *de
 
 typedef void (*serviceHandlerFree)(ServiceHandler *service_handler);
 
-typedef void (*observationsCallback)(GList *observations, DeviceInfo *deviceInfo);
+typedef void (*observationsCallback)(const GList *observations, DeviceInfo *deviceInfo);
 
 struct service_handler_entry {
     gpointer private_data;
@@ -50,4 +50,6 @@ binc_service_handler_manager_get(ServiceHandlerManager *serviceHandlerManager, c
 
 void binc_service_handler_manager_device_disconnected(ServiceHandlerManager *serviceHandlerManager, Device *device);
 
+void binc_service_handler_send_observations(const ServiceHandler *service_handler, const Device *device,
+                                            const GList *observation_list);
 #endif //TEST_SERVICE_HANDLER_MANAGER_H

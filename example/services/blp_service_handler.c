@@ -100,10 +100,7 @@ void blp_measurement_free(BloodPressureMeasurement *measurement) {
 
 static void blp_onCharacteristicsDiscovered(ServiceHandler *service_handler, Device *device, GList *characteristics) {
     log_debug(TAG, "discovered %d characteristics", g_list_length(characteristics));
-    Characteristic *blp_measurement = binc_device_get_characteristic(device, BLP_SERVICE_UUID, BLOODPRESSURE_CHAR_UUID);
-    if (blp_measurement != NULL && binc_characteristic_supports_notify(blp_measurement)) {
-        binc_characteristic_start_notify(blp_measurement);
-    }
+    binc_device_start_notify(device, BLP_SERVICE_UUID, BLOODPRESSURE_CHAR_UUID);
 }
 
 static void blp_onNotificationStateUpdated(ServiceHandler *service_handler,
@@ -112,20 +109,10 @@ static void blp_onNotificationStateUpdated(ServiceHandler *service_handler,
                                            const GError *error) {
 
     const char *uuid = binc_characteristic_get_uuid(characteristic);
-    gboolean is_notifying = binc_characteristic_is_notifying(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to start/stop notify '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
-    log_debug(TAG, "characteristic <%s> notifying %s", uuid, is_notifying ? "true" : "false");
-}
-
-static void blp_onCharacteristicWrite(ServiceHandler *service_handler,
-                                      Device *device,
-                                      Characteristic *characteristic,
-                                      const GByteArray *byteArray,
-                                      const GError *error) {
-
 }
 
 static void log_measurement(BloodPressureMeasurement *measurement) {// Log the measurement
@@ -153,24 +140,24 @@ static void blp_onCharacteristicChanged(ServiceHandler *service_handler,
         return;
     }
 
-    if (byteArray != NULL) {
-        if (g_str_equal(uuid, BLOODPRESSURE_CHAR_UUID)) {
-            BloodPressureMeasurement *measurement = blp_create_measurement(byteArray);
-            GList *observations_list = blp_measurement_as_observations(measurement);
-            log_measurement(measurement);
-            blp_measurement_free(measurement);
+    if (byteArray == NULL) return;
 
-            if (service_handler->observations_callback != NULL) {
-                DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
-                service_handler->observations_callback(observations_list, deviceInfo);
-            }
+    if (g_str_equal(uuid, BLOODPRESSURE_CHAR_UUID)) {
+        BloodPressureMeasurement *measurement = blp_create_measurement(byteArray);
 
-            observation_list_free(observations_list);
+        if (measurement->timestamp == NULL) {
+            log_debug(TAG, "Ignoring bloodpressure measurement without timestamp");
+            return;
         }
+
+        GList *observations_list = blp_measurement_as_observations(measurement);
+        log_measurement(measurement);
+        blp_measurement_free(measurement);
+
+        binc_service_handler_send_observations(service_handler, device, observations_list);
+        observation_list_free(observations_list);
     }
 }
-
-
 
 static void blp_free(ServiceHandler *service_handler) {
     log_debug(TAG, "freeing BLP private_data");
@@ -182,7 +169,7 @@ ServiceHandler *blp_service_handler_create() {
     handler->uuid = BLP_SERVICE_UUID;
     handler->on_characteristics_discovered = &blp_onCharacteristicsDiscovered;
     handler->on_notification_state_updated = &blp_onNotificationStateUpdated;
-    handler->on_characteristic_write = &blp_onCharacteristicWrite;
+    handler->on_characteristic_write = NULL;
     handler->on_characteristic_changed = &blp_onCharacteristicChanged;
     handler->on_device_disconnected = NULL;
     handler->service_handler_free = &blp_free;

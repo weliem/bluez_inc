@@ -8,6 +8,7 @@
 #include "../utility.h"
 #include "fhir_uploader.h"
 #include "cJSON.h"
+#include "../device.h"
 
 #define TAG "ServiceHandlerManager"
 
@@ -43,7 +44,7 @@ void binc_service_handler_manager_free(ServiceHandlerManager *serviceHandlerMana
 
 static void log_observation(Observation *observation) {
     char *time_string = binc_date_time_format_iso8601(observation->timestamp);
-    log_debug(TAG, "observation{spo2_value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
+    log_debug(TAG, "observation{value=%.1f, unit=%s, type='%s', timestamp=%s, location=%s}",
               observation->value,
               observation_unit_str(observation->unit),
               observation_get_display_str(observation),
@@ -66,12 +67,12 @@ static gboolean g_date_time_is_later_than(GDateTime *end, GDateTime *begin) {
     return g_date_time_compare(end, begin) > 0;
 }
 
-static void on_observation(GList *observations, DeviceInfo *deviceInfo) {
+static void on_observation(const GList *observations, DeviceInfo *deviceInfo) {
     GDateTime *last_observation_timestamp = device_info_get_last_observation_timestamp(deviceInfo);
     GDateTime *latest_timestamp = NULL;
     GList *filtered_observations = NULL;
 
-    for (GList *iterator = observations; iterator; iterator = iterator->next) {
+    for (GList *iterator = (GList *) observations; iterator; iterator = iterator->next) {
         Observation *observation = (Observation *) iterator->data;
 
         // Filter out the new observations and find the latest one
@@ -180,4 +181,12 @@ void binc_service_handler_manager_device_disconnected(ServiceHandlerManager *ser
         }
     }
     g_list_free(service_handlers);
+}
+
+void binc_service_handler_send_observations(const ServiceHandler *service_handler, const Device *device,
+                                                   const GList *observation_list) {
+    if (service_handler->observations_callback != NULL) {
+        DeviceInfo *deviceInfo = get_device_info(binc_device_get_address(device));
+        service_handler->observations_callback(observation_list, deviceInfo);
+    }
 }
