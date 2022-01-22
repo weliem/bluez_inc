@@ -95,6 +95,21 @@ guint16 parser_get_uint16(Parser *parser) {
     }
 }
 
+gint16 parser_get_sint16(Parser *parser) {
+    g_assert(parser != NULL);
+    g_assert((parser->offset+1) < parser->bytes->len);
+
+    guint8 byte1, byte2;
+    byte1 = parser->bytes->data[parser->offset];
+    byte2 = parser->bytes->data[parser->offset+1];
+    parser->offset = parser->offset + 2;
+    if (parser->byteOrder == LITTLE_ENDIAN) {
+        return (byte2 << 8) + byte1;
+    } else {
+        return (byte1 << 8) + byte2;
+    }
+}
+
 guint32 parser_get_uint32(Parser *parser) {
     g_assert(parser != NULL);
     g_assert((parser->offset + 3) < parser->bytes->len);

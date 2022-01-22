@@ -48,6 +48,8 @@ gint8 parser_get_sint8(Parser *parser);
 
 guint16 parser_get_uint16(Parser *parser);
 
+gint16 parser_get_sint16(Parser *parser);
+
 guint32 parser_get_uint32(Parser *parser);
 
 float parser_get_sfloat(Parser *parser);

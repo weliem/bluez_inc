@@ -719,6 +719,16 @@ void binc_device_set_write_char_callback(Device *device, OnWriteCallback callbac
     device->on_write_callback = callback;
 }
 
+gboolean binc_device_write_char(const Device *device, const char* service_uuid, const char *characteristic_uuid,
+                                const GByteArray *byteArray, WriteType writeType) {
+    Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
+    if (characteristic != NULL && binc_characteristic_supports_write(characteristic, writeType)) {
+        binc_characteristic_write(characteristic, byteArray, writeType);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);

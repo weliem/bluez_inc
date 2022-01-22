@@ -66,6 +66,9 @@ gboolean binc_device_read_char(const Device *device, const char* service_uuid, c
 
 void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback);
 
+gboolean binc_device_write_char(const Device *device, const char* service_uuid,
+                                const char *characteristic_uuid, const GByteArray *byteArray, WriteType writeType);
+
 void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback);
 
 void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChangedCallback callback);
