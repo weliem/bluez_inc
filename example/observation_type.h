@@ -13,7 +13,8 @@ typedef enum observation_type {
     BLOOD_PRESSURE_PULSE = 4,
     BODY_WEIGHT = 5,
     BLOOD_OXYGEN_SATURATION = 6,
-    PULSE_OXIMETRY_PULSE = 7
+    PULSE_OXIMETRY_PULSE = 7,
+    BLOOD_GLUCOSE = 8
 } ObservationType;
 
 #endif //TEST_OBSERVATION_TYPE_H

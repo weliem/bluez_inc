@@ -4,7 +4,23 @@
 
 #include "glx_measurement.h"
 #include "../../parser.h"
+#include "../observation.h"
 
+GList *glx_measurement_as_observation(GlxMeasurement *measurement) {
+    GList *observation_list = NULL;
+
+    Observation *observation = g_new0(Observation, 1);
+    observation->value = measurement->glucoseConcentration;
+    observation->unit = measurement->unit;
+    observation->duration_msec = 5000;
+    observation->type = BLOOD_GLUCOSE;
+    observation->timestamp = g_date_time_ref(measurement->timestamp);
+    observation->received = g_date_time_new_now_local();
+    observation->location = LOCATION_FINGER;
+    observation_list = g_list_append(observation_list, observation);
+
+    return observation_list;
+}
 GlxMeasurement *glx_measurement_create(const GByteArray *byteArray) {
     GlxMeasurement *measurement = g_new0(GlxMeasurement, 1);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
@@ -22,7 +38,7 @@ GlxMeasurement *glx_measurement_create(const GByteArray *byteArray) {
     if (timeOffsetPresent) {
         int offset = parser_get_sint16(parser);
         long timestampUTC = g_date_time_to_unix(measurement->timestamp);
-        long adjustedTimestampUTC = timestampUTC + offset * 60000;
+        long adjustedTimestampUTC = timestampUTC + offset * 60;
         g_date_time_unref(measurement->timestamp);
         measurement->timestamp = g_date_time_new_from_unix_local(adjustedTimestampUTC);
     }
@@ -41,4 +57,10 @@ GlxMeasurement *glx_measurement_create(const GByteArray *byteArray) {
 
     parser_free(parser);
     return measurement;
+}
+
+void glx_measurement_free(GlxMeasurement *measurement) {
+    g_date_time_unref(measurement->timestamp);
+    measurement->timestamp = NULL;
+    g_free(measurement);
 }

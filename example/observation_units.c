@@ -12,7 +12,9 @@ const char *observation_unit_names[] = {
         [BPM]  = "bpm",
         [LBS] = "lbs",
         [KG] = "Kg",
-        [PERCENT] = "%"
+        [PERCENT] = "%",
+        [MMOLL] = "mmol/L",
+        [MGDL] = "mg/dL"
 };
 
 const char* observation_unit_str(ObservationUnit unit) {

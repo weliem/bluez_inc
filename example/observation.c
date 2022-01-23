@@ -14,7 +14,8 @@ const char *observation_type_loinc_codes[] = {
         [BODY_TEMPERATURE]  = "8310-5",
         [BODY_WEIGHT] = "3141-9",
         [BLOOD_OXYGEN_SATURATION] = "59408-5",
-        [PULSE_OXIMETRY_PULSE] = "8889-8"
+        [PULSE_OXIMETRY_PULSE] = "8889-8",
+        [BLOOD_GLUCOSE] = "2339-0"
 };
 
 const char *observation_type_loinc_display[] = {
@@ -25,7 +26,8 @@ const char *observation_type_loinc_display[] = {
         [BODY_TEMPERATURE]  = "Body temperature",
         [BODY_WEIGHT] = "Body weight measured",
         [BLOOD_OXYGEN_SATURATION] = "Blood oxygen saturation in arterial blood",
-        [PULSE_OXIMETRY_PULSE] = "Heart rate by Pulse oximetry"
+        [PULSE_OXIMETRY_PULSE] = "Heart rate by Pulse oximetry",
+        [BLOOD_GLUCOSE] = "Glucose [Mass/volume] in Blood"
 };
 
 const char *observation_precision[] = {
@@ -36,7 +38,8 @@ const char *observation_precision[] = {
         [BODY_TEMPERATURE]  = "1",
         [BODY_WEIGHT] = "1",
         [BLOOD_OXYGEN_SATURATION] = "0",
-        [PULSE_OXIMETRY_PULSE] = "0"
+        [PULSE_OXIMETRY_PULSE] = "0",
+        [BLOOD_GLUCOSE] = "1"
 };
 
 const char *observation_unit_ucum[] = {
@@ -47,7 +50,9 @@ const char *observation_unit_ucum[] = {
         [BPM] = "/min",
         [KG] = "kg",
         [LBS] = "[lb_av]",
-        [PERCENT] = "%"
+        [PERCENT] = "%",
+        [MMOLL] = "mmol/L",
+        [MGDL] = "mg/dL"
 };
 
 const char *observation_get_loinc_code(Observation *observation) {

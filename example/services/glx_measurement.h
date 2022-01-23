@@ -21,5 +21,6 @@ typedef struct glx_measurement {
 } GlxMeasurement;
 
 GlxMeasurement *glx_measurement_create(const GByteArray *byteArray);
-
+GList *glx_measurement_as_observation(GlxMeasurement *measurement);
+void glx_measurement_free(GlxMeasurement *measurement);
 #endif //TEST_GLX_MEASUREMENT_H

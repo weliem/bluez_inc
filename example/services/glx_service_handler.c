@@ -66,6 +66,17 @@ static void handleFeature(const ServiceHandler *service_handler, const Device *d
 
 static void handleMeasurement(const ServiceHandler *service_handler, const Device *device,const GByteArray *byteArray ) {
     GlxMeasurement *measurement = glx_measurement_create(byteArray);
+
+    if (measurement->timestamp == NULL) {
+        log_debug(TAG, "Ignoring glucose measurement without timestamp");
+        return;
+    }
+
+    GList *observation_list = glx_measurement_as_observation(measurement);
+    glx_measurement_free(measurement);
+
+    binc_service_handler_send_observations(service_handler, device, observation_list);
+    observation_list_free(observation_list);
     log_debug(TAG, "got GLX measurement");
 }
 
