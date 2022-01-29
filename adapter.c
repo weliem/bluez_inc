@@ -26,6 +26,7 @@
 #include "device_internal.h"
 #include "logger.h"
 #include "utility.h"
+#include "advertisement.h"
 
 static const char *const TAG = "Adapter";
 static const char *const BLUEZ_DBUS = "org.bluez";
@@ -83,6 +84,8 @@ struct binc_adapter {
     AdapterPoweredStateChangeCallback poweredStateCallback;
 
     GHashTable *devices_cache;
+
+    Advertisement *advertisement;
 };
 
 static void binc_internal_adapter_call_method_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -790,4 +793,80 @@ GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter) {
 const char *binc_adapter_get_discovery_state_name(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return discovery_state_names[adapter->discovery_state];
+}
+
+static void binc_internal_start_advertising_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    Adapter *adapter = (Adapter *) user_data;
+    g_assert(adapter != NULL);
+
+    GError *error = NULL;
+    GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to register advertisement (error %d: %s)", error->code, error->message);
+        g_clear_error(&error);
+    } else {
+        log_debug(TAG, "started advertising (%s)", adapter->address);
+    }
+}
+
+void binc_adapter_start_advertising(Adapter *adapter, Advertisement *advertisement) {
+    g_assert(adapter != NULL);
+    g_assert(advertisement != NULL);
+
+    adapter->advertisement = advertisement;
+    binc_advertisement_register(advertisement, adapter);
+
+    g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
+                           "org.bluez",
+                           adapter->path,
+                           "org.bluez.LEAdvertisingManager1",
+                           "RegisterAdvertisement",
+                           g_variant_new("(oa{sv})", binc_advertisement_get_path(advertisement), NULL),
+                           NULL,
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           (GAsyncReadyCallback) binc_internal_start_advertising_cb, adapter);
+}
+
+static void binc_internal_stop_advertising_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    Adapter *adapter = (Adapter *) user_data;
+    g_assert(adapter != NULL);
+
+    GError *error = NULL;
+    GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to unregister advertisement (error %d: %s)", error->code, error->message);
+        g_clear_error(&error);
+    } else {
+        log_debug(TAG, "stopped advertising");
+    }
+}
+
+void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisement) {
+    g_assert(adapter != NULL);
+    g_assert(advertisement != NULL);
+
+//    adapter->advertisement = advertisement;
+//    binc_advertisement_register(advertisement, adapter);
+
+    g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
+                           "org.bluez",
+                           adapter->path,
+                           "org.bluez.LEAdvertisingManager1",
+                           "UnregisterAdvertisement",
+                           g_variant_new("(o)", binc_advertisement_get_path(advertisement)),
+                           NULL,
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           (GAsyncReadyCallback) binc_internal_stop_advertising_cb, adapter);
 }

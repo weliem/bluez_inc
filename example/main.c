@@ -37,6 +37,7 @@
 #include "services/wss_service_handler.h"
 #include "services/plx_service_handler.h"
 #include "services/glx_service_handler.h"
+#include "../advertisement.h"
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
@@ -45,6 +46,7 @@ GMainLoop *loop = NULL;
 Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 ServiceHandlerManager *serviceHandlerManager = NULL;
+Advertisement *advertisement = NULL;
 
 void on_connection_state_changed(Device *device, ConnectionState state, const GError *error) {
     if (error != NULL) {
@@ -223,6 +225,11 @@ void on_powered_state_changed(Adapter *adapter, gboolean state) {
 }
 
 gboolean callback(gpointer data) {
+    if (advertisement != NULL) {
+        binc_adapter_stop_advertising(default_adapter, advertisement);
+        binc_advertisement_free(advertisement);
+    }
+
     if (agent != NULL) {
         binc_agent_free(agent);
         agent = NULL;
@@ -263,6 +270,11 @@ int main(void) {
 
     if (default_adapter != NULL) {
         log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
+
+        // Start advertising
+        advertisement = binc_advertisement_create();
+        binc_advertisement_set_local_name(advertisement, "BINC2");
+        binc_adapter_start_advertising(default_adapter, advertisement);
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
@@ -306,12 +318,14 @@ int main(void) {
         binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
         g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);
+
+        //binc_adapter_stop_advertising(default_adapter, advertisement);
     } else {
         log_debug("MAIN", "No default_adapter found");
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(120, callback, loop);
+    g_timeout_add_seconds(60, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
