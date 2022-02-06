@@ -272,9 +272,27 @@ int main(void) {
         log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
 
         // Start advertising
+        GPtrArray *adv_service_uuids = g_ptr_array_new();
+        g_ptr_array_add(adv_service_uuids, HTS_SERVICE_UUID);
+        g_ptr_array_add(adv_service_uuids, BLP_SERVICE_UUID);
+
+        const guint8 bytes[] = {1, 0x02, 0x03, 0x04, 0x05};
+        GByteArray *byteArray = g_byte_array_new();
+        g_byte_array_append(byteArray, bytes, 5);
+
+        const guint8 service_data[] = {5, 0x02, 0x03};
+        GByteArray *service_bytes = g_byte_array_new();
+        g_byte_array_append(service_bytes, service_data, 3);
+
         advertisement = binc_advertisement_create();
         binc_advertisement_set_local_name(advertisement, "BINC2");
+        binc_advertisement_set_services(advertisement, adv_service_uuids);
+        binc_advertisement_set_manufacturer_data(advertisement, 52, byteArray);
+        binc_advertisement_set_service_data(advertisement, HTS_SERVICE_UUID, service_bytes);
         binc_adapter_start_advertising(default_adapter, advertisement);
+        g_byte_array_free(byteArray, TRUE);
+        g_byte_array_free(service_bytes, TRUE);
+        g_ptr_array_free(adv_service_uuids, TRUE);
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);

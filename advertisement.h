@@ -14,10 +14,14 @@ void binc_advertisement_free(Advertisement *advertisement);
 
 void binc_advertisement_set_local_name(Advertisement *advertisement, const char* local_name);
 
-void binc_advertisement_set_include_tx_power(Advertisement *advertisement, gboolean include_tx_power);
+void binc_advertisement_set_services(Advertisement *advertisement, const GPtrArray * service_uuids);
+
+void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guint16 manufacturer_id, const GByteArray *byteArray);
+
+void binc_advertisement_set_service_data(Advertisement *advertisement, const char* service_uuid, const GByteArray *byteArray);
 
 const char *binc_advertisement_get_path(Advertisement *advertisement);
 
-void binc_advertisement_register(Advertisement *advertisement, Adapter *adapter);
+void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter);
 
 #endif //BINC_ADVERTISEMENT_H

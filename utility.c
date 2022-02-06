@@ -58,8 +58,7 @@ float binc_round_with_precision(float value, guint8 precision) {
     return roundf(value * multiplier) / multiplier;
 }
 
-gchar *
-binc_date_time_format_iso8601(GDateTime *datetime) {
+gchar *binc_date_time_format_iso8601(GDateTime *datetime) {
     GString *outstr = NULL;
     gchar *main_date = NULL;
     gint64 offset;
