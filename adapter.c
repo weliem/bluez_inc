@@ -27,6 +27,7 @@
 #include "logger.h"
 #include "utility.h"
 #include "advertisement.h"
+#include "application.h"
 
 static const char *const TAG = "Adapter";
 static const char *const BLUEZ_DBUS = "org.bluez";
@@ -869,4 +870,43 @@ void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisemen
                            -1,
                            NULL,
                            (GAsyncReadyCallback) binc_internal_stop_advertising_cb, adapter);
+}
+
+static void binc_internal_register_appl_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    Adapter *adapter = (Adapter *) user_data;
+    g_assert(adapter != NULL);
+
+    GError *error = NULL;
+    GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to register application (error %d: %s)", error->code, error->message);
+        g_clear_error(&error);
+    } else {
+        log_debug(TAG, "successfully register application");
+    }
+}
+
+void binc_adapter_register_application(Adapter *adapter, Application *application) {
+    g_assert(adapter != NULL);
+    g_assert(application != NULL);
+
+    // Publish the application on the DBus
+    binc_application_publish(application, adapter);
+
+    g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
+                           "org.bluez",
+                           adapter->path,
+                           "org.bluez.GattManager1",
+                           "RegisterApplication",
+                           g_variant_new("(oa{sv})", binc_application_get_path(application), NULL),
+                           NULL,
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           (GAsyncReadyCallback) binc_internal_register_appl_cb, adapter);
+
 }

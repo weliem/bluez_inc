@@ -30,5 +30,6 @@ typedef struct binc_service Service;
 typedef struct binc_characteristic Characteristic;
 typedef struct binc_service_handler_manager ServiceHandlerManager;
 typedef struct binc_advertisement Advertisement;
+typedef struct binc_application Application;
 
 #endif //BINC_FORWARD_DECL_H

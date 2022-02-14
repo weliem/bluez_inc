@@ -82,4 +82,7 @@ GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter);
 void binc_adapter_start_advertising(Adapter *adapter, Advertisement *advertisement);
 
 void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisement);
+
+void binc_adapter_register_application(Adapter *adapter, Application *application);
+
 #endif //BINC_ADAPTER_H

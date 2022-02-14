@@ -28,6 +28,7 @@
 #include "../device.h"
 #include "../logger.h"
 #include "../agent.h"
+#include "../application.h"
 #include "service_handler_manager.h"
 #include "services/hts_service_handler.h"
 #include "services/dis_service_handler.h"
@@ -293,6 +294,13 @@ int main(void) {
         g_byte_array_free(byteArray, TRUE);
         g_byte_array_free(service_bytes, TRUE);
         g_ptr_array_free(adv_service_uuids, TRUE);
+
+        // Start application
+        Application *application = binc_create_application();
+        binc_application_add_service(application, HTS_SERVICE_UUID);
+        binc_adapter_register_application(default_adapter, application);
+
+        //binc_application_publish(application, default_adapter);
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
