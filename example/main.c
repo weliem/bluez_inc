@@ -200,14 +200,14 @@ void on_scan_result(Adapter *adapter, Device *device) {
 //    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
 
 
-        binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
-        binc_device_set_services_resolved_callback(device, &on_services_resolved);
-        binc_device_set_bonding_state_changed_callback(device, &on_bonding_state_changed);
-        binc_device_set_read_char_callback(device, &on_read);
-        binc_device_set_write_char_callback(device, &on_write);
-        binc_device_set_notify_char_callback(device, &on_notify);
-        binc_device_set_notify_state_callback(device, &on_notification_state_changed);
-        binc_device_connect(device);
+    binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
+    binc_device_set_services_resolved_callback(device, &on_services_resolved);
+    binc_device_set_bonding_state_changed_callback(device, &on_bonding_state_changed);
+    binc_device_set_read_char_callback(device, &on_read);
+    binc_device_set_write_char_callback(device, &on_write);
+    binc_device_set_notify_char_callback(device, &on_notify);
+    binc_device_set_notify_state_callback(device, &on_notification_state_changed);
+    binc_device_connect(device);
 //    g_timeout_add(CONNECT_DELAY, delayed_connect, device);
 //    }
 }
@@ -248,8 +248,7 @@ gboolean callback(gpointer data) {
     return FALSE;
 }
 
-static void cleanup_handler(int signo)
-{
+static void cleanup_handler(int signo) {
     if (signo == SIGINT) {
         g_print("received SIGINT\n");
         callback(loop);
@@ -260,7 +259,7 @@ int main(void) {
     // Get a DBus connection
     GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
 
-    if(signal(SIGINT, cleanup_handler) == SIG_ERR)
+    if (signal(SIGINT, cleanup_handler) == SIG_ERR)
         g_print("can't catch SIGINT\n");
 
     // Setup mainloop
@@ -298,6 +297,11 @@ int main(void) {
         // Start application
         Application *application = binc_create_application();
         binc_application_add_service(application, HTS_SERVICE_UUID);
+        binc_application_add_characteristic(
+                application,
+                HTS_SERVICE_UUID,
+                TEMPERATURE_CHAR_UUID,
+                GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE);
         binc_adapter_register_application(default_adapter, application);
 
         //binc_application_publish(application, default_adapter);
