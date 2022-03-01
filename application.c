@@ -9,6 +9,7 @@
 
 #define BUFFER_SIZE 255
 #define GATT_SERV_INTERFACE "org.bluez.GattService1"
+#define GATT_CHAR_INTERFACE "org.bluez.GattCharacteristic1"
 
 static const char *const TAG = "Application";
 
@@ -217,11 +218,25 @@ static GVariant* binc_local_service_get_characteristics(LocalService *localServi
     g_hash_table_iter_init(&iter, localService->characteristics);
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         LocalCharacteristic *localCharacteristic = (LocalCharacteristic*) value;
-        log_debug(TAG, "adding %s", localCharacteristic->path);
+//        log_debug(TAG, "adding %s", localCharacteristic->path);
         g_variant_builder_add(characteristics_builder, "o", localCharacteristic->path);
     }
     GVariant* result = g_variant_builder_end(characteristics_builder);
     g_variant_builder_unref(characteristics_builder);
+    return result;
+}
+
+static GVariant* binc_local_characteristic_get_flags(LocalCharacteristic *localCharacteristic) {
+    g_assert(localCharacteristic != NULL);
+
+    GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+
+    for (GList *iterator = localCharacteristic->flags; iterator; iterator = iterator->next) {
+        g_variant_builder_add(flags_builder, "s", (char*) iterator->data);
+    }
+
+    GVariant *result = g_variant_builder_end(flags_builder);
+    g_variant_builder_unref(flags_builder);
     return result;
 }
 
@@ -251,9 +266,9 @@ static void bluez_application_method_call(GDBusConnection *conn,
             while (g_hash_table_iter_next(&iter, (gpointer) &key, &value)) {
                 LocalService *localService = (LocalService*) value;
                 log_debug(TAG, "adding %s", localService->path);
-                GVariantBuilder *svc_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
+                GVariantBuilder *service_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
 
-                // Build service
+                // Build service properties
                 GVariantBuilder *service_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
                 g_variant_builder_add(service_properties_builder, "{sv}", "UUID", g_variant_new_string((char *) key));
                 g_variant_builder_add(service_properties_builder, "{sv}", "Primary", g_variant_new_boolean(TRUE));
@@ -261,15 +276,38 @@ static void bluez_application_method_call(GDBusConnection *conn,
                                       binc_local_service_get_characteristics(localService));
 
                 // Add the service to result
-                g_variant_builder_add(svc_builder, "{sa{sv}}", GATT_SERV_INTERFACE, service_properties_builder);
-                g_variant_builder_add(builder, "{oa{sa{sv}}}", localService->path, svc_builder);
+                g_variant_builder_add(service_builder, "{sa{sv}}", GATT_SERV_INTERFACE, service_properties_builder);
+                g_variant_builder_unref(service_properties_builder);
+                g_variant_builder_add(builder, "{oa{sa{sv}}}", localService->path, service_builder);
+                g_variant_builder_unref(service_builder);
 
                 // Build service characteristics
 
+                GHashTableIter iter2;
+                gpointer key2, value2;
+                g_hash_table_iter_init(&iter2, localService->characteristics);
+                while (g_hash_table_iter_next(&iter2, &key2, &value2)) {
+                    LocalCharacteristic *localCharacteristic = (LocalCharacteristic*) value2;
+                    log_debug(TAG, "adding %s", localCharacteristic->path);
+
+                    GVariantBuilder *characteristic_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
+                    GVariantBuilder *char_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "UUID", g_variant_new_string(localCharacteristic->uuid));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "Service", g_variant_new("o", localService->path));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "Flags", binc_local_characteristic_get_flags(localCharacteristic));
+
+                    // Add the characteristic to result
+                    g_variant_builder_add(characteristic_builder, "{sa{sv}}", GATT_CHAR_INTERFACE, char_properties_builder);
+                    g_variant_builder_unref(char_properties_builder);
+                    g_variant_builder_add(builder, "{oa{sa{sv}}}", localCharacteristic->path, characteristic_builder);
+                    g_variant_builder_unref(characteristic_builder);
+
+                    // Add descriptors
+                    // NOTE that the CCCD is automatically added by Bluez so no need to add it.
+                }
+
                 // Build the final variant
 
-                g_variant_builder_unref(service_properties_builder);
-                g_variant_builder_unref(svc_builder);
             }
         }
 
