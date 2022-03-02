@@ -75,10 +75,8 @@ static const gchar characteristics_introspection_xml[] =
         "        </property>"
         "    <property type='as' name='Flags' access='read'>"
         "    </property>"
-        "    <property type='s' name='Unicast' access='read'>"
+        "    <property type='ao' name='Descriptors' access='read'>"
         "    </property>"
-        "        <property type='ao' name='Descriptors' access='read'>"
-        "        </property>"
         "  </interface>"
         "</node>";
 
@@ -92,6 +90,7 @@ struct binc_application {
 typedef struct binc_local_service {
     char* path;
     char* uuid;
+    guint registration_id;
     GHashTable *characteristics;
 } LocalService;
 
@@ -107,11 +106,15 @@ void binc_local_service_free(LocalService *localService) {
     g_free(localService);
 }
 
-Application *binc_create_application() {
+Application *binc_create_application(const Adapter *adapter) {
     Application *application = g_new0(Application, 1);
+    application->connection = binc_adapter_get_dbus_connection(adapter);
     application->path = g_strdup("/org/bluez/bincapplication");
     application->services = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
                                                   (GDestroyNotify) binc_local_service_free);
+
+    binc_application_publish(application, adapter);
+
     return application;
 }
 
@@ -129,6 +132,8 @@ void binc_application_free(Application *application) {
     g_free(application);
 }
 
+static const GDBusInterfaceVTable service_table = {};
+
 void binc_application_add_service(Application *application, const char *service_uuid) {
     g_assert(application != NULL);
     g_assert(service_uuid != NULL);
@@ -145,6 +150,32 @@ void binc_application_add_service(Application *application, const char *service_
     localService->path = g_strdup(path);
 
     g_hash_table_insert(application->services, g_strdup(service_uuid), localService);
+
+    GError *error = NULL;
+    guint id = 0;
+    GDBusNodeInfo *info = NULL;
+
+    info = g_dbus_node_info_new_for_xml(service_introspection_xml, &error);
+    if (error) {
+        log_debug(TAG, "Unable to create node: %s\n", error->message);
+        g_clear_error(&error);
+        return;
+    }
+
+    localService->registration_id = g_dbus_connection_register_object(application->connection,
+                                                                     localService->path,
+                                                                     info->interfaces[0],
+                                                                     &service_table,
+                                                                     localService, NULL, &error);
+    g_dbus_node_info_unref(info);
+
+    if (localService->registration_id == 0) {
+        log_debug(TAG, "failed to publish local service");
+        log_debug(TAG, "Error %s", error->message);
+    } else {
+        log_debug(TAG, "successfully published local service");
+
+    }
 }
 
 LocalService *binc_application_get_service(Application *application, const char *service_uuid) {
@@ -159,8 +190,11 @@ typedef struct local_characteristic {
     char *service_uuid;
     char *uuid;
     char *path;
+    guint registration_id;
+    GByteArray *value;
     guint8 permissions;
     GList *flags;
+    gboolean notifying;
 } LocalCharacteristic;
 
 static GList *permissions2Flags(guint8 permissions) {
@@ -184,6 +218,23 @@ static GList *permissions2Flags(guint8 permissions) {
     return list;
 }
 
+static void bluez_characteristic_method_call(GDBusConnection *conn,
+                                             const gchar *sender,
+                                             const gchar *path,
+                                             const gchar *interface,
+                                             const gchar *method,
+                                             GVariant *params,
+                                             GDBusMethodInvocation *invocation,
+                                             void *userdata) {
+
+    log_debug(TAG,"local characteristic method called: %s", method);
+    g_dbus_method_invocation_return_value(invocation, NULL);
+}
+
+static const GDBusInterfaceVTable characteristic_table = {
+        .method_call = bluez_characteristic_method_call,
+};
+
 void binc_application_add_characteristic(Application *application, const char *service_uuid,
                                          const char *characteristic_uuid, guint8 permissions) {
     g_assert(application != NULL);
@@ -200,6 +251,7 @@ void binc_application_add_characteristic(Application *application, const char *s
     characteristic->uuid = g_strdup(characteristic_uuid);
     characteristic->permissions = permissions;
     characteristic->flags = permissions2Flags(permissions);
+    characteristic->value = NULL;
 
     // Determine new path
     guint8 count = g_hash_table_size(localService->characteristics);
@@ -207,6 +259,33 @@ void binc_application_add_characteristic(Application *application, const char *s
     g_snprintf(path, BUFFER_SIZE, "%s/char%d", localService->path, count);
     characteristic->path = g_strdup(path);
     g_hash_table_insert(localService->characteristics, g_strdup(characteristic_uuid), characteristic);
+
+    GError *error = NULL;
+    GDBusNodeInfo *info = NULL;
+    info = g_dbus_node_info_new_for_xml(characteristics_introspection_xml, &error);
+    if (error) {
+        log_debug(TAG, "Unable to create node: %s\n", error->message);
+        g_clear_error(&error);
+        return;
+    }
+
+    characteristic->registration_id = g_dbus_connection_register_object(application->connection,
+                                                                        characteristic->path,
+                                                                      info->interfaces[0],
+                                                                      &characteristic_table,
+                                                                        characteristic, NULL, &error);
+    g_dbus_node_info_unref(info);
+
+    if (characteristic->registration_id == 0) {
+        log_debug(TAG, "failed to publish local characteristic");
+        log_debug(TAG, "Error %s", error->message);
+    } else {
+        log_debug(TAG, "successfully published local characteristic");
+    }
+
+    if (error) {
+        g_clear_error(&error);
+    }
 }
 
 static GVariant* binc_local_service_get_characteristics(LocalService *localService) {
@@ -282,7 +361,6 @@ static void bluez_application_method_call(GDBusConnection *conn,
                 g_variant_builder_unref(service_builder);
 
                 // Build service characteristics
-
                 GHashTableIter iter2;
                 gpointer key2, value2;
                 g_hash_table_iter_init(&iter2, localService->characteristics);
@@ -292,9 +370,18 @@ static void bluez_application_method_call(GDBusConnection *conn,
 
                     GVariantBuilder *characteristic_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
                     GVariantBuilder *char_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+
+                    // Build characteristic properties
+                    GByteArray *byteArray = localCharacteristic->value;
+                    GVariant *byteArrayVariant = NULL;
+                    if (byteArray != NULL) {
+                        byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data, byteArray->len, sizeof(guint8));
+                        g_variant_builder_add(char_properties_builder, "{sv}", "Value", byteArrayVariant);
+                    }
                     g_variant_builder_add(char_properties_builder, "{sv}", "UUID", g_variant_new_string(localCharacteristic->uuid));
                     g_variant_builder_add(char_properties_builder, "{sv}", "Service", g_variant_new("o", localService->path));
                     g_variant_builder_add(char_properties_builder, "{sv}", "Flags", binc_local_characteristic_get_flags(localCharacteristic));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "Notifying", g_variant_new("b", localCharacteristic->notifying));
 
                     // Add the characteristic to result
                     g_variant_builder_add(characteristic_builder, "{sa{sv}}", GATT_CHAR_INTERFACE, char_properties_builder);
@@ -302,30 +389,34 @@ static void bluez_application_method_call(GDBusConnection *conn,
                     g_variant_builder_add(builder, "{oa{sa{sv}}}", localCharacteristic->path, characteristic_builder);
                     g_variant_builder_unref(characteristic_builder);
 
-                    // Add descriptors
+                    // TODO Add descriptors
                     // NOTE that the CCCD is automatically added by Bluez so no need to add it.
                 }
-
-                // Build the final variant
-
             }
         }
 
+        // Build the final variant
         GVariant *result = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
         g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
     }
 }
 
+
+
 static const GDBusInterfaceVTable application_method_table = {
         .method_call = bluez_application_method_call,
 };
 
-void binc_application_publish(Application *application, Adapter *adapter) {
+
+
+
+
+void binc_application_publish(Application *application, const Adapter *adapter) {
     g_assert(application != NULL);
     g_assert(adapter != NULL);
 
-    application->connection = binc_adapter_get_dbus_connection(adapter);
+    //application->connection = binc_adapter_get_dbus_connection(adapter);
 
     GError *error = NULL;
     guint id = 0;

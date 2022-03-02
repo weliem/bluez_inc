@@ -295,7 +295,7 @@ int main(void) {
         g_ptr_array_free(adv_service_uuids, TRUE);
 
         // Start application
-        Application *application = binc_create_application();
+        Application *application = binc_create_application(default_adapter);
         binc_application_add_service(application, HTS_SERVICE_UUID);
         binc_application_add_characteristic(
                 application,

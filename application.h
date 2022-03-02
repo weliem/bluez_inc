@@ -12,10 +12,10 @@ typedef GByteArray (*onLocalCharacteristicRead)(const char *path, const char* se
 typedef void (*onLocalCharacteristicWrite)(const char *path, const char* service_uuid,
         const char* char_uuid, GByteArray *byteArray);
 
-Application* binc_create_application();
+Application* binc_create_application(const Adapter *adapter);
 void binc_application_free(Application *application);
 const char* binc_application_get_path(Application *application);
-void binc_application_publish(Application *application, Adapter *adapter);
+void binc_application_publish(Application *application, const Adapter *adapter);
 void binc_application_add_service(Application *application, const char* service_uuid);
 void binc_application_add_characteristic(Application *application, const char* service_uuid,
                                          const char* characteristic_uuid, guint8 permissions);

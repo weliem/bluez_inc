@@ -894,9 +894,6 @@ void binc_adapter_register_application(Adapter *adapter, Application *applicatio
     g_assert(adapter != NULL);
     g_assert(application != NULL);
 
-    // Publish the application on the DBus
-    binc_application_publish(application, adapter);
-
     g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
                            "org.bluez",
                            adapter->path,
