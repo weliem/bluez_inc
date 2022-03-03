@@ -25,16 +25,11 @@ static const gchar manager_introspection_xml[] =
 static const gchar service_introspection_xml[] =
         "<node name='/'>"
         "  <interface name='org.freedesktop.DBus.Properties'>"
-        "    <property type='s' name='UUID' access='read'>"
-        "    </property>"
-        "        <property type='b' name='primary' access='read'>"
-        "        </property>"
-        "        <property type='o' name='Device' access='read'>"
-        "        </property>"
-        "        <property type='ao' name='Characteristics' access='read'>"
-        "        </property>"
-        "        <property type='s' name='Includes' access='read'>"
-        "        </property>"
+        "        <property type='s' name='UUID' access='read' />"
+        "        <property type='b' name='primary' access='read' />"
+        "        <property type='o' name='Device' access='read' />"
+        "        <property type='ao' name='Characteristics' access='read' />"
+        "        <property type='s' name='Includes' access='read' />"
         "  </interface>"
         "</node>";
 
@@ -43,40 +38,24 @@ static const gchar characteristics_introspection_xml[] =
         "<node name='/'>"
         "  <interface name='org.bluez.GattCharacteristic1'>"
         "        <method name='ReadValue'>"
-        "               <arg type='s' name='address' direction='in'/>"
-        "               <arg type='u' name='id' direction='in'/>"
-        "               <arg type='q' name='offset' direction='in'/>"
-        "               <arg type='ay' name='Value' direction='out'/>"
+        "               <arg type='a{sv}' name='options' direction='in' />"
+        "               <arg type='ay' name='value' direction='out'/>"
         "        </method>"
         "        <method name='WriteValue'>"
-        "               <arg type='s' name='address' direction='in'/>"
-        "               <arg type='u' name='id' direction='in'/>"
-        "               <arg type='q' name='offset' direction='in'/>"
-        "               <arg type='b' name='response_needed' direction='in'/>"
         "               <arg type='ay' name='value' direction='in'/>"
+        "               <arg type='a{sv}' name='options' direction='in' />"
         "        </method>"
-        "        <method name='StartNotify'>"
-        "        </method>"
-        "        <method name='StopNotify'>"
-        "        </method>"
-        "        <method name='IndicateConfirm'>"
-        "               <arg type='s' name='address' direction='in'/>"
-        "               <arg type='b' name='complete' direction='in'/>"
-        "        </method>"
+        "        <method name='StartNotify'/>"
+        "        <method name='StopNotify' />"
+        "        <method name='Confirm' />"
         "  </interface>"
         "  <interface name='org.freedesktop.DBus.Properties'>"
-        "    <property type='s' name='UUID' access='read'>"
-        "    </property>"
-        "    <property type='o' name='Service' access='read'>"
-        "    </property>"
-        "    <property type='ay' name='Value' access='readwrite'>"
-        "    </property>"
-        "        <property type='b' name='Notifying' access='read'>"
-        "        </property>"
-        "    <property type='as' name='Flags' access='read'>"
-        "    </property>"
-        "    <property type='ao' name='Descriptors' access='read'>"
-        "    </property>"
+        "    <property type='s' name='UUID' access='read' />"
+        "    <property type='o' name='Service' access='read' />"
+        "    <property type='ay' name='Value' access='readwrite' />"
+        "    <property type='b' name='Notifying' access='read' />"
+        "    <property type='as' name='Flags' access='read' />"
+        "    <property type='ao' name='Descriptors' access='read' />"
         "  </interface>"
         "</node>";
 
@@ -188,6 +167,7 @@ LocalService *binc_application_get_service(Application *application, const char 
 
 typedef struct local_characteristic {
     char *service_uuid;
+    char *service_path;
     char *uuid;
     char *path;
     guint registration_id;
@@ -218,6 +198,20 @@ static GList *permissions2Flags(guint8 permissions) {
     return list;
 }
 
+static GVariant* binc_local_characteristic_get_flags(LocalCharacteristic *localCharacteristic) {
+    g_assert(localCharacteristic != NULL);
+
+    GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+
+    for (GList *iterator = localCharacteristic->flags; iterator; iterator = iterator->next) {
+        g_variant_builder_add(flags_builder, "s", (char*) iterator->data);
+    }
+
+    GVariant *result = g_variant_builder_end(flags_builder);
+    g_variant_builder_unref(flags_builder);
+    return result;
+}
+
 static void bluez_characteristic_method_call(GDBusConnection *conn,
                                              const gchar *sender,
                                              const gchar *path,
@@ -228,11 +222,55 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
                                              void *userdata) {
 
     log_debug(TAG,"local characteristic method called: %s", method);
+    LocalCharacteristic *characteristic = (LocalCharacteristic*) userdata;
+    g_assert(characteristic != NULL);
+
+    if (g_str_equal(method, "ReadValue")) {
+        const guint8 bytes[] = {0x06,0x6f,0x01,0x00,0xff,0xe6,0x07,0x03,0x03,0x10,0x04,0x00,0x01};
+        GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, bytes, sizeof(bytes), sizeof(guint8));
+        g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
+        return;
+    } else if (g_str_equal(method, "WriteValue")) {
+
+    } else if (g_str_equal(method, "StartNotify")) {
+        characteristic->notifying = TRUE;
+    } else if (g_str_equal(method, "StopNotify")) {
+        characteristic->notifying = FALSE;
+    }
+
     g_dbus_method_invocation_return_value(invocation, NULL);
+}
+
+GVariant *characteristic_get_property(GDBusConnection *connection,
+                                     const gchar *sender,
+                                     const gchar *object_path,
+                                     const gchar *interface_name,
+                                     const gchar *property_name,
+                                     GError **error,
+                                     gpointer user_data) {
+
+    log_debug(TAG,"local characteristic get property : %s", property_name);
+    LocalCharacteristic *characteristic = (LocalCharacteristic*) user_data;
+    g_assert(characteristic != NULL);
+
+    GVariant *ret;
+    if (g_str_equal(property_name, "UUID")) {
+        ret = g_variant_new_string(characteristic->uuid);
+    } else if (g_str_equal(property_name, "Service")) {
+        ret = g_variant_new_object_path(characteristic->path);
+    } else if (g_str_equal(property_name, "Flags")) {
+        ret = binc_local_characteristic_get_flags( characteristic);
+    } else if (g_str_equal(property_name, "Notifying")) {
+        ret = g_variant_new_boolean(characteristic->notifying);
+    } else if (g_str_equal(property_name, "Value")) {
+        ret = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, characteristic->value->data, characteristic->value->len, sizeof(guint8));
+    }
+    return ret;
 }
 
 static const GDBusInterfaceVTable characteristic_table = {
         .method_call = bluez_characteristic_method_call,
+        .get_property = characteristic_get_property
 };
 
 void binc_application_add_characteristic(Application *application, const char *service_uuid,
@@ -248,6 +286,7 @@ void binc_application_add_characteristic(Application *application, const char *s
 
     LocalCharacteristic *characteristic = g_new0(LocalCharacteristic, 1);
     characteristic->service_uuid = g_strdup(service_uuid);
+    characteristic->service_path = g_strdup(localService->path);
     characteristic->uuid = g_strdup(characteristic_uuid);
     characteristic->permissions = permissions;
     characteristic->flags = permissions2Flags(permissions);
@@ -305,19 +344,7 @@ static GVariant* binc_local_service_get_characteristics(LocalService *localServi
     return result;
 }
 
-static GVariant* binc_local_characteristic_get_flags(LocalCharacteristic *localCharacteristic) {
-    g_assert(localCharacteristic != NULL);
 
-    GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-
-    for (GList *iterator = localCharacteristic->flags; iterator; iterator = iterator->next) {
-        g_variant_builder_add(flags_builder, "s", (char*) iterator->data);
-    }
-
-    GVariant *result = g_variant_builder_end(flags_builder);
-    g_variant_builder_unref(flags_builder);
-    return result;
-}
 
 static void bluez_application_method_call(GDBusConnection *conn,
                                           const gchar *sender,

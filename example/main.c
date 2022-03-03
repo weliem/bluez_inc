@@ -301,7 +301,7 @@ int main(void) {
                 application,
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
-                GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE);
+                GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
         binc_adapter_register_application(default_adapter, application);
 
         //binc_application_publish(application, default_adapter);
