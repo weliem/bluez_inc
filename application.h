@@ -24,4 +24,7 @@ void binc_application_set_on_characteristic_read_callback(Application *applicati
 void binc_application_set_on_characteristic_write_callback(Application *application, onLocalCharacteristicWrite callback);
 void binc_application_characteristic_set_value(const Application *application, const char* service_uuid,
                                                const char* characteristic_uuid, GByteArray *byteArray);
+
+void binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
+                             GByteArray *byteArray);
 #endif //BINC_APPLICATION_H

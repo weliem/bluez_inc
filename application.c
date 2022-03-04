@@ -223,7 +223,7 @@ static void binc_characteristic_set_value(LocalCharacteristic *characteristic, G
     g_assert(byteArray != NULL);
 
     GString *byteArrayStr = g_byte_array_as_hex(byteArray);
-    log_debug(TAG, "write value <%s> to <%s>", byteArrayStr->str, characteristic->uuid);
+    log_debug(TAG, "set value <%s> to <%s>", byteArrayStr->str, characteristic->uuid);
     g_string_free(byteArrayStr, TRUE);
 
     if (characteristic->value != NULL) {
@@ -232,14 +232,21 @@ static void binc_characteristic_set_value(LocalCharacteristic *characteristic, G
     characteristic->value = byteArray;
 }
 
-void binc_application_characteristic_set_value(const Application *application, const char *service_uuid,
-                                               const char *characteristic_uuid, GByteArray *byteArray) {
+static LocalCharacteristic *get_local_characteristic(const Application *application, const char *service_uuid,
+                                                     const char *characteristic_uuid) {
     LocalService *service = binc_application_get_service(application, service_uuid);
     if (service != NULL) {
-        LocalCharacteristic *characteristic = g_hash_table_lookup(service->characteristics, characteristic_uuid);
-        if (characteristic != NULL) {
-            binc_characteristic_set_value(characteristic, byteArray);
-        }
+        return g_hash_table_lookup(service->characteristics, characteristic_uuid);
+    }
+    return NULL;
+}
+
+void binc_application_characteristic_set_value(const Application *application, const char *service_uuid,
+                                               const char *characteristic_uuid, GByteArray *byteArray) {
+
+    LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, characteristic_uuid);
+    if (characteristic != NULL) {
+        binc_characteristic_set_value(characteristic, byteArray);
     }
 }
 
@@ -264,6 +271,7 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
         char *device = NULL;
         guint16 mtu = 0;
         guint16 offset = 0;
+        char *link_type = NULL;
 
         // Parse options
         GVariantIter *optionsVariant;
@@ -273,7 +281,7 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
         GVariant *property_value;
         gchar *property_name;
         while (g_variant_iter_loop(optionsVariant, "{&sv}", &property_name, &property_value)) {
-            log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
+            //log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
 
             if (g_str_equal(property_name, "offset")) {
                 offset = g_variant_get_uint16(property_value);
@@ -281,13 +289,16 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
                 mtu = g_variant_get_uint16(property_value);
             } else if (g_str_equal(property_name, "device")) {
                 device = g_strdup(g_variant_get_string(property_value, NULL));
+            } else if (g_str_equal(property_name, "link")) {
+                link_type = g_strdup(g_variant_get_string(property_value, NULL));
             }
         }
-        log_debug(TAG, "offset=%u, mtu=%u, device=%s", (unsigned int) offset,
-                  (unsigned int) mtu, device);
+        log_debug(TAG, "read with offset=%u, mtu=%u, link=%s, device=%s", (unsigned int) offset,
+                  (unsigned int) mtu, link_type, device);
 
         if (application->on_char_read != NULL) {
-            application->on_char_read(characteristic->application, device, characteristic->service_uuid, characteristic->uuid);
+            application->on_char_read(characteristic->application, device, characteristic->service_uuid,
+                                      characteristic->uuid);
         }
 
         GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
@@ -313,7 +324,7 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
         gchar *property_name;
         g_variant_iter_init(&iter, optionsVariant);
         while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &property_value)) {
-            log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
+            //log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
 
             if (g_str_equal(property_name, "offset")) {
                 offset = g_variant_get_uint16(property_value);
@@ -327,7 +338,7 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
                 device = g_strdup(g_variant_get_string(property_value, NULL));
             }
         }
-        log_debug(TAG, "offset=%u, type=%s, mtu=%u, link=%s, device=%s", (unsigned int) offset, write_type,
+        log_debug(TAG, "write with offset=%u, type=%s, mtu=%u, link=%s, device=%s", (unsigned int) offset, write_type,
                   (unsigned int) mtu, link_type, device);
 
         size_t data_length = 0;
@@ -342,6 +353,7 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
         }
     } else if (g_str_equal(method, "StartNotify")) {
         characteristic->notifying = TRUE;
+        binc_application_notify(application, characteristic->service_uuid, characteristic->uuid, characteristic->value);
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (g_str_equal(method, "StopNotify")) {
         characteristic->notifying = FALSE;
@@ -598,4 +610,42 @@ binc_application_set_on_characteristic_write_callback(Application *application, 
     g_assert(callback != NULL);
 
     application->on_char_write = callback;
+}
+
+void binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
+                             GByteArray *byteArray) {
+    g_assert(application != NULL);
+    g_assert(application != NULL);
+    g_assert(service_uuid != NULL);
+    g_assert(g_uuid_string_is_valid(service_uuid));
+    g_assert(g_uuid_string_is_valid(char_uuid));
+
+    LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
+    g_assert(characteristic != NULL);
+
+    if (characteristic == NULL) return;
+
+    GVariantBuilder * properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+    GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+                                                 characteristic->value->data,
+                                                 characteristic->value->len,
+                                                 sizeof(guint8));
+    g_variant_builder_add(properties_builder, "{sv}", "Value", result);
+    GVariantBuilder *invalidated_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+
+    GError *error = NULL;
+    g_dbus_connection_emit_signal(application->connection,
+                                  NULL,
+                                  characteristic->path,
+                                  "org.freedesktop.DBus.Properties",
+                                  "PropertiesChanged",
+                                  g_variant_new("(sa{sv}as)", "org.bluez.GattCharacteristic1", properties_builder, invalidated_builder),
+                                  &error );
+
+    if (error != NULL) {
+        log_debug(TAG, "error emitting signal: %s", error->message);
+        g_clear_error(&error);
+    } else {
+        log_debug(TAG, "notified <%s>", characteristic->uuid);
+    }
 }
