@@ -225,6 +225,15 @@ void on_powered_state_changed(Adapter *adapter, gboolean state) {
     log_debug(TAG, "powered '%s' (%s)", state ? "on" : "off", binc_adapter_get_path(adapter));
 }
 
+void on_local_char_read(const Application *application, const char *address, const char* service_uuid, const char* char_uuid) {
+    if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
+        const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
+        GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
+        g_byte_array_append(byteArray, bytes, sizeof(bytes));
+        binc_application_characteristic_set_value(application, service_uuid, char_uuid, byteArray);
+    }
+}
+
 gboolean callback(gpointer data) {
     if (advertisement != NULL) {
         binc_adapter_stop_advertising(default_adapter, advertisement);
@@ -302,9 +311,9 @@ int main(void) {
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
                 GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
+        binc_application_set_on_characteristic_read_callback(application, &on_local_char_read);
         binc_adapter_register_application(default_adapter, application);
 
-        //binc_application_publish(application, default_adapter);
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);

@@ -6,6 +6,7 @@
 #include "adapter.h"
 #include "logger.h"
 #include "characteristic.h"
+#include "utility.h"
 
 #define BUFFER_SIZE 255
 #define GATT_SERV_INTERFACE "org.bluez.GattService1"
@@ -64,11 +65,13 @@ struct binc_application {
     guint registration_id;
     GDBusConnection *connection;
     GHashTable *services;
+    onLocalCharacteristicWrite on_char_write;
+    onLocalCharacteristicRead on_char_read;
 };
 
 typedef struct binc_local_service {
-    char* path;
-    char* uuid;
+    char *path;
+    char *uuid;
     guint registration_id;
     GHashTable *characteristics;
 } LocalService;
@@ -120,8 +123,8 @@ void binc_application_add_service(Application *application, const char *service_
 
     LocalService *localService = g_new0(LocalService, 1);
     localService->uuid = g_strdup(service_uuid);
-    localService->characteristics =  g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-                          g_free);
+    localService->characteristics = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+                                                          g_free);
 
     char path[BUFFER_SIZE];
     guint8 count = g_hash_table_size(application->services);
@@ -142,10 +145,10 @@ void binc_application_add_service(Application *application, const char *service_
     }
 
     localService->registration_id = g_dbus_connection_register_object(application->connection,
-                                                                     localService->path,
-                                                                     info->interfaces[0],
-                                                                     &service_table,
-                                                                     localService, NULL, &error);
+                                                                      localService->path,
+                                                                      info->interfaces[0],
+                                                                      &service_table,
+                                                                      localService, NULL, &error);
     g_dbus_node_info_unref(info);
 
     if (localService->registration_id == 0) {
@@ -157,7 +160,7 @@ void binc_application_add_service(Application *application, const char *service_
     }
 }
 
-LocalService *binc_application_get_service(Application *application, const char *service_uuid) {
+static LocalService *binc_application_get_service(const Application *application, const char *service_uuid) {
     g_assert(application != NULL);
     g_assert(service_uuid != NULL);
     g_assert(g_uuid_string_is_valid(service_uuid));
@@ -175,6 +178,8 @@ typedef struct local_characteristic {
     guint8 permissions;
     GList *flags;
     gboolean notifying;
+
+    Application *application;
 } LocalCharacteristic;
 
 static GList *permissions2Flags(guint8 permissions) {
@@ -198,18 +203,44 @@ static GList *permissions2Flags(guint8 permissions) {
     return list;
 }
 
-static GVariant* binc_local_characteristic_get_flags(LocalCharacteristic *localCharacteristic) {
+static GVariant *binc_local_characteristic_get_flags(LocalCharacteristic *localCharacteristic) {
     g_assert(localCharacteristic != NULL);
 
     GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
 
     for (GList *iterator = localCharacteristic->flags; iterator; iterator = iterator->next) {
-        g_variant_builder_add(flags_builder, "s", (char*) iterator->data);
+        g_variant_builder_add(flags_builder, "s", (char *) iterator->data);
     }
 
     GVariant *result = g_variant_builder_end(flags_builder);
     g_variant_builder_unref(flags_builder);
     return result;
+}
+
+
+static void binc_characteristic_set_value(LocalCharacteristic *characteristic, GByteArray *byteArray) {
+    g_assert(characteristic != NULL);
+    g_assert(byteArray != NULL);
+
+    GString *byteArrayStr = g_byte_array_as_hex(byteArray);
+    log_debug(TAG, "write value <%s> to <%s>", byteArrayStr->str, characteristic->uuid);
+    g_string_free(byteArrayStr, TRUE);
+
+    if (characteristic->value != NULL) {
+        g_byte_array_free(characteristic->value, TRUE);
+    }
+    characteristic->value = byteArray;
+}
+
+void binc_application_characteristic_set_value(const Application *application, const char *service_uuid,
+                                               const char *characteristic_uuid, GByteArray *byteArray) {
+    LocalService *service = binc_application_get_service(application, service_uuid);
+    if (service != NULL) {
+        LocalCharacteristic *characteristic = g_hash_table_lookup(service->characteristics, characteristic_uuid);
+        if (characteristic != NULL) {
+            binc_characteristic_set_value(characteristic, byteArray);
+        }
+    }
 }
 
 static void bluez_characteristic_method_call(GDBusConnection *conn,
@@ -221,36 +252,113 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
                                              GDBusMethodInvocation *invocation,
                                              void *userdata) {
 
-    log_debug(TAG,"local characteristic method called: %s", method);
-    LocalCharacteristic *characteristic = (LocalCharacteristic*) userdata;
+    log_debug(TAG, "local characteristic method called: %s", method);
+    LocalCharacteristic *characteristic = (LocalCharacteristic *) userdata;
     g_assert(characteristic != NULL);
 
+    Application *application = characteristic->application;
+    g_assert(application != NULL);
+
     if (g_str_equal(method, "ReadValue")) {
-        const guint8 bytes[] = {0x06,0x6f,0x01,0x00,0xff,0xe6,0x07,0x03,0x03,0x10,0x04,0x00,0x01};
-        GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, bytes, sizeof(bytes), sizeof(guint8));
+        g_assert(g_str_equal(g_variant_get_type_string(params), "(a{sv})"));
+        char *device = NULL;
+        guint16 mtu = 0;
+        guint16 offset = 0;
+
+        // Parse options
+        GVariantIter *optionsVariant;
+        g_variant_get(params, "(a{sv})", &optionsVariant);
+
+        // Parse options
+        GVariant *property_value;
+        gchar *property_name;
+        while (g_variant_iter_loop(optionsVariant, "{&sv}", &property_name, &property_value)) {
+            log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
+
+            if (g_str_equal(property_name, "offset")) {
+                offset = g_variant_get_uint16(property_value);
+            } else if (g_str_equal(property_name, "mtu")) {
+                mtu = g_variant_get_uint16(property_value);
+            } else if (g_str_equal(property_name, "device")) {
+                device = g_strdup(g_variant_get_string(property_value, NULL));
+            }
+        }
+        log_debug(TAG, "offset=%u, mtu=%u, device=%s", (unsigned int) offset,
+                  (unsigned int) mtu, device);
+
+        if (application->on_char_read != NULL) {
+            application->on_char_read(characteristic->application, device, characteristic->service_uuid, characteristic->uuid);
+        }
+
+        GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+                                                     characteristic->value->data,
+                                                     characteristic->value->len,
+                                                     sizeof(guint8));
         g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
         return;
     } else if (g_str_equal(method, "WriteValue")) {
+        g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
+        guint16 offset = 0;
+        guint16 mtu = 0;
+        char *write_type = NULL;
+        char *link_type = NULL;
+        char *device = NULL;
 
+        GVariant *valueVariant, *optionsVariant;
+        g_variant_get(params, "(@ay@a{sv})", &valueVariant, &optionsVariant);
+
+        // Parse options
+        GVariantIter iter;
+        GVariant *property_value;
+        gchar *property_name;
+        g_variant_iter_init(&iter, optionsVariant);
+        while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &property_value)) {
+            log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
+
+            if (g_str_equal(property_name, "offset")) {
+                offset = g_variant_get_uint16(property_value);
+            } else if (g_str_equal(property_name, "type")) {
+                write_type = g_strdup(g_variant_get_string(property_value, NULL));
+            } else if (g_str_equal(property_name, "mtu")) {
+                mtu = g_variant_get_uint16(property_value);
+            } else if (g_str_equal(property_name, "link")) {
+                link_type = g_strdup(g_variant_get_string(property_value, NULL));
+            } else if (g_str_equal(property_name, "device")) {
+                device = g_strdup(g_variant_get_string(property_value, NULL));
+            }
+        }
+        log_debug(TAG, "offset=%u, type=%s, mtu=%u, link=%s, device=%s", (unsigned int) offset, write_type,
+                  (unsigned int) mtu, link_type, device);
+
+        size_t data_length = 0;
+        guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
+        GByteArray *byteArray = g_byte_array_sized_new(data_length);
+        g_byte_array_append(byteArray, data, data_length);
+        binc_characteristic_set_value(characteristic, byteArray);
+
+        // Only send a response for a Write With Response. How can we tell????
+        if ((characteristic->permissions & GATT_CHR_PROP_WRITE) > 0) {
+            g_dbus_method_invocation_return_value(invocation, NULL);
+        }
     } else if (g_str_equal(method, "StartNotify")) {
         characteristic->notifying = TRUE;
+        g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (g_str_equal(method, "StopNotify")) {
         characteristic->notifying = FALSE;
+        g_dbus_method_invocation_return_value(invocation, NULL);
     }
-
-    g_dbus_method_invocation_return_value(invocation, NULL);
 }
 
 GVariant *characteristic_get_property(GDBusConnection *connection,
-                                     const gchar *sender,
-                                     const gchar *object_path,
-                                     const gchar *interface_name,
-                                     const gchar *property_name,
-                                     GError **error,
-                                     gpointer user_data) {
+                                      const gchar *sender,
+                                      const gchar *object_path,
+                                      const gchar *interface_name,
+                                      const gchar *property_name,
+                                      GError **error,
+                                      gpointer user_data) {
 
-    log_debug(TAG,"local characteristic get property : %s", property_name);
-    LocalCharacteristic *characteristic = (LocalCharacteristic*) user_data;
+    log_debug(TAG, "local characteristic get property : %s", property_name);
+    LocalCharacteristic *characteristic = (LocalCharacteristic *) user_data;
     g_assert(characteristic != NULL);
 
     GVariant *ret;
@@ -259,11 +367,12 @@ GVariant *characteristic_get_property(GDBusConnection *connection,
     } else if (g_str_equal(property_name, "Service")) {
         ret = g_variant_new_object_path(characteristic->path);
     } else if (g_str_equal(property_name, "Flags")) {
-        ret = binc_local_characteristic_get_flags( characteristic);
+        ret = binc_local_characteristic_get_flags(characteristic);
     } else if (g_str_equal(property_name, "Notifying")) {
         ret = g_variant_new_boolean(characteristic->notifying);
     } else if (g_str_equal(property_name, "Value")) {
-        ret = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, characteristic->value->data, characteristic->value->len, sizeof(guint8));
+        ret = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, characteristic->value->data, characteristic->value->len,
+                                        sizeof(guint8));
     }
     return ret;
 }
@@ -291,6 +400,7 @@ void binc_application_add_characteristic(Application *application, const char *s
     characteristic->permissions = permissions;
     characteristic->flags = permissions2Flags(permissions);
     characteristic->value = NULL;
+    characteristic->application = application;
 
     // Determine new path
     guint8 count = g_hash_table_size(localService->characteristics);
@@ -310,8 +420,8 @@ void binc_application_add_characteristic(Application *application, const char *s
 
     characteristic->registration_id = g_dbus_connection_register_object(application->connection,
                                                                         characteristic->path,
-                                                                      info->interfaces[0],
-                                                                      &characteristic_table,
+                                                                        info->interfaces[0],
+                                                                        &characteristic_table,
                                                                         characteristic, NULL, &error);
     g_dbus_node_info_unref(info);
 
@@ -327,7 +437,7 @@ void binc_application_add_characteristic(Application *application, const char *s
     }
 }
 
-static GVariant* binc_local_service_get_characteristics(LocalService *localService) {
+static GVariant *binc_local_service_get_characteristics(LocalService *localService) {
     g_assert(localService != NULL);
 
     GVariantBuilder *characteristics_builder = g_variant_builder_new(G_VARIANT_TYPE("ao"));
@@ -335,15 +445,13 @@ static GVariant* binc_local_service_get_characteristics(LocalService *localServi
     gpointer key, value;
     g_hash_table_iter_init(&iter, localService->characteristics);
     while (g_hash_table_iter_next(&iter, &key, &value)) {
-        LocalCharacteristic *localCharacteristic = (LocalCharacteristic*) value;
-//        log_debug(TAG, "adding %s", localCharacteristic->path);
+        LocalCharacteristic *localCharacteristic = (LocalCharacteristic *) value;
         g_variant_builder_add(characteristics_builder, "o", localCharacteristic->path);
     }
-    GVariant* result = g_variant_builder_end(characteristics_builder);
+    GVariant *result = g_variant_builder_end(characteristics_builder);
     g_variant_builder_unref(characteristics_builder);
     return result;
 }
-
 
 
 static void bluez_application_method_call(GDBusConnection *conn,
@@ -370,7 +478,7 @@ static void bluez_application_method_call(GDBusConnection *conn,
             gpointer key, value;
             g_hash_table_iter_init(&iter, application->services);
             while (g_hash_table_iter_next(&iter, (gpointer) &key, &value)) {
-                LocalService *localService = (LocalService*) value;
+                LocalService *localService = (LocalService *) value;
                 log_debug(TAG, "adding %s", localService->path);
                 GVariantBuilder *service_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
 
@@ -392,7 +500,7 @@ static void bluez_application_method_call(GDBusConnection *conn,
                 gpointer key2, value2;
                 g_hash_table_iter_init(&iter2, localService->characteristics);
                 while (g_hash_table_iter_next(&iter2, &key2, &value2)) {
-                    LocalCharacteristic *localCharacteristic = (LocalCharacteristic*) value2;
+                    LocalCharacteristic *localCharacteristic = (LocalCharacteristic *) value2;
                     log_debug(TAG, "adding %s", localCharacteristic->path);
 
                     GVariantBuilder *characteristic_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
@@ -402,16 +510,22 @@ static void bluez_application_method_call(GDBusConnection *conn,
                     GByteArray *byteArray = localCharacteristic->value;
                     GVariant *byteArrayVariant = NULL;
                     if (byteArray != NULL) {
-                        byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data, byteArray->len, sizeof(guint8));
+                        byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data,
+                                                                     byteArray->len, sizeof(guint8));
                         g_variant_builder_add(char_properties_builder, "{sv}", "Value", byteArrayVariant);
                     }
-                    g_variant_builder_add(char_properties_builder, "{sv}", "UUID", g_variant_new_string(localCharacteristic->uuid));
-                    g_variant_builder_add(char_properties_builder, "{sv}", "Service", g_variant_new("o", localService->path));
-                    g_variant_builder_add(char_properties_builder, "{sv}", "Flags", binc_local_characteristic_get_flags(localCharacteristic));
-                    g_variant_builder_add(char_properties_builder, "{sv}", "Notifying", g_variant_new("b", localCharacteristic->notifying));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "UUID",
+                                          g_variant_new_string(localCharacteristic->uuid));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "Service",
+                                          g_variant_new("o", localService->path));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "Flags",
+                                          binc_local_characteristic_get_flags(localCharacteristic));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "Notifying",
+                                          g_variant_new("b", localCharacteristic->notifying));
 
                     // Add the characteristic to result
-                    g_variant_builder_add(characteristic_builder, "{sa{sv}}", GATT_CHAR_INTERFACE, char_properties_builder);
+                    g_variant_builder_add(characteristic_builder, "{sa{sv}}", GATT_CHAR_INTERFACE,
+                                          char_properties_builder);
                     g_variant_builder_unref(char_properties_builder);
                     g_variant_builder_add(builder, "{oa{sa{sv}}}", localCharacteristic->path, characteristic_builder);
                     g_variant_builder_unref(characteristic_builder);
@@ -430,13 +544,9 @@ static void bluez_application_method_call(GDBusConnection *conn,
 }
 
 
-
 static const GDBusInterfaceVTable application_method_table = {
         .method_call = bluez_application_method_call,
 };
-
-
-
 
 
 void binc_application_publish(Application *application, const Adapter *adapter) {
@@ -472,4 +582,20 @@ void binc_application_publish(Application *application, const Adapter *adapter) 
 const char *binc_application_get_path(Application *application) {
     g_assert(application != NULL);
     return application->path;
+}
+
+void
+binc_application_set_on_characteristic_read_callback(Application *application, onLocalCharacteristicRead callback) {
+    g_assert(application != NULL);
+    g_assert(callback != NULL);
+
+    application->on_char_read = callback;
+}
+
+void
+binc_application_set_on_characteristic_write_callback(Application *application, onLocalCharacteristicWrite callback) {
+    g_assert(application != NULL);
+    g_assert(callback != NULL);
+
+    application->on_char_write = callback;
 }

@@ -8,8 +8,8 @@
 #include <gio/gio.h>
 #include "forward_decl.h"
 
-typedef GByteArray (*onLocalCharacteristicRead)(const char *path, const char* service_uuid, const char* char_uuid);
-typedef void (*onLocalCharacteristicWrite)(const char *path, const char* service_uuid,
+typedef void (*onLocalCharacteristicRead)(const Application *application, const char *address, const char* service_uuid, const char* char_uuid);
+typedef void (*onLocalCharacteristicWrite)(const char *address, const char* service_uuid,
         const char* char_uuid, GByteArray *byteArray);
 
 Application* binc_create_application(const Adapter *adapter);
@@ -22,5 +22,6 @@ void binc_application_add_characteristic(Application *application, const char* s
 
 void binc_application_set_on_characteristic_read_callback(Application *application, onLocalCharacteristicRead callback);
 void binc_application_set_on_characteristic_write_callback(Application *application, onLocalCharacteristicWrite callback);
-
+void binc_application_characteristic_set_value(const Application *application, const char* service_uuid,
+                                               const char* characteristic_uuid, GByteArray *byteArray);
 #endif //BINC_APPLICATION_H
