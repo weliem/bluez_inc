@@ -48,6 +48,7 @@ Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 ServiceHandlerManager *serviceHandlerManager = NULL;
 Advertisement *advertisement = NULL;
+Application *application = NULL;
 
 void on_connection_state_changed(Device *device, ConnectionState state, const GError *error) {
     if (error != NULL) {
@@ -230,11 +231,16 @@ void on_local_char_read(const Application *application, const char *address, con
         const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
         GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
         g_byte_array_append(byteArray, bytes, sizeof(bytes));
-        binc_application_characteristic_set_value(application, service_uuid, char_uuid, byteArray);
+        binc_application_char_set_value(application, service_uuid, char_uuid, byteArray);
     }
 }
 
 gboolean callback(gpointer data) {
+    if (application != NULL) {
+        binc_application_free(application);
+        application = NULL;
+    }
+
     if (advertisement != NULL) {
         binc_adapter_stop_advertising(default_adapter, advertisement);
         binc_advertisement_free(advertisement);
@@ -304,16 +310,15 @@ int main(void) {
         g_ptr_array_free(adv_service_uuids, TRUE);
 
         // Start application
-        Application *application = binc_create_application(default_adapter);
+        application = binc_create_application(default_adapter);
         binc_application_add_service(application, HTS_SERVICE_UUID);
         binc_application_add_characteristic(
                 application,
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
                 GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
-        binc_application_set_on_characteristic_read_callback(application, &on_local_char_read);
+        binc_application_set_on_char_read_cb(application, &on_local_char_read);
         binc_adapter_register_application(default_adapter, application);
-
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
