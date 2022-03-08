@@ -6,8 +6,6 @@
 #include "../logger.h"
 #include "observation.h"
 #include "../utility.h"
-#include "fhir_uploader.h"
-#include "cJSON.h"
 #include "../device.h"
 
 #define TAG "ServiceHandlerManager"
@@ -97,57 +95,6 @@ static void on_observation(const GList *observations, DeviceInfo *deviceInfo) {
         device_info_set_last_observation_timestamp(deviceInfo, latest_timestamp);
     }
 
-    // Build bundle
-    cJSON *fhir_json = cJSON_CreateObject();
-    cJSON_AddStringToObject(fhir_json, "resourceType", "Bundle");
-    cJSON_AddStringToObject(fhir_json, "type", "transaction");
-    cJSON *entries = cJSON_AddArrayToObject(fhir_json, "entry");
-
-    // Add device
-    GString *device_full_url = g_string_new("urn:uuid:");
-    gchar *device_full_url_uuid = g_uuid_string_random();
-    g_string_append(device_full_url, device_full_url_uuid);
-    g_free(device_full_url_uuid);
-    cJSON *device_entry = cJSON_CreateObject();
-    cJSON_AddStringToObject(device_entry, "fullUrl", device_full_url->str);
-    cJSON_AddItemToObject(device_entry, "resource", device_info_to_fhir(deviceInfo));
-    cJSON *device_request = cJSON_CreateObject();
-    cJSON_AddStringToObject(device_request, "method", "POST");
-    cJSON_AddStringToObject(device_request, "url", "Device");
-    GString *ifNoneExist = g_string_new("identifier=");
-    g_string_append(ifNoneExist, DEVICE_SYSTEM);
-    g_string_append(ifNoneExist, "|");
-    GString *mac_address = g_string_new(device_info_get_address(deviceInfo));
-    g_string_replace(mac_address, ":", "-", 0);
-    g_string_append(ifNoneExist, mac_address->str);
-    cJSON_AddStringToObject(device_request, "ifNoneExist", ifNoneExist->str);
-    g_string_free(ifNoneExist, TRUE);
-    g_string_free(mac_address, TRUE);
-    cJSON_AddItemToObject(device_entry, "request", device_request);
-    cJSON_AddItemToArray(entries, device_entry);
-
-    // Add observation
-    gchar *observation_full_url_uuid = g_uuid_string_random();
-    GString *observation_full_url = g_string_new("urn:uuid:");
-    g_string_append(observation_full_url, observation_full_url_uuid);
-    g_free(observation_full_url_uuid);
-    cJSON *observation_entry = cJSON_CreateObject();
-    cJSON_AddStringToObject(observation_entry, "fullUrl", observation_full_url->str);
-    g_string_free(observation_full_url, TRUE);
-    cJSON_AddItemToObject(observation_entry, "resource",
-                          observation_list_as_fhir(filtered_observations, device_full_url->str));
-    g_string_free(device_full_url, TRUE);
-    cJSON *observation_request = cJSON_CreateObject();
-    cJSON_AddStringToObject(observation_request, "method", "POST");
-    cJSON_AddStringToObject(observation_request, "url", "Device");
-    cJSON_AddItemToObject(observation_entry, "request", observation_request);
-    cJSON_AddItemToArray(entries, observation_entry);
-
-    char *result = cJSON_Print(fhir_json);
-    g_print("%s", result);
-    cJSON_Delete(fhir_json);
-    //  postFhir(result);
-    g_free(result);
     g_list_free(filtered_observations);
 }
 

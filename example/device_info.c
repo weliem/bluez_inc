@@ -4,7 +4,6 @@
 
 #include <glib.h>
 #include "device_info.h"
-#include "cJSON.h"
 
 static GHashTable *device_info_store;
 
@@ -211,35 +210,4 @@ GDateTime *device_info_get_device_time(DeviceInfo *deviceInfo) {
 GDateTime* device_info_get_last_observation_timestamp(const DeviceInfo *deviceInfo) {
     g_assert(deviceInfo != NULL);
     return deviceInfo->last_observation_timestamp;
-}
-
-cJSON *device_info_to_fhir(DeviceInfo *deviceInfo) {
-    cJSON *fhir_json = cJSON_CreateObject();
-    if (fhir_json == NULL) return NULL;
-
-    cJSON_AddStringToObject(fhir_json, "resourceType", "Device");
-    cJSON_AddStringToObject(fhir_json, "status", "active");
-    cJSON *identifier_array = cJSON_AddArrayToObject(fhir_json, "identifier");
-    cJSON *identifier = cJSON_CreateObject();
-    cJSON_AddStringToObject(identifier, "system", DEVICE_SYSTEM);
-
-    GString *mac_address = g_string_new(deviceInfo->address);
-    g_string_replace(mac_address, ":", "-", 0);
-    cJSON_AddStringToObject(identifier, "value", mac_address->str);
-    g_string_free(mac_address, TRUE);
-    cJSON_AddItemToArray(identifier_array, identifier);
-
-    if (deviceInfo->manufacturer != NULL) {
-        cJSON_AddStringToObject(fhir_json, "manufacturer", deviceInfo->manufacturer);
-    }
-
-    if (deviceInfo->model != NULL) {
-        cJSON_AddStringToObject(fhir_json, "modelNumber", deviceInfo->model);
-    }
-
-    if (deviceInfo->serial_number != NULL) {
-        cJSON_AddStringToObject(fhir_json, "serialNumber", deviceInfo->serial_number);
-    }
-
-    return fhir_json;
 }

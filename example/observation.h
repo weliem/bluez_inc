@@ -9,7 +9,6 @@
 #include "observation_type.h"
 #include "observation_units.h"
 #include "observation_location.h"
-#include "cJSON.h"
 
 typedef struct observation {
     float value;
@@ -24,6 +23,6 @@ typedef struct observation {
 
 const char *observation_get_display_str(Observation *observation);
 void observation_list_free(GList *observation_list);
-cJSON* observation_list_as_fhir(GList *observation_list, const char* device_reference);
+
 
 #endif //TEST_OBSERVATION_H

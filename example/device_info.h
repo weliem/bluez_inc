@@ -10,7 +10,6 @@
 
 #include <glibconfig.h>
 #include <glib/gdatetime.h>
-#include "cJSON.h"
 
 typedef struct device_info DeviceInfo;
 
@@ -51,8 +50,5 @@ const char *device_info_get_software_version(DeviceInfo *deviceInfo);
 GDateTime *device_info_get_device_time(DeviceInfo *deviceInfo);
 
 GDateTime* device_info_get_last_observation_timestamp(const DeviceInfo *deviceInfo);
-
-
-cJSON *device_info_to_fhir(DeviceInfo *deviceInfo);
 
 #endif //TEST_DEVICE_INFO_H
