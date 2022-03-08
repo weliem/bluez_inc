@@ -55,7 +55,7 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, G
 
 void binc_adapter_remove_device(Adapter *adapter, Device *device);
 
-GList* binc_adapter_get_devices(const Adapter *adapter);
+GList *binc_adapter_get_devices(const Adapter *adapter);
 
 Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path);
 
@@ -67,7 +67,7 @@ const char *binc_adapter_get_path(const Adapter *adapter);
 
 DiscoveryState binc_adapter_get_discovery_state(const Adapter *adapter);
 
-const char* binc_adapter_get_discovery_state_name(const Adapter *adapter);
+const char *binc_adapter_get_discovery_state_name(const Adapter *adapter);
 
 gboolean binc_adapter_get_powered_state(const Adapter *adapter);
 
@@ -84,5 +84,7 @@ void binc_adapter_start_advertising(Adapter *adapter, Advertisement *advertiseme
 void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisement);
 
 void binc_adapter_register_application(Adapter *adapter, Application *application);
+
+void binc_adapter_unregister_application(Adapter *adapter, Application *application);
 
 #endif //BINC_ADAPTER_H

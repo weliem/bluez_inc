@@ -886,7 +886,7 @@ static void binc_internal_register_appl_cb(GObject *source_object, GAsyncResult 
         log_debug(TAG, "failed to register application (error %d: %s)", error->code, error->message);
         g_clear_error(&error);
     } else {
-        log_debug(TAG, "successfully register application");
+        log_debug(TAG, "successfully registered application");
     }
 }
 
@@ -905,5 +905,41 @@ void binc_adapter_register_application(Adapter *adapter, Application *applicatio
                            -1,
                            NULL,
                            (GAsyncReadyCallback) binc_internal_register_appl_cb, adapter);
+
+}
+
+static void binc_internal_unregister_appl_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    Adapter *adapter = (Adapter *) user_data;
+    g_assert(adapter != NULL);
+
+    GError *error = NULL;
+    GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
+    if (value != NULL) {
+        g_variant_unref(value);
+    }
+
+    if (error != NULL) {
+        log_debug(TAG, "failed to unregister application (error %d: %s)", error->code, error->message);
+        g_clear_error(&error);
+    } else {
+        log_debug(TAG, "successfully unregistered application");
+    }
+}
+
+void binc_adapter_unregister_application(Adapter *adapter, Application *application) {
+    g_assert(adapter != NULL);
+    g_assert(application != NULL);
+
+    g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
+                           "org.bluez",
+                           adapter->path,
+                           "org.bluez.GattManager1",
+                           "UnregisterApplication",
+                           g_variant_new("(o)", binc_application_get_path(application)),
+                           NULL,
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           (GAsyncReadyCallback) binc_internal_unregister_appl_cb, adapter);
 
 }

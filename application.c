@@ -95,6 +95,15 @@ static void binc_local_char_free(LocalCharacteristic *localCharacteristic) {
 
     log_debug(TAG, "freeing characteristic %s", localCharacteristic->path);
 
+    if (localCharacteristic->registration_id != 0) {
+        gboolean result = g_dbus_connection_unregister_object(localCharacteristic->application->connection,
+                                                              localCharacteristic->registration_id);
+        if (!result) {
+            log_debug(TAG, "error: could not unregister service %s", localCharacteristic->path);
+        }
+        localCharacteristic->registration_id = 0;
+    }
+
     if (localCharacteristic->value != NULL) {
         g_byte_array_free(localCharacteristic->value, TRUE);
     }
@@ -566,13 +575,11 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
         g_byte_array_append(byteArray, data, data_length);
         binc_characteristic_set_value(characteristic, byteArray);
 
-        // Send properties changes because of new value?
+        // Send properties changed signal with new value
         binc_application_notify(application, characteristic->service_uuid, characteristic->uuid, byteArray);
 
         // Only send a response for a Write With Response. How can we tell????
-        if ((characteristic->permissions & GATT_CHR_PROP_WRITE) > 0) {
-            g_dbus_method_invocation_return_value(invocation, NULL);
-        }
+        g_dbus_method_invocation_return_value(invocation, g_variant_new ("()"));
     } else if (g_str_equal(method, "StartNotify")) {
         characteristic->notifying = TRUE;
         if (characteristic->value != NULL) {
@@ -581,7 +588,7 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
                                     characteristic->uuid,
                                     characteristic->value);
         }
-        //g_dbus_method_invocation_return_value(invocation, NULL);
+        g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (g_str_equal(method, "StopNotify")) {
         characteristic->notifying = FALSE;
         g_dbus_method_invocation_return_value(invocation, NULL);
