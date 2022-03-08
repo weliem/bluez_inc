@@ -237,6 +237,7 @@ void on_local_char_read(const Application *application, const char *address, con
 
 gboolean callback(gpointer data) {
     if (application != NULL) {
+        binc_adapter_unregister_application(default_adapter, application);
         binc_application_free(application);
         application = NULL;
     }
