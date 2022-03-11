@@ -67,6 +67,7 @@ struct binc_application {
     GHashTable *services;
     onLocalCharacteristicWrite on_char_write;
     onLocalCharacteristicRead on_char_read;
+    onLocalCharacteristicUpdated on_char_updated;
 };
 
 typedef struct binc_local_service {
@@ -433,7 +434,7 @@ static GList *permissions2Flags(guint8 permissions) {
 }
 
 
-static void binc_characteristic_set_value(LocalCharacteristic *characteristic, GByteArray *byteArray) {
+static void binc_characteristic_set_value(Application *application, LocalCharacteristic *characteristic, GByteArray *byteArray) {
     g_assert(characteristic != NULL);
     g_assert(byteArray != NULL);
 
@@ -445,6 +446,11 @@ static void binc_characteristic_set_value(LocalCharacteristic *characteristic, G
         g_byte_array_free(characteristic->value, TRUE);
     }
     characteristic->value = byteArray;
+
+    if (application->on_char_updated != NULL) {
+        application->on_char_updated(characteristic->application, characteristic->service_uuid,
+                                            characteristic->uuid, byteArray);
+    }
 }
 
 static LocalCharacteristic *get_local_characteristic(const Application *application, const char *service_uuid,
@@ -569,9 +575,25 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
         if (device != NULL) g_free(device);
         if (write_type != NULL) g_free(write_type);
 
+        // Get byte array
         size_t data_length = 0;
         guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
         GByteArray *byteArray = g_byte_array_sized_new(data_length);
+
+        // Allow application to set the characteristic value before returning it
+        char* result = NULL;
+        if (application->on_char_write != NULL) {
+            result = application->on_char_write(characteristic->application, device, characteristic->service_uuid,
+                                      characteristic->uuid, byteArray);
+        }
+
+        if (result) {
+            g_dbus_method_invocation_return_dbus_error(invocation, result, "write error");
+            log_debug(TAG, "write error");
+            return;
+        }
+
+        // Store the new byte array
         g_byte_array_append(byteArray, data, data_length);
         binc_characteristic_set_value(characteristic, byteArray);
 
@@ -690,7 +712,7 @@ const char *binc_application_get_path(Application *application) {
 }
 
 void
-binc_application_set_on_char_read_cb(Application *application, onLocalCharacteristicRead callback) {
+binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback) {
     g_assert(application != NULL);
     g_assert(callback != NULL);
 

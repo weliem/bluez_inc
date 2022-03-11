@@ -235,6 +235,11 @@ void on_local_char_read(const Application *application, const char *address, con
     }
 }
 
+char* on_local_char_write(const Application *application, const char *address, const char *service_uuid,
+                          const char *char_uuid, GByteArray *byteArray) {
+    return BLUEZ_ERROR_REJECTED;
+}
+
 gboolean callback(gpointer data) {
     if (application != NULL) {
         binc_adapter_unregister_application(default_adapter, application);
@@ -318,7 +323,8 @@ int main(void) {
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
                 GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
-        binc_application_set_on_char_read_cb(application, &on_local_char_read);
+        binc_application_set_char_read_cb(application, &on_local_char_read);
+        binc_application_set_char_write_cb(application, &on_local_char_write);
         binc_adapter_register_application(default_adapter, application);
 
         // Register an agent and set callbacks
