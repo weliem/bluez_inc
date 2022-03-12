@@ -138,8 +138,8 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
                                           GVariant *parameters,
                                           void *user_data) {
 
-    GVariantIter *properties = NULL;
-    GVariantIter *unknown = NULL;
+    GVariantIter *properties_changed = NULL;
+    GVariantIter *properties_invalidated = NULL;
     char *iface = NULL;
     char *property_name = NULL;
     GVariant *property_value = NULL;
@@ -148,8 +148,8 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
     g_assert(adapter != NULL);
 
     g_assert(g_str_equal(g_variant_get_type_string(parameters), "(sa{sv}as)"));
-    g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
+    g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties_changed, &properties_invalidated);
+    while (g_variant_iter_loop(properties_changed, "{&sv}", &property_name, &property_value)) {
         if (g_str_equal(property_name, ADAPTER_PROPERTY_POWERED)) {
             adapter->powered = g_variant_get_boolean(property_value);
             if (adapter->poweredStateCallback != NULL) {
@@ -161,10 +161,10 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
         }
     }
 
-    if (properties != NULL)
-        g_variant_iter_free(properties);
-    if (unknown != NULL)
-        g_variant_iter_free(unknown);
+    if (properties_changed != NULL)
+        g_variant_iter_free(properties_changed);
+    if (properties_invalidated != NULL)
+        g_variant_iter_free(properties_invalidated);
 }
 
 
@@ -329,8 +329,8 @@ static void binc_internal_device_changed(GDBusConnection *conn,
                                          GVariant *parameters,
                                          void *user_data) {
 
-    GVariantIter *properties = NULL;
-    GVariantIter *unknown = NULL;
+    GVariantIter *properties_changed = NULL;
+    GVariantIter *properties_invalidated = NULL;
     const char *iface = NULL;
     char *property_name = NULL;
     GVariant *property_value = NULL;
@@ -346,8 +346,8 @@ static void binc_internal_device_changed(GDBusConnection *conn,
     } else {
         gboolean isDiscoveryResult = FALSE;
         g_assert(g_str_equal(g_variant_get_type_string(parameters), "(sa{sv}as)"));
-        g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties, &unknown);
-        while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
+        g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties_changed, &properties_invalidated);
+        while (g_variant_iter_loop(properties_changed, "{&sv}", &property_name, &property_value)) {
             binc_internal_device_update_property(device, property_name, property_value);
             if (g_str_equal(property_name, DEVICE_PROPERTY_RSSI) ||
                 g_str_equal(property_name, DEVICE_PROPERTY_MANUFACTURER_DATA) ||
@@ -360,10 +360,10 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         }
     }
 
-    if (properties != NULL)
-        g_variant_iter_free(properties);
-    if (unknown != NULL)
-        g_variant_iter_free(unknown);
+    if (properties_changed != NULL)
+        g_variant_iter_free(properties_changed);
+    if (properties_invalidated != NULL)
+        g_variant_iter_free(properties_invalidated);
 }
 
 static void setup_signal_subscribers(Adapter *adapter) {
