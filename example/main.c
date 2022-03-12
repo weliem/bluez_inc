@@ -231,7 +231,7 @@ void on_local_char_read(const Application *application, const char *address, con
         const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
         GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
         g_byte_array_append(byteArray, bytes, sizeof(bytes));
-        binc_application_char_set_value(application, service_uuid, char_uuid, byteArray);
+        binc_application_set_char_value(application, service_uuid, char_uuid, byteArray);
     }
 }
 

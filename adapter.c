@@ -258,8 +258,13 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
             }
 
             g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
-            if (adapter->discovery_state == STARTED) {
+            if (adapter->discovery_state == STARTED && binc_device_get_connection_state(device)==DISCONNECTED) {
                 deliver_discovery_result(adapter, device);
+            }
+
+            if (binc_device_get_connection_state(device)==CONNECTED) {
+                // Remote device connected to adapter
+                log_debug(TAG, "remote device connected %s", binc_device_get_address(device));
             }
         }
     }

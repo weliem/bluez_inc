@@ -48,7 +48,7 @@ void binc_application_set_char_read_cb(Application *application, onLocalCharacte
 
 void binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback);
 
-void binc_application_char_set_value(const Application *application, const char *service_uuid,
+void binc_application_set_char_value(const Application *application, const char *service_uuid,
                                      const char *char_uuid, GByteArray *byteArray);
 
 void binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,

@@ -434,7 +434,7 @@ static GList *permissions2Flags(guint8 permissions) {
 }
 
 
-static void binc_characteristic_set_value(Application *application, LocalCharacteristic *characteristic, GByteArray *byteArray) {
+static void binc_characteristic_set_value(const Application *application, LocalCharacteristic *characteristic, GByteArray *byteArray) {
     g_assert(characteristic != NULL);
     g_assert(byteArray != NULL);
 
@@ -462,12 +462,12 @@ static LocalCharacteristic *get_local_characteristic(const Application *applicat
     return NULL;
 }
 
-void binc_application_char_set_value(const Application *application, const char *service_uuid,
+void binc_application_set_char_value(const Application *application, const char *service_uuid,
                                      const char *char_uuid, GByteArray *byteArray) {
 
     LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
     if (characteristic != NULL) {
-        binc_characteristic_set_value(characteristic, byteArray);
+        binc_characteristic_set_value(application,characteristic, byteArray);
     }
 }
 
@@ -595,7 +595,7 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
 
         // Store the new byte array
         g_byte_array_append(byteArray, data, data_length);
-        binc_characteristic_set_value(characteristic, byteArray);
+        binc_characteristic_set_value(application, characteristic, byteArray);
 
         // Send properties changed signal with new value
         binc_application_notify(application, characteristic->service_uuid, characteristic->uuid, byteArray);
