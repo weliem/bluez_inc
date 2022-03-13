@@ -212,3 +212,9 @@ The official Bluez documentation is a bit sparse but can be found here:
 * [Agent documentation](https://github.com/bluez/bluez/blob/master/doc/agent-api.txt) (for agent)
 
 You will notice that most original methods and properties are available in this library. In some cases, some adaptations have been done for convenience.
+
+
+## Installing on Raspberry Pi
+Assuming you have a default installation, you will need to install CMake and GLib:
+* sudo apt install -y cmake
+* sudo apt-get install -y libglib2.0-dev
