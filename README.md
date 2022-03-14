@@ -4,7 +4,7 @@
 The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood. 
 As a result, it looks like a 'normal' C library for Bluetooth!
 
-Note, at the moment only BLE is supported and only Central role.
+The library supports both Central and Peripheral roles.
 
 
 ## Discovering devices
@@ -202,6 +202,82 @@ guint32 on_request_passkey(Device *device) {
 Note that this type of bonding requires a **6 digit pin** code!
 
 If you want to initiate bonding yourself, you can call `binc_device_pair()`. The same callbacks will be called for dealing with authorization or PIN codes.
+
+# Creating your own peripheral
+It is also possible with BINC to create your own peripheral, i.e. start advertising and implementing some services and characteristics.
+
+## Advertising
+In Bluez an advertisement is an object on the DBus. By using some basic calls BINC will create this object for you and set the right values.
+After that, you need to tell the adapter to start advertising.
+
+```c
+// Build array with services to advertise
+GPtrArray *adv_service_uuids = g_ptr_array_new();
+g_ptr_array_add(adv_service_uuids, HTS_SERVICE_UUID);
+g_ptr_array_add(adv_service_uuids, BLP_SERVICE_UUID);
+
+// Create the advertisement
+advertisement = binc_advertisement_create();
+binc_advertisement_set_local_name(advertisement, "BINC2");
+binc_advertisement_set_services(advertisement, adv_service_uuids);
+        
+// Start advertising
+binc_adapter_start_advertising(default_adapter, advertisement);
+g_ptr_array_free(adv_service_uuids, TRUE);
+```
+
+## Adding services and characteristics
+In order to make your peripheral work you need to create an 'application' in Bluez terminology. The steps are:
+* Create an application
+* Add one or more services
+* Add one or more characteristics
+* Implement read/write/notify callbacks for characteristics
+
+Here is how to setup an application with a service and a characteristic:
+
+```c
+// Create an application with a service
+application = binc_create_application(default_adapter);
+binc_application_add_service(application, HTS_SERVICE_UUID);
+binc_application_add_characteristic(
+                application,
+                HTS_SERVICE_UUID,
+                TEMPERATURE_CHAR_UUID,
+                GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
+                
+// Set the callbacks for read/write
+binc_application_set_char_read_cb(application, &on_local_char_read);
+binc_application_set_char_write_cb(application, &on_local_char_write);
+
+// Register your application
+binc_adapter_register_application(default_adapter, application);
+```
+
+There are callbacks to be implemented where you can update the value of a characteristic just before the read/write is done:
+
+```c
+void on_local_char_read(const Application *application, const char *address, const char* service_uuid, const char* char_uuid) {
+    if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
+        const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
+        GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
+        g_byte_array_append(byteArray, bytes, sizeof(bytes));
+        binc_application_set_char_value(application, service_uuid, char_uuid, byteArray);
+    }
+}
+
+char* on_local_char_write(const Application *application, const char *address, const char *service_uuid,
+                          const char *char_uuid, GByteArray *byteArray) {
+    // Reject all writes
+    return BLUEZ_ERROR_REJECTED;
+}
+```
+
+In order to notify you can use:
+
+```c
+void binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
+                             GByteArray *byteArray);
+```
 
 ## Bluez documentation
 
