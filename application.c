@@ -68,6 +68,8 @@ struct binc_application {
     onLocalCharacteristicWrite on_char_write;
     onLocalCharacteristicRead on_char_read;
     onLocalCharacteristicUpdated on_char_updated;
+    onLocalCharacteristicStartNotify on_char_start_notify;
+    onLocalCharacteristicStopNotify on_char_stop_notify;
 };
 
 typedef struct binc_local_service {
@@ -194,14 +196,14 @@ static GVariant *binc_local_characteristic_get_flags(LocalCharacteristic *localC
     return result;
 }
 
-static void bluez_application_method_call(GDBusConnection *conn,
-                                          const gchar *sender,
-                                          const gchar *path,
-                                          const gchar *interface,
-                                          const gchar *method,
-                                          GVariant *params,
-                                          GDBusMethodInvocation *invocation,
-                                          void *userdata) {
+static void binc_internal_application_method_call(GDBusConnection *conn,
+                                                  const gchar *sender,
+                                                  const gchar *path,
+                                                  const gchar *interface,
+                                                  const gchar *method,
+                                                  GVariant *params,
+                                                  GDBusMethodInvocation *invocation,
+                                                  void *userdata) {
 
     Application *application = (Application *) userdata;
     g_assert(application != NULL);
@@ -284,7 +286,7 @@ static void bluez_application_method_call(GDBusConnection *conn,
 }
 
 static const GDBusInterfaceVTable application_method_table = {
-        .method_call = bluez_application_method_call,
+        .method_call = binc_internal_application_method_call,
 };
 
 void binc_application_publish(Application *application, const Adapter *adapter) {
@@ -465,20 +467,43 @@ static LocalCharacteristic *get_local_characteristic(const Application *applicat
 void binc_application_set_char_value(const Application *application, const char *service_uuid,
                                      const char *char_uuid, GByteArray *byteArray) {
 
+    g_assert(application != NULL);
+    g_assert(service_uuid != NULL);
+    g_assert(char_uuid != NULL);
+    g_assert(byteArray != NULL);
+    g_assert(g_uuid_string_is_valid(service_uuid));
+    g_assert(g_uuid_string_is_valid(char_uuid));
+
     LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
     if (characteristic != NULL) {
         binc_characteristic_set_value(application,characteristic, byteArray);
     }
 }
 
-static void bluez_characteristic_method_call(GDBusConnection *conn,
-                                             const gchar *sender,
-                                             const gchar *path,
-                                             const gchar *interface,
-                                             const gchar *method,
-                                             GVariant *params,
-                                             GDBusMethodInvocation *invocation,
-                                             void *userdata) {
+GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,
+                                            const char *char_uuid) {
+
+    g_assert(application != NULL);
+    g_assert(service_uuid != NULL);
+    g_assert(char_uuid != NULL);
+    g_assert(g_uuid_string_is_valid(service_uuid));
+    g_assert(g_uuid_string_is_valid(char_uuid));
+
+    LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
+    if (characteristic != NULL) {
+        return characteristic->value;
+    }
+    return NULL;
+}
+
+static void binc_internal_characteristic_method_call(GDBusConnection *conn,
+                                                     const gchar *sender,
+                                                     const gchar *path,
+                                                     const gchar *interface,
+                                                     const gchar *method,
+                                                     GVariant *params,
+                                                     GDBusMethodInvocation *invocation,
+                                                     void *userdata) {
 
     log_debug(TAG, "local characteristic method called: %s", method);
     LocalCharacteristic *characteristic = (LocalCharacteristic *) userdata;
@@ -604,16 +629,27 @@ static void bluez_characteristic_method_call(GDBusConnection *conn,
         g_dbus_method_invocation_return_value(invocation, g_variant_new ("()"));
     } else if (g_str_equal(method, "StartNotify")) {
         characteristic->notifying = TRUE;
-        if (characteristic->value != NULL) {
-            binc_application_notify(application,
-                                    characteristic->service_uuid,
-                                    characteristic->uuid,
-                                    characteristic->value);
-        }
         g_dbus_method_invocation_return_value(invocation, NULL);
+
+//        if (characteristic->value != NULL) {
+//            binc_application_notify(application,
+//                                    characteristic->service_uuid,
+//                                    characteristic->uuid,
+//                                    characteristic->value);
+//        }
+
+        if (application->on_char_start_notify != NULL) {
+            application->on_char_start_notify(characteristic->application, characteristic->service_uuid,
+                                      characteristic->uuid);
+        }
     } else if (g_str_equal(method, "StopNotify")) {
         characteristic->notifying = FALSE;
         g_dbus_method_invocation_return_value(invocation, NULL);
+
+        if (application->on_char_stop_notify != NULL) {
+            application->on_char_stop_notify(characteristic->application, characteristic->service_uuid,
+                                              characteristic->uuid);
+        }
     }
 }
 
@@ -646,7 +682,7 @@ GVariant *characteristic_get_property(GDBusConnection *connection,
 }
 
 static const GDBusInterfaceVTable characteristic_table = {
-        .method_call = bluez_characteristic_method_call,
+        .method_call = binc_internal_characteristic_method_call,
         .get_property = characteristic_get_property
 };
 
@@ -725,6 +761,20 @@ binc_application_set_char_write_cb(Application *application, onLocalCharacterist
     g_assert(callback != NULL);
 
     application->on_char_write = callback;
+}
+
+void binc_application_set_char_start_notify_cb(Application *application, onLocalCharacteristicStartNotify callback) {
+    g_assert(application != NULL);
+    g_assert(callback != NULL);
+
+    application->on_char_start_notify = callback;
+}
+
+void binc_application_set_char_stop_notify_cb(Application *application, onLocalCharacteristicStopNotify callback) {
+    g_assert(application != NULL);
+    g_assert(callback != NULL);
+
+    application->on_char_stop_notify = callback;
 }
 
 void binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,

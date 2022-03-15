@@ -237,7 +237,15 @@ void on_local_char_read(const Application *application, const char *address, con
 
 char* on_local_char_write(const Application *application, const char *address, const char *service_uuid,
                           const char *char_uuid, GByteArray *byteArray) {
-    return BLUEZ_ERROR_REJECTED;
+    return NULL;
+}
+
+void on_local_char_start_notify(const Application *application, const char* service_uuid, const char* char_uuid) {
+    log_debug(TAG, "on start notify");
+}
+
+void on_local_char_stop_notify(const Application *application, const char* service_uuid, const char* char_uuid) {
+    log_debug(TAG, "on stop notify");
 }
 
 gboolean callback(gpointer data) {
@@ -325,6 +333,9 @@ int main(void) {
                 GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
         binc_application_set_char_read_cb(application, &on_local_char_read);
         binc_application_set_char_write_cb(application, &on_local_char_write);
+        binc_application_set_char_start_notify_cb(application, &on_local_char_start_notify);
+        binc_application_set_char_stop_notify_cb(application, &on_local_char_stop_notify);
+
         binc_adapter_register_application(default_adapter, application);
 
         // Register an agent and set callbacks
@@ -368,7 +379,7 @@ int main(void) {
         binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
         g_ptr_array_free(service_uuids, TRUE);
-        binc_adapter_start_discovery(default_adapter);
+       // binc_adapter_start_discovery(default_adapter);
 
         //binc_adapter_stop_advertising(default_adapter, advertisement);
     } else {

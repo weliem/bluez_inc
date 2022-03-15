@@ -32,6 +32,14 @@ typedef char* (*onLocalCharacteristicWrite)(const Application *application, cons
 typedef void (*onLocalCharacteristicUpdated)(const Application *application, const char *service_uuid,
                                             const char *char_uuid, GByteArray *byteArray);
 
+// This callback is called when notifications are enabled for a characteristic
+typedef void (*onLocalCharacteristicStartNotify)(const Application *application, const char *service_uuid,
+                                                 const char *char_uuid);
+
+// This callback is called when notifications are disabled for a characteristic
+typedef void (*onLocalCharacteristicStopNotify)(const Application *application, const char *service_uuid,
+                                                 const char *char_uuid);
+
 // Methods
 Application *binc_create_application(const Adapter *adapter);
 
@@ -48,8 +56,15 @@ void binc_application_set_char_read_cb(Application *application, onLocalCharacte
 
 void binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback);
 
+void binc_application_set_char_start_notify_cb(Application *application, onLocalCharacteristicStartNotify callback);
+
+void binc_application_set_char_stop_notify_cb(Application *application, onLocalCharacteristicStopNotify callback);
+
 void binc_application_set_char_value(const Application *application, const char *service_uuid,
                                      const char *char_uuid, GByteArray *byteArray);
+
+GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,
+                                     const char *char_uuid);
 
 void binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
                              GByteArray *byteArray);
