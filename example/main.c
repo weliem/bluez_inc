@@ -39,6 +39,7 @@
 #include "services/plx_service_handler.h"
 #include "services/glx_service_handler.h"
 #include "../advertisement.h"
+#include "../utility.h"
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
@@ -242,6 +243,13 @@ char* on_local_char_write(const Application *application, const char *address, c
 
 void on_local_char_start_notify(const Application *application, const char* service_uuid, const char* char_uuid) {
     log_debug(TAG, "on start notify");
+    if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
+        const guint8 bytes[] = {0x06, 0x6A, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
+        GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
+        g_byte_array_append(byteArray, bytes, sizeof(bytes));
+        binc_application_notify(application, service_uuid, char_uuid, byteArray);
+        g_byte_array_free(byteArray, TRUE);
+    }
 }
 
 void on_local_char_stop_notify(const Application *application, const char* service_uuid, const char* char_uuid) {
@@ -335,7 +343,6 @@ int main(void) {
         binc_application_set_char_write_cb(application, &on_local_char_write);
         binc_application_set_char_start_notify_cb(application, &on_local_char_start_notify);
         binc_application_set_char_stop_notify_cb(application, &on_local_char_stop_notify);
-
         binc_adapter_register_application(default_adapter, application);
 
         // Register an agent and set callbacks
@@ -379,7 +386,7 @@ int main(void) {
         binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
         g_ptr_array_free(service_uuids, TRUE);
-       // binc_adapter_start_discovery(default_adapter);
+        binc_adapter_start_discovery(default_adapter);
 
         //binc_adapter_stop_advertising(default_adapter, advertisement);
     } else {

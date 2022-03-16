@@ -264,7 +264,7 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
 
             if (binc_device_get_connection_state(device)==CONNECTED) {
                 // Remote device connected to adapter
-                log_debug(TAG, "remote device connected %s", binc_device_get_address(device));
+                log_debug(TAG, "remote central connected %s", binc_device_get_address(device));
             }
         }
     }
@@ -345,6 +345,7 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         binc_internal_device_getall_properties(adapter, device);
     } else {
         gboolean isDiscoveryResult = FALSE;
+        ConnectionState oldState = binc_device_get_connection_state(device);
         g_assert(g_str_equal(g_variant_get_type_string(parameters), "(sa{sv}as)"));
         g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties_changed, &properties_invalidated);
         while (g_variant_iter_loop(properties_changed, "{&sv}", &property_name, &property_value)) {
@@ -357,6 +358,12 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         }
         if (adapter->discovery_state == STARTED && isDiscoveryResult) {
             deliver_discovery_result(adapter, device);
+        }
+
+        ConnectionState newState = binc_device_get_connection_state(device);
+        if (oldState == CONNECTED && newState == DISCONNECTED) {
+            // Only remote centrals go directly from connected to disconnected
+            log_debug(TAG, "remote central disconnected %s", binc_device_get_address(device));
         }
     }
 

@@ -34,4 +34,10 @@ float binc_round_with_precision(float value, guint8 precision);
 
 gchar *binc_date_time_format_iso8601(GDateTime *datetime);
 
+gboolean is_lowercase(const char *str);
+
+gboolean is_valid_uuid(const char *uuid);
+
+char *path_to_address(const char *path);
+
 #endif //BINC_UTILITY_H

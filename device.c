@@ -705,6 +705,9 @@ void binc_device_set_read_char_callback(Device *device, OnReadCallback callback)
 }
 
 gboolean binc_device_read_char(const Device *device, const char* service_uuid, const char *characteristic_uuid) {
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(is_valid_uuid(characteristic_uuid));
+
     Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
     if (characteristic != NULL && binc_characteristic_supports_read(characteristic)) {
         binc_characteristic_read(characteristic);
@@ -721,6 +724,10 @@ void binc_device_set_write_char_callback(Device *device, OnWriteCallback callbac
 
 gboolean binc_device_write_char(const Device *device, const char* service_uuid, const char *characteristic_uuid,
                                 const GByteArray *byteArray, WriteType writeType) {
+    g_assert(device != NULL);
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(is_valid_uuid(characteristic_uuid));
+
     Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
     if (characteristic != NULL && binc_characteristic_supports_write(characteristic, writeType)) {
         binc_characteristic_write(characteristic, byteArray, writeType);
@@ -742,6 +749,10 @@ void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChang
 }
 
 gboolean binc_device_start_notify(const Device *device, const char* service_uuid, const char *characteristic_uuid) {
+    g_assert(device != NULL);
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(is_valid_uuid(characteristic_uuid));
+
     Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
     if (characteristic != NULL && binc_characteristic_supports_notify(characteristic)) {
         binc_characteristic_start_notify(characteristic);

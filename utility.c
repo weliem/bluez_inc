@@ -84,3 +84,43 @@ gchar *binc_date_time_format_iso8601(GDateTime *datetime) {
     return g_string_free(outstr, FALSE);
 }
 
+gboolean is_lowercase(const char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        if (g_ascii_isalpha(str[i]) && g_ascii_isupper(str[i])) return FALSE;
+    }
+
+    return TRUE;
+}
+
+gboolean is_valid_uuid(const char *uuid) {
+    if (uuid == NULL) {
+        g_critical("uuid is NULL");
+        return FALSE;
+    }
+
+    if (!g_uuid_string_is_valid(uuid)) {
+        g_critical("%s is not a valid UUID", uuid);
+        return FALSE;
+    }
+
+    if (!is_lowercase(uuid)) {
+        g_critical("%s is not entirely lowercase", uuid);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static char* replace_char(char* str, char find, char replace){
+    char *current_pos = strchr(str,find);
+    while (current_pos) {
+        *current_pos = replace;
+        current_pos = strchr(current_pos,find);
+    }
+    return str;
+}
+
+char *path_to_address(const char *path) {
+    char *address = g_strdup_printf("%s", path+(strlen(path)-17));
+    return replace_char(address, '_', ':');
+}
