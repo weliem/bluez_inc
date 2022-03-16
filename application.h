@@ -60,7 +60,7 @@ void binc_application_set_char_start_notify_cb(Application *application, onLocal
 
 void binc_application_set_char_stop_notify_cb(Application *application, onLocalCharacteristicStopNotify callback);
 
-void binc_application_set_char_value(const Application *application, const char *service_uuid,
+int binc_application_set_char_value(const Application *application, const char *service_uuid,
                                      const char *char_uuid, GByteArray *byteArray);
 
 GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,

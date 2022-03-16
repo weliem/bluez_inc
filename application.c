@@ -436,9 +436,9 @@ static GList *permissions2Flags(guint8 permissions) {
 }
 
 
-static void binc_characteristic_set_value(const Application *application, LocalCharacteristic *characteristic, GByteArray *byteArray) {
-    g_assert(characteristic != NULL);
-    g_assert(byteArray != NULL);
+static int binc_characteristic_set_value(const Application *application, LocalCharacteristic *characteristic, GByteArray *byteArray) {
+    g_return_val_if_fail (characteristic != NULL, EINVAL);
+    g_return_val_if_fail (byteArray != NULL, EINVAL);
 
     GString *byteArrayStr = g_byte_array_as_hex(byteArray);
     log_debug(TAG, "set value <%s> to <%s>", byteArrayStr->str, characteristic->uuid);
@@ -453,6 +453,8 @@ static void binc_characteristic_set_value(const Application *application, LocalC
         application->on_char_updated(characteristic->application, characteristic->service_uuid,
                                             characteristic->uuid, byteArray);
     }
+
+    return 0;
 }
 
 static LocalCharacteristic *get_local_characteristic(const Application *application, const char *service_uuid,
@@ -464,30 +466,30 @@ static LocalCharacteristic *get_local_characteristic(const Application *applicat
     return NULL;
 }
 
-void binc_application_set_char_value(const Application *application, const char *service_uuid,
+int binc_application_set_char_value(const Application *application, const char *service_uuid,
                                      const char *char_uuid, GByteArray *byteArray) {
 
-    g_assert(application != NULL);
-    g_assert(service_uuid != NULL);
-    g_assert(char_uuid != NULL);
-    g_assert(byteArray != NULL);
-    g_assert(g_uuid_string_is_valid(service_uuid));
-    g_assert(g_uuid_string_is_valid(char_uuid));
+    g_return_val_if_fail (application != NULL, EINVAL);
+    g_return_val_if_fail (service_uuid != NULL, EINVAL);
+    g_return_val_if_fail (char_uuid != NULL, EINVAL);
+    g_return_val_if_fail (g_uuid_string_is_valid(service_uuid), EINVAL);
+    g_return_val_if_fail (g_uuid_string_is_valid(char_uuid), EINVAL);
 
     LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
     if (characteristic != NULL) {
-        binc_characteristic_set_value(application,characteristic, byteArray);
+        return binc_characteristic_set_value(application,characteristic, byteArray);
     }
+    return EINVAL;
 }
 
 GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,
                                             const char *char_uuid) {
 
-    g_assert(application != NULL);
-    g_assert(service_uuid != NULL);
-    g_assert(char_uuid != NULL);
-    g_assert(g_uuid_string_is_valid(service_uuid));
-    g_assert(g_uuid_string_is_valid(char_uuid));
+    g_return_val_if_fail (application != NULL, NULL);
+    g_return_val_if_fail (service_uuid != NULL, NULL);
+    g_return_val_if_fail (char_uuid != NULL, NULL);
+    g_return_val_if_fail (g_uuid_string_is_valid(service_uuid), NULL);
+    g_return_val_if_fail (g_uuid_string_is_valid(char_uuid), NULL);
 
     LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
     if (characteristic != NULL) {
