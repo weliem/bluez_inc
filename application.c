@@ -472,14 +472,17 @@ int binc_application_set_char_value(const Application *application, const char *
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (service_uuid != NULL, EINVAL);
     g_return_val_if_fail (char_uuid != NULL, EINVAL);
+    g_return_val_if_fail (byteArray != NULL, EINVAL);
     g_return_val_if_fail (g_uuid_string_is_valid(service_uuid), EINVAL);
     g_return_val_if_fail (g_uuid_string_is_valid(char_uuid), EINVAL);
 
     LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
-    if (characteristic != NULL) {
-        return binc_characteristic_set_value(application,characteristic, byteArray);
+    if (characteristic == NULL) {
+        g_critical("%s: characteristic with uuid %s does not exist", G_STRFUNC, char_uuid);
+        return EINVAL;
     }
-    return EINVAL;
+
+    return binc_characteristic_set_value(application,characteristic, byteArray);
 }
 
 GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,
