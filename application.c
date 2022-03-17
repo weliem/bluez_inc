@@ -8,7 +8,6 @@
 #include "characteristic.h"
 #include "utility.h"
 
-#define BUFFER_SIZE 255
 #define GATT_SERV_INTERFACE "org.bluez.GattService1"
 #define GATT_CHAR_INTERFACE "org.bluez.GattCharacteristic1"
 
@@ -33,7 +32,6 @@ static const gchar service_introspection_xml[] =
         "        <property type='s' name='Includes' access='read' />"
         "  </interface>"
         "</node>";
-
 
 static const gchar characteristics_introspection_xml[] =
         "<node name='/'>"
@@ -109,26 +107,32 @@ static void binc_local_char_free(LocalCharacteristic *localCharacteristic) {
 
     if (localCharacteristic->value != NULL) {
         g_byte_array_free(localCharacteristic->value, TRUE);
+        localCharacteristic->value = NULL;
     }
 
     if (localCharacteristic->path != NULL) {
         g_free(localCharacteristic->path);
+        localCharacteristic->path = NULL;
     }
 
     if (localCharacteristic->uuid != NULL) {
         g_free(localCharacteristic->uuid);
+        localCharacteristic->uuid = NULL;
     }
 
     if (localCharacteristic->service_uuid != NULL) {
         g_free(localCharacteristic->service_uuid);
+        localCharacteristic->service_uuid = NULL;
     }
 
     if (localCharacteristic->service_path != NULL) {
         g_free(localCharacteristic->service_path);
+        localCharacteristic->service_path = NULL;
     }
 
     if (localCharacteristic->flags != NULL) {
         g_list_free_full(localCharacteristic->flags, g_free);
+        localCharacteristic->flags = NULL;
     }
 
     g_free(localCharacteristic);
@@ -166,17 +170,16 @@ void binc_local_service_free(LocalService *localService) {
     g_free(localService);
 }
 
+static void add_char_path(gpointer key, gpointer value, gpointer userdata) {
+    LocalCharacteristic *localCharacteristic = (LocalCharacteristic *) value;
+    g_variant_builder_add((GVariantBuilder *) userdata, "o", localCharacteristic->path);
+}
+
 static GVariant *binc_local_service_get_characteristics(LocalService *localService) {
     g_assert(localService != NULL);
 
     GVariantBuilder *characteristics_builder = g_variant_builder_new(G_VARIANT_TYPE("ao"));
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, localService->characteristics);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        LocalCharacteristic *localCharacteristic = (LocalCharacteristic *) value;
-        g_variant_builder_add(characteristics_builder, "o", localCharacteristic->path);
-    }
+    g_hash_table_foreach(localService->characteristics, add_char_path, characteristics_builder);
     GVariant *result = g_variant_builder_end(characteristics_builder);
     g_variant_builder_unref(characteristics_builder);
     return result;
@@ -186,11 +189,9 @@ static GVariant *binc_local_characteristic_get_flags(LocalCharacteristic *localC
     g_assert(localCharacteristic != NULL);
 
     GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-
     for (GList *iterator = localCharacteristic->flags; iterator; iterator = iterator->next) {
         g_variant_builder_add(flags_builder, "s", (char *) iterator->data);
     }
-
     GVariant *result = g_variant_builder_end(flags_builder);
     g_variant_builder_unref(flags_builder);
     return result;
@@ -294,11 +295,9 @@ void binc_application_publish(Application *application, const Adapter *adapter) 
     g_assert(adapter != NULL);
 
     GError *error = NULL;
-    GDBusNodeInfo *info = NULL;
-
-    info = g_dbus_node_info_new_for_xml(manager_introspection_xml, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(manager_introspection_xml, &error);
     if (error) {
-        log_debug(TAG, "Unable to create node: %s\n", error->message);
+        log_debug(TAG, "Unable to create manager node: %s\n", error->message);
         g_clear_error(&error);
         return;
     }
@@ -309,12 +308,14 @@ void binc_application_publish(Application *application, const Adapter *adapter) 
                                                                      &application_method_table,
                                                                      application, NULL, &error);
     g_dbus_node_info_unref(info);
-    if (application->registration_id == 0) {
+
+    if (application->registration_id == 0 && error != NULL) {
         log_debug(TAG, "failed to publish application");
         g_clear_error(&error);
-    } else {
-        log_debug(TAG, "successfully published application");
+        return;
     }
+
+    log_debug(TAG, "successfully published application");
 }
 
 Application *binc_create_application(const Adapter *adapter) {
@@ -365,17 +366,14 @@ int binc_application_add_service(Application *application, const char *service_u
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
 
-    // Get node info from XML
     GError *error = NULL;
-    GDBusNodeInfo *info = NULL;
-    info = g_dbus_node_info_new_for_xml(service_introspection_xml, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(service_introspection_xml, &error);
     if (error) {
-        log_debug(TAG, "Unable to create node: %s\n", error->message);
+        log_debug(TAG, "Unable to create service node: %s\n", error->message);
         g_clear_error(&error);
         return EINVAL;
     }
 
-    // Create LocalService
     LocalService *localService = g_new0(LocalService, 1);
     localService->uuid = g_strdup(service_uuid);
     localService->application = application;
@@ -390,8 +388,6 @@ int binc_application_add_service(Application *application, const char *service_u
             g_hash_table_size(application->services));
     g_hash_table_insert(application->services, g_strdup(service_uuid), localService);
 
-
-    // Register LocalService on DBUS
     localService->registration_id = g_dbus_connection_register_object(application->connection,
                                                                       localService->path,
                                                                       info->interfaces[0],
@@ -537,8 +533,6 @@ static ReadOptions *parse_read_options(GVariant *params) {
     GVariant *property_value;
     gchar *property_name;
     while (g_variant_iter_loop(optionsVariant, "{&sv}", &property_name, &property_value)) {
-        //log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
-
         if (g_str_equal(property_name, "offset")) {
             options->offset = g_variant_get_uint16(property_value);
         } else if (g_str_equal(property_name, "mtu")) {
@@ -581,8 +575,6 @@ static WriteOptions *parse_write_options(GVariant *optionsVariant) {
     GVariant *property_value;
     gchar *property_name;
     while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &property_value)) {
-        //log_debug(TAG, "property %s, variant type %s", property_name, g_variant_get_type_string(property_value));
-
         if (g_str_equal(property_name, "offset")) {
             options->offset = g_variant_get_uint16(property_value);
         } else if (g_str_equal(property_name, "type")) {
@@ -611,7 +603,6 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
                                                      GDBusMethodInvocation *invocation,
                                                      void *userdata) {
 
-    log_debug(TAG, "local characteristic method called: %s", method);
     LocalCharacteristic *characteristic = (LocalCharacteristic *) userdata;
     g_assert(characteristic != NULL);
 
@@ -619,6 +610,8 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
     g_assert(application != NULL);
 
     if (g_str_equal(method, "ReadValue")) {
+        log_debug(TAG, "read <%s>", characteristic->uuid);
+
         ReadOptions *options = parse_read_options(params);
         if (application->on_char_read != NULL) {
             application->on_char_read(characteristic->application, options->device, characteristic->service_uuid,
@@ -633,13 +626,14 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
                                                      sizeof(guint8));
         g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
     } else if (g_str_equal(method, "WriteValue")) {
+        log_debug(TAG, "write <%s>", characteristic->uuid);
+
         g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
         GVariant *valueVariant, *optionsVariant;
         g_variant_get(params, "(@ay@a{sv})", &valueVariant, &optionsVariant);
         WriteOptions *options = parse_write_options(optionsVariant);
         g_variant_unref(optionsVariant);
 
-        // Get byte array
         size_t data_length = 0;
         guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
         GByteArray *byteArray = g_byte_array_sized_new(data_length);
@@ -649,16 +643,15 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         // Allow application to accept/reject the characteristic value before setting it
         char *result = NULL;
         if (application->on_char_write != NULL) {
-            result = application->on_char_write(characteristic->application, options->device, characteristic->service_uuid,
+            result = application->on_char_write(characteristic->application, options->device,
+                                                characteristic->service_uuid,
                                                 characteristic->uuid, byteArray);
         }
-
         write_options_free(options);
 
         if (result) {
             g_dbus_method_invocation_return_dbus_error(invocation, result, "write error");
             log_debug(TAG, "write error");
-
             return;
         }
 
@@ -670,21 +663,18 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
 
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     } else if (g_str_equal(method, "StartNotify")) {
+        log_debug(TAG, "start notify <%s>", characteristic->uuid);
+
         characteristic->notifying = TRUE;
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
-
-//        if (characteristic->value != NULL) {
-//            binc_application_notify(application,
-//                                    characteristic->service_uuid,
-//                                    characteristic->uuid,
-//                                    characteristic->value);
-//        }
 
         if (application->on_char_start_notify != NULL) {
             application->on_char_start_notify(characteristic->application, characteristic->service_uuid,
                                               characteristic->uuid);
         }
     } else if (g_str_equal(method, "StopNotify")) {
+        log_debug(TAG, "stop notify <%s>", characteristic->uuid);
+
         characteristic->notifying = FALSE;
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
 
@@ -692,6 +682,9 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
             application->on_char_stop_notify(characteristic->application, characteristic->service_uuid,
                                              characteristic->uuid);
         }
+    } else if (g_str_equal(method, "Confirm")) {
+        log_debug(TAG, "indication confirmed <%s>", characteristic->uuid);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     }
 }
 
@@ -729,14 +722,14 @@ static const GDBusInterfaceVTable characteristic_table = {
 };
 
 int binc_application_add_characteristic(Application *application, const char *service_uuid,
-                                         const char *char_uuid, guint8 permissions) {
+                                        const char *char_uuid, guint8 permissions) {
 
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
     g_return_val_if_fail (is_valid_uuid(char_uuid), EINVAL);
 
     LocalService *localService = binc_application_get_service(application, service_uuid);
-    if(localService == NULL) {
+    if (localService == NULL) {
         g_critical("service %s does not exist", service_uuid);
         return EINVAL;
     }
@@ -774,14 +767,12 @@ int binc_application_add_characteristic(Application *application, const char *se
     if (characteristic->registration_id == 0) {
         log_debug(TAG, "failed to publish local characteristic");
         log_debug(TAG, "Error %s", error->message);
-    } else {
-        log_debug(TAG, "successfully published local characteristic %s", char_uuid);
-    }
-
-    if (error) {
         g_clear_error(&error);
+        g_hash_table_remove(localService->characteristics, char_uuid);
+        return EINVAL;
     }
 
+    log_debug(TAG, "successfully published local characteristic %s", char_uuid);
     return 0;
 }
 
@@ -822,7 +813,7 @@ void binc_application_set_char_stop_notify_cb(Application *application, onLocalC
 }
 
 int binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
-                             const GByteArray *byteArray) {
+                            const GByteArray *byteArray) {
 
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (byteArray != NULL, EINVAL);
