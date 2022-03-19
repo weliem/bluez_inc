@@ -27,6 +27,7 @@
 #include <stdint-gcc.h>
 #include "forward_decl.h"
 #include "characteristic.h"
+#include "descriptor.h"
 
 typedef enum ConnectionState {
     DISCONNECTED = 0, CONNECTED = 1, CONNECTING = 2, DISCONNECTING = 3
@@ -75,6 +76,13 @@ void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChang
 
 gboolean binc_device_start_notify(const Device *device, const char* service_uuid, const char *characteristic_uuid);
 
+gboolean binc_device_read_desc(const Device *device, const char* service_uuid,
+                               const char *characteristic_uuid, const char *desc_uuid);
+
+gboolean binc_device_write_desc(const Device *device, const char* service_uuid,
+                                const char *characteristic_uuid, const char *desc_uuid, const GByteArray *byteArray);
+void binc_device_set_read_desc_cb(Device *device, OnDescReadCallback callback);
+void binc_device_set_write_desc_cb(Device *device, OnDescWriteCallback callback);
 void binc_device_set_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 
 void binc_device_set_services_resolved_callback(Device *device, ServicesResolvedCallback callback);

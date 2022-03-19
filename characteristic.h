@@ -67,15 +67,15 @@ void binc_characteristic_start_notify(Characteristic *characteristic);
 
 void binc_characteristic_stop_notify(Characteristic *characteristic);
 
-Device* binc_characteristic_get_device(const Characteristic *characteristic);
+Device *binc_characteristic_get_device(const Characteristic *characteristic);
 
-const char* binc_characteristic_get_uuid(const Characteristic *characteristic);
+const char *binc_characteristic_get_uuid(const Characteristic *characteristic);
 
-const char* binc_characteristic_get_service_uuid(const Characteristic *characteristic);
+const char *binc_characteristic_get_service_uuid(const Characteristic *characteristic);
 
-const char* binc_characteristic_get_service_path(const Characteristic *characteristic);
+const char *binc_characteristic_get_service_path(const Characteristic *characteristic);
 
-GList* binc_characteristic_get_flags(const Characteristic *characteristic);
+GList *binc_characteristic_get_flags(const Characteristic *characteristic);
 
 guint binc_characteristic_get_properties(const Characteristic *characteristic);
 
@@ -87,6 +87,7 @@ gboolean binc_characteristic_supports_read(const Characteristic *characteristic)
 
 gboolean binc_characteristic_supports_notify(const Characteristic *characteristic);
 
+Descriptor *binc_characteristic_get_descriptor(const Characteristic *characteristic, const char *desc_uuid);
 
 /**
  * Get a string representation of the characteristic

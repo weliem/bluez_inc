@@ -40,4 +40,6 @@ gboolean is_valid_uuid(const char *uuid);
 
 char *path_to_address(const char *path);
 
+GByteArray *g_variant_get_byte_array(GVariant *variant);
+
 #endif //BINC_UTILITY_H

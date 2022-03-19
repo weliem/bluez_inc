@@ -415,7 +415,6 @@ static LocalService *binc_application_get_service(const Application *application
     return g_hash_table_lookup(application->services, service_uuid);
 }
 
-
 static GList *permissions2Flags(guint8 permissions) {
     GList *list = NULL;
 
@@ -436,7 +435,6 @@ static GList *permissions2Flags(guint8 permissions) {
     }
     return list;
 }
-
 
 static int binc_characteristic_set_value(const Application *application, LocalCharacteristic *characteristic,
                                          GByteArray *byteArray) {
@@ -775,7 +773,6 @@ int binc_application_add_characteristic(Application *application, const char *se
     log_debug(TAG, "successfully published local characteristic %s", char_uuid);
     return 0;
 }
-
 
 const char *binc_application_get_path(Application *application) {
     g_assert(application != NULL);

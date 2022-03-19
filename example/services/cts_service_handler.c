@@ -14,6 +14,7 @@
 #define CURRENT_TIME_CHAR "00002a2b-0000-1000-8000-00805f9b34fb"
 #define LOCAL_TIME_INFORMATION_CHAR "00002a0f-0000-1000-8000-00805f9b34fb"
 #define REFERENCE_TIME_INFORMATION_CHAR "00002a14-0000-1000-8000-00805f9b34fb"
+#define CUD_CHAR "00002901-0000-1000-8000-00805f9b34fb"
 
 #define CURRENT_TIME_LENGTH 10
 #define LOCAL_TIME_LENGTH 2
@@ -51,6 +52,8 @@ static void cts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
 
     binc_device_read_char(device, CTS_SERVICE, LOCAL_TIME_INFORMATION_CHAR);
     binc_device_read_char(device, CTS_SERVICE, REFERENCE_TIME_INFORMATION_CHAR);
+
+    binc_device_read_desc(device, CTS_SERVICE, CURRENT_TIME_CHAR, CUD_CHAR);
 }
 
 static void cts_onNotificationStateUpdated(ServiceHandler *service_handler,

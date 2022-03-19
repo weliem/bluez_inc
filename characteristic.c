@@ -52,6 +52,7 @@ struct binc_characteristic {
     gboolean notifying;
     GList *flags;
     guint properties;
+    GList *descriptors;
 
     guint characteristic_prop_changed;
     OnNotifyingStateChangedCallback notify_state_callback;
@@ -116,23 +117,7 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
     return result;
 }
 
-/**
- * Get a byte array that wraps the data inside the variant.
- *
- * Only the GByteArray should be freed but not the content as it doesn't make a copy.
- * Content will be freed automatically when the variant is unref-ed.
- *
- * @param variant byte array of format 'ay'
- * @return GByteArray wrapping the data in the variant
- */
-static GByteArray *g_variant_get_byte_array(GVariant *variant) {
-    g_assert(variant != NULL);
-    g_assert(g_str_equal(g_variant_get_type_string(variant), "ay"));
 
-    size_t data_length = 0;
-    guint8 *data = (guint8 *) g_variant_get_fixed_array(variant, &data_length, sizeof(guint8));
-    return g_byte_array_new_take(data, data_length);
-}
 
 static void binc_internal_char_read_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
@@ -573,3 +558,21 @@ gboolean binc_characteristic_supports_notify(const Characteristic *characteristi
             (characteristic->properties & GATT_CHR_PROP_NOTIFY) > 0);
 }
 
+void binc_characteristic_add_descriptor(Characteristic *characteristic, Descriptor *descriptor) {
+    g_assert(characteristic != NULL);
+    g_assert(descriptor != NULL);
+
+    characteristic->descriptors = g_list_append(characteristic->descriptors, descriptor);
+}
+
+Descriptor *binc_characteristic_get_descriptor(const Characteristic *characteristic, const char* desc_uuid) {
+    if (characteristic->descriptors != NULL) {
+        for (GList *iterator = characteristic->descriptors; iterator; iterator = iterator->next) {
+            Descriptor *descriptor = (Descriptor *) iterator->data;
+            if (g_str_equal(desc_uuid, binc_descriptor_get_uuid(descriptor))) {
+                return descriptor;
+            }
+        }
+    }
+    return NULL;
+}

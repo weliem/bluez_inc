@@ -30,6 +30,7 @@
 #include "characteristic.h"
 #include "characteristic_internal.h"
 #include "adapter.h"
+#include "descriptor.h"
 
 static const char *const TAG = "Device";
 static const char *const BLUEZ_DBUS = "org.bluez";
@@ -55,6 +56,7 @@ static const char *const DEVICE_PROPERTY_SERVICES_RESOLVED = "ServicesResolved";
 
 static const char *const INTERFACE_SERVICE = "org.bluez.GattService1";
 static const char *const INTERFACE_CHARACTERISTIC = "org.bluez.GattCharacteristic1";
+static const char *const INTERFACE_DESCRIPTOR = "org.bluez.GattDescriptor1";
 
 static const char *connection_state_names[] = {
         [DISCONNECTED] = "DISCONNECTED",
@@ -97,11 +99,14 @@ struct binc_device {
     GHashTable *services;
     GList *services_list;
     GHashTable *characteristics;
+    GHashTable *descriptors;
 
     OnReadCallback on_read_callback;
     OnWriteCallback on_write_callback;
     OnNotifyCallback on_notify_callback;
     OnNotifyingStateChangedCallback on_notify_state_callback;
+    OnDescReadCallback on_read_desc_cb;
+    OnDescWriteCallback on_write_desc_cb;
 };
 
 static void binc_init_device(Device *device) {
@@ -163,6 +168,11 @@ void binc_device_free(Device *device) {
     device->alias = NULL;
     g_free((char *) device->name);
     device->name = NULL;
+
+    if (device->descriptors != NULL) {
+        g_hash_table_destroy(device->descriptors);
+        device->descriptors = NULL;
+    }
 
     if (device->characteristics != NULL) {
         g_hash_table_destroy(device->characteristics);
@@ -281,6 +291,20 @@ static void binc_on_characteristic_notification_state_changed(Characteristic *ch
     }
 }
 
+static void binc_on_descriptor_read(Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
+    Device *device = binc_descriptor_get_device(descriptor);
+    if (device->on_read_desc_cb != NULL) {
+        device->on_read_desc_cb(descriptor, byteArray, error);
+    }
+}
+
+static void binc_on_descriptor_write(Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
+    Device *device = binc_descriptor_get_device(descriptor);
+    if (device->on_write_desc_cb != NULL) {
+        device->on_write_desc_cb(descriptor, byteArray, error);
+    }
+}
+
 static void binc_device_internal_set_conn_state(Device *device, ConnectionState state, GError *error) {
     device->connection_state = state;
     if (device->connection_state_callback != NULL) {
@@ -320,6 +344,12 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
         device->characteristics = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                         g_free, (GDestroyNotify) binc_characteristic_free);
 
+        if (device->descriptors != NULL) {
+            g_hash_table_destroy(device->descriptors);
+        }
+        device->descriptors = g_hash_table_new_full(g_str_hash, g_str_equal,
+                                                    g_free, (GDestroyNotify) binc_descriptor_free);
+
         g_assert(g_str_equal(g_variant_get_type_string(result), "(a{oa{sa{sv}}})"));
         g_variant_get(result, "(a{oa{sa{sv}}})", &iter);
         while (g_variant_iter_loop(iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
@@ -353,18 +383,21 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
 
                         const gchar *property_name;
                         GVariantIter iter3;
-                        GVariant *prop_val;
+                        GVariant *property_value;
                         g_variant_iter_init(&iter3, properties);
-                        while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &prop_val)) {
+                        while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &property_value)) {
                             if (g_str_equal(property_name, "UUID")) {
-                                binc_characteristic_set_uuid(characteristic, g_variant_get_string(prop_val, NULL));
+                                binc_characteristic_set_uuid(characteristic,
+                                                             g_variant_get_string(property_value, NULL));
                             } else if (g_str_equal(property_name, "Service")) {
                                 binc_characteristic_set_service_path(characteristic,
-                                                                     g_variant_get_string(prop_val, NULL));
+                                                                     g_variant_get_string(property_value, NULL));
                             } else if (g_str_equal(property_name, "Flags")) {
-                                binc_characteristic_set_flags(characteristic, g_variant_string_array_to_list(prop_val));
+                                binc_characteristic_set_flags(characteristic,
+                                                              g_variant_string_array_to_list(property_value));
                             } else if (g_str_equal(property_name, "Notifying")) {
-                                binc_characteristic_set_notifying(characteristic, g_variant_get_boolean(prop_val));
+                                binc_characteristic_set_notifying(characteristic,
+                                                                  g_variant_get_boolean(property_value));
                             }
                         }
 
@@ -382,6 +415,41 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                         } else {
                             log_debug(TAG, "could not find service %s",
                                       binc_characteristic_get_service_path(characteristic));
+                        }
+                    } else if (g_str_equal(interface_name, INTERFACE_DESCRIPTOR)) {
+                        Descriptor *descriptor = binc_descriptor_create(device, object_path);
+                        binc_descriptor_set_read_cb(descriptor, &binc_on_descriptor_read);
+                        binc_descriptor_set_write_cb(descriptor, &binc_on_descriptor_write);
+
+                        const gchar *property_name;
+                        GVariantIter iter3;
+                        GVariant *property_value;
+                        g_variant_iter_init(&iter3, properties);
+                        while (g_variant_iter_loop(&iter3, "{&sv}", &property_name, &property_value)) {
+                            if (g_str_equal(property_name, "UUID")) {
+                                binc_descriptor_set_uuid(descriptor, g_variant_get_string(property_value, NULL));
+                            } else if (g_str_equal(property_name, "Characteristic")) {
+                                binc_descriptor_set_char_path(descriptor,
+                                                              g_variant_get_string(property_value, NULL));
+                            } else if (g_str_equal(property_name, "Flags")) {
+                                binc_descriptor_set_flags(descriptor, g_variant_string_array_to_list(property_value));
+                            }
+                        }
+
+                        // Look up characteristic
+                        Characteristic *characteristic = g_hash_table_lookup(device->characteristics,
+                                                                             binc_descriptor_get_char_path(descriptor));
+                        if (characteristic != NULL) {
+                            binc_characteristic_add_descriptor(characteristic, descriptor);
+                            binc_descriptor_set_char_uuid(descriptor, binc_characteristic_get_uuid(characteristic));
+                            g_hash_table_insert(device->descriptors, g_strdup(object_path), descriptor);
+
+                            const char *descString = binc_descriptor_to_string(descriptor);
+                            log_debug(TAG, descString);
+                            g_free((char *) descString);
+                        } else {
+                            log_debug(TAG, "could not find characteristic %s",
+                                      binc_descriptor_get_char_path(descriptor));
                         }
                     }
                 }
@@ -704,7 +772,7 @@ void binc_device_set_read_char_callback(Device *device, OnReadCallback callback)
     device->on_read_callback = callback;
 }
 
-gboolean binc_device_read_char(const Device *device, const char* service_uuid, const char *characteristic_uuid) {
+gboolean binc_device_read_char(const Device *device, const char *service_uuid, const char *characteristic_uuid) {
     g_assert(is_valid_uuid(service_uuid));
     g_assert(is_valid_uuid(characteristic_uuid));
 
@@ -716,13 +784,53 @@ gboolean binc_device_read_char(const Device *device, const char* service_uuid, c
     return FALSE;
 }
 
+gboolean binc_device_read_desc(const Device *device, const char *service_uuid,
+                               const char *characteristic_uuid, const char *desc_uuid) {
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(is_valid_uuid(characteristic_uuid));
+    g_assert(is_valid_uuid(desc_uuid));
+
+    Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
+    if (characteristic == NULL) {
+        return FALSE;
+    }
+
+    Descriptor *descriptor = binc_characteristic_get_descriptor(characteristic, desc_uuid);
+    if (descriptor == NULL) {
+        return FALSE;
+    }
+
+    binc_descriptor_read(descriptor);
+    return TRUE;
+}
+
+gboolean binc_device_write_desc(const Device *device, const char *service_uuid,
+                                const char *characteristic_uuid, const char *desc_uuid, const GByteArray *byteArray) {
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(is_valid_uuid(characteristic_uuid));
+    g_assert(is_valid_uuid(desc_uuid));
+
+    Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
+    if (characteristic == NULL) {
+        return FALSE;
+    }
+
+    Descriptor *descriptor = binc_characteristic_get_descriptor(characteristic, desc_uuid);
+    if (descriptor == NULL) {
+        return FALSE;
+    }
+
+    binc_descriptor_write(descriptor, byteArray);
+    return TRUE;
+}
+
 void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
     device->on_write_callback = callback;
 }
 
-gboolean binc_device_write_char(const Device *device, const char* service_uuid, const char *characteristic_uuid,
+gboolean binc_device_write_char(const Device *device, const char *service_uuid, const char *characteristic_uuid,
                                 const GByteArray *byteArray, WriteType writeType) {
     g_assert(device != NULL);
     g_assert(is_valid_uuid(service_uuid));
@@ -748,7 +856,7 @@ void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChang
     device->on_notify_state_callback = callback;
 }
 
-gboolean binc_device_start_notify(const Device *device, const char* service_uuid, const char *characteristic_uuid) {
+gboolean binc_device_start_notify(const Device *device, const char *service_uuid, const char *characteristic_uuid) {
     g_assert(device != NULL);
     g_assert(is_valid_uuid(service_uuid));
     g_assert(is_valid_uuid(characteristic_uuid));
@@ -759,6 +867,18 @@ gboolean binc_device_start_notify(const Device *device, const char* service_uuid
         return TRUE;
     }
     return FALSE;
+}
+
+void binc_device_set_read_desc_cb(Device *device, OnDescReadCallback callback) {
+    g_assert(device != NULL);
+    g_assert(callback != NULL);
+    device->on_read_desc_cb = callback;
+}
+
+void binc_device_set_write_desc_cb(Device *device, OnDescWriteCallback callback) {
+    g_assert(device != NULL);
+    g_assert(callback != NULL);
+    device->on_write_desc_cb = callback;
 }
 
 ConnectionState binc_device_get_connection_state(const Device *device) {
@@ -938,10 +1058,10 @@ Adapter *binc_device_get_adapter(const Device *device) {
     return device->adapter;
 }
 
-gboolean binc_device_has_service(const Device *device, const char* service_uuid) {
+gboolean binc_device_has_service(const Device *device, const char *service_uuid) {
     if (g_list_length(device->uuids) > 0) {
         for (GList *iterator = device->uuids; iterator; iterator = iterator->next) {
-            if(g_str_equal(service_uuid, (char *) iterator->data)) {
+            if (g_str_equal(service_uuid, (char *) iterator->data)) {
                 return TRUE;
             }
         }

@@ -30,4 +30,6 @@ void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uu
 
 void binc_characteristic_set_notifying(Characteristic *characteristic, gboolean notifying);
 
+void binc_characteristic_add_descriptor(Characteristic *characteristic, Descriptor *descriptor);
+
 #endif //BINC_CHARACTERISTIC_INTERNAL_H

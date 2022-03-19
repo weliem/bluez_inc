@@ -40,6 +40,7 @@
 #include "services/glx_service_handler.h"
 #include "../advertisement.h"
 #include "../utility.h"
+#include "../parser.h"
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
@@ -123,6 +124,14 @@ void on_write(Characteristic *characteristic, const GByteArray *byteArray, const
                 byteArray,
                 error);
     }
+}
+
+void on_desc_read(Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
+    log_debug(TAG, "on descriptor read");
+    Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
+    GString *parsed_string = parser_get_string(parser);
+    log_debug(TAG, "CUD %s", parsed_string->str);
+    parser_free(parser);
 }
 
 GList *order_services(GList *services) {
@@ -209,6 +218,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     binc_device_set_write_char_callback(device, &on_write);
     binc_device_set_notify_char_callback(device, &on_notify);
     binc_device_set_notify_state_callback(device, &on_notification_state_changed);
+    binc_device_set_read_desc_cb(device, &on_desc_read);
     binc_device_connect(device);
 //    g_timeout_add(CONNECT_DELAY, delayed_connect, device);
 //    }
