@@ -207,7 +207,7 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    const char *name = binc_device_get_name(device);
+//    const char *name = binc_device_get_name(device);
 //    if (name != NULL && g_str_has_prefix(name, "TAIDOC")) {
 
 

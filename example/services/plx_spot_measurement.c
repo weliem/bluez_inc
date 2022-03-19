@@ -87,7 +87,7 @@ SpotMeasurement *plx_create_spot_measurement(const GByteArray *byteArray) {
     measurement->measurement_status = measurementStatusPresent ? plx_create_measurement_status(
             parser_get_uint16(parser)) : NULL;
     measurement->sensor_status = sensorStatusPresent ? plx_create_sensor_status(parser_get_uint16(parser)) : NULL;
-    guint8 reserved_byte = sensorStatusPresent ? parser_get_uint8(parser) : 0xFF;
+    sensorStatusPresent ? parser_get_uint8(parser) : 0xFF; // Skip reserved byte
     measurement->pulse_amplitude_index = pulseAmplitudeIndexPresent ? parser_get_sfloat(parser) : 0x00;
 
     parser_free(parser);

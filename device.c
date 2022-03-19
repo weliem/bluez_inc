@@ -65,11 +65,11 @@ static const char *connection_state_names[] = {
         [DISCONNECTING]  = "DISCONNECTING"
 };
 
-static const char *bonding_state_names[] = {
-        [BOND_NONE] = "BOND_NONE",
-        [BONDING] = "BONDING",
-        [BONDED]  = "BONDED"
-};
+//static const char *bonding_state_names[] = {
+//        [BOND_NONE] = "BOND_NONE",
+//        [BONDING] = "BONDING",
+//        [BONDED]  = "BONDED"
+//};
 
 struct binc_device {
     GDBusConnection *connection;

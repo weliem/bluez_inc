@@ -698,7 +698,7 @@ GVariant *characteristic_get_property(GDBusConnection *connection,
     LocalCharacteristic *characteristic = (LocalCharacteristic *) user_data;
     g_assert(characteristic != NULL);
 
-    GVariant *ret;
+    GVariant *ret = NULL;
     if (g_str_equal(property_name, "UUID")) {
         ret = g_variant_new_string(characteristic->uuid);
     } else if (g_str_equal(property_name, "Service")) {

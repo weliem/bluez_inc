@@ -258,6 +258,7 @@ int binc_agentmanager_register_agent(Agent *agent) {
     if (result == EXIT_FAILURE) {
         log_debug(TAG, "failed to register agent as default agent");
     }
+    return result;
 }
 
 void binc_agent_free(Agent *agent) {
