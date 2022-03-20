@@ -10,6 +10,7 @@
 
 #define GATT_SERV_INTERFACE "org.bluez.GattService1"
 #define GATT_CHAR_INTERFACE "org.bluez.GattCharacteristic1"
+#define GATT_DESC_INTERFACE "org.bluez.GattDescriptor1"
 
 static const char *const TAG = "Application";
 
@@ -58,6 +59,26 @@ static const gchar characteristics_introspection_xml[] =
         "  </interface>"
         "</node>";
 
+static const gchar descriptor_introspection_xml[] =
+        "<node name='/'>"
+        "  <interface name='org.bluez.GattDescriptor1'>"
+        "        <method name='ReadValue'>"
+        "               <arg type='a{sv}' name='options' direction='in' />"
+        "               <arg type='ay' name='value' direction='out'/>"
+        "        </method>"
+        "        <method name='WriteValue'>"
+        "               <arg type='ay' name='value' direction='in'/>"
+        "               <arg type='a{sv}' name='options' direction='in' />"
+        "        </method>"
+        "  </interface>"
+        "  <interface name='org.freedesktop.DBus.Properties'>"
+        "    <property type='s' name='UUID' access='read' />"
+        "    <property type='o' name='Characteristic' access='read' />"
+        "    <property type='ay' name='Value' access='readwrite' />"
+        "    <property type='as' name='Flags' access='read' />"
+        "  </interface>"
+        "</node>";
+
 struct binc_application {
     char *path;
     guint registration_id;
@@ -88,8 +109,57 @@ typedef struct local_characteristic {
     guint8 permissions;
     GList *flags;
     gboolean notifying;
+    GHashTable *descriptors;
     Application *application;
 } LocalCharacteristic;
+
+typedef struct local_descriptor {
+    char *path;
+    char *char_path;
+    char *uuid;
+    guint registration_id;
+    GByteArray *value;
+    guint8 permissions;
+    GList *flags;
+    Application *application;
+} LocalDescriptor;
+
+static void binc_local_desc_free(LocalDescriptor *localDescriptor) {
+    g_assert(localDescriptor != NULL);
+
+    log_debug(TAG, "freeing descriptor %s", localDescriptor->path);
+
+    if (localDescriptor->registration_id != 0) {
+        gboolean result = g_dbus_connection_unregister_object(localDescriptor->application->connection,
+                                                              localDescriptor->registration_id);
+        if (!result) {
+            log_debug(TAG, "error: could not unregister descriptor %s", localDescriptor->path);
+        }
+        localDescriptor->registration_id = 0;
+    }
+
+    if (localDescriptor->value != NULL) {
+        g_byte_array_free(localDescriptor->value, TRUE);
+        localDescriptor->value = NULL;
+    }
+
+    if (localDescriptor->path != NULL) {
+        g_free(localDescriptor->path);
+        localDescriptor->path = NULL;
+    }
+
+    if (localDescriptor->uuid != NULL) {
+        g_free(localDescriptor->uuid);
+        localDescriptor->uuid = NULL;
+    }
+
+    if (localDescriptor->flags != NULL) {
+        g_list_free_full(localDescriptor->flags, g_free);
+        localDescriptor->flags = NULL;
+    }
+
+    g_free(localDescriptor);
+}
 
 static void binc_local_char_free(LocalCharacteristic *localCharacteristic) {
     g_assert(localCharacteristic != NULL);
@@ -185,11 +255,38 @@ static GVariant *binc_local_service_get_characteristics(LocalService *localServi
     return result;
 }
 
+static void add_desc_path(gpointer key, gpointer value, gpointer userdata) {
+    LocalDescriptor *localDescriptor = (LocalDescriptor *) value;
+    g_variant_builder_add((GVariantBuilder *) userdata, "o", localDescriptor->path);
+}
+
+static GVariant *binc_local_characteristic_get_descriptors(LocalCharacteristic *localCharacteristic) {
+    g_assert(localCharacteristic != NULL);
+
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("ao"));
+    g_hash_table_foreach(localCharacteristic->descriptors, add_desc_path, builder);
+    GVariant *result = g_variant_builder_end(builder);
+    g_variant_builder_unref(builder);
+    return result;
+}
+
 static GVariant *binc_local_characteristic_get_flags(LocalCharacteristic *localCharacteristic) {
     g_assert(localCharacteristic != NULL);
 
     GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
     for (GList *iterator = localCharacteristic->flags; iterator; iterator = iterator->next) {
+        g_variant_builder_add(flags_builder, "s", (char *) iterator->data);
+    }
+    GVariant *result = g_variant_builder_end(flags_builder);
+    g_variant_builder_unref(flags_builder);
+    return result;
+}
+
+static GVariant *binc_local_descriptor_get_flags(LocalDescriptor *localDescriptor) {
+    g_assert(localDescriptor != NULL);
+
+    GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+    for (GList *iterator = localDescriptor->flags; iterator; iterator = iterator->next) {
         g_variant_builder_add(flags_builder, "s", (char *) iterator->data);
     }
     GVariant *result = g_variant_builder_end(flags_builder);
@@ -265,6 +362,8 @@ static void binc_internal_application_method_call(GDBusConnection *conn,
                                           binc_local_characteristic_get_flags(localCharacteristic));
                     g_variant_builder_add(char_properties_builder, "{sv}", "Notifying",
                                           g_variant_new("b", localCharacteristic->notifying));
+                    g_variant_builder_add(char_properties_builder, "{sv}", "Descriptors",
+                                          binc_local_characteristic_get_descriptors(localCharacteristic));
 
                     // Add the characteristic to result
                     g_variant_builder_add(characteristic_builder, "{sa{sv}}", GATT_CHAR_INTERFACE,
@@ -275,6 +374,37 @@ static void binc_internal_application_method_call(GDBusConnection *conn,
 
                     // TODO Add descriptors
                     // NOTE that the CCCD is automatically added by Bluez so no need to add it.
+                    GHashTableIter iter3;
+                    gpointer key3, value3;
+                    g_hash_table_iter_init(&iter3, localCharacteristic->descriptors);
+                    while (g_hash_table_iter_next(&iter3, &key3, &value3)) {
+                        LocalDescriptor *localDescriptor = (LocalDescriptor *) value3;
+                        log_debug(TAG, "adding %s", localDescriptor->path);
+
+                        GVariantBuilder *descriptors_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
+                        GVariantBuilder *desc_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+
+                        GByteArray *byteArray2 = localDescriptor->value;
+                        GVariant *byteArrayVariant2 = NULL;
+                        if (byteArray != NULL) {
+                            byteArrayVariant2 = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray2->data,
+                                                                          byteArray2->len, sizeof(guint8));
+                            g_variant_builder_add(desc_properties_builder, "{sv}", "Value", byteArrayVariant2);
+                        }
+                        g_variant_builder_add(desc_properties_builder, "{sv}", "UUID",
+                                              g_variant_new_string(localDescriptor->uuid));
+                        g_variant_builder_add(desc_properties_builder, "{sv}", "Characteristic",
+                                              g_variant_new("o", localDescriptor->char_path));
+                        g_variant_builder_add(desc_properties_builder, "{sv}", "Flags",
+                                              binc_local_descriptor_get_flags(localDescriptor));
+
+                        // Add the characteristic to result
+                        g_variant_builder_add(descriptors_builder, "{sa{sv}}", GATT_DESC_INTERFACE,
+                                              desc_properties_builder);
+                        g_variant_builder_unref(desc_properties_builder);
+                        g_variant_builder_add(builder, "{oa{sa{sv}}}", localDescriptor->path, descriptors_builder);
+                        g_variant_builder_unref(descriptors_builder);
+                    }
                 }
             }
         }
@@ -408,6 +538,8 @@ int binc_application_add_service(Application *application, const char *service_u
     return 0;
 }
 
+
+
 static LocalService *binc_application_get_service(const Application *application, const char *service_uuid) {
     g_return_val_if_fail (application != NULL, NULL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), NULL);
@@ -459,6 +591,29 @@ static int binc_characteristic_set_value(const Application *application, LocalCh
     return 0;
 }
 
+static int binc_descriptor_set_value(const Application *application, LocalDescriptor *descriptor,
+                                         GByteArray *byteArray) {
+    g_return_val_if_fail (application != NULL, EINVAL);
+    g_return_val_if_fail (descriptor != NULL, EINVAL);
+    g_return_val_if_fail (byteArray != NULL, EINVAL);
+
+    GString *byteArrayStr = g_byte_array_as_hex(byteArray);
+    log_debug(TAG, "set value <%s> to <%s>", byteArrayStr->str, descriptor->uuid);
+    g_string_free(byteArrayStr, TRUE);
+
+    if (descriptor->value != NULL) {
+        g_byte_array_free(descriptor->value, TRUE);
+    }
+    descriptor->value = byteArray;
+
+//    if (application->on_char_updated != NULL) {
+//        application->on_char_updated(characteristic->application, characteristic->service_uuid,
+//                                     characteristic->uuid, byteArray);
+//    }
+
+    return 0;
+}
+
 static LocalCharacteristic *get_local_characteristic(const Application *application, const char *service_uuid,
                                                      const char *char_uuid) {
 
@@ -471,6 +626,105 @@ static LocalCharacteristic *get_local_characteristic(const Application *applicat
         return g_hash_table_lookup(service->characteristics, char_uuid);
     }
     return NULL;
+}
+
+static LocalDescriptor *get_local_descriptor(const Application *application, const char *service_uuid,
+                                                     const char *char_uuid, const char *desc_uuid) {
+
+    g_return_val_if_fail (application != NULL, NULL);
+    g_return_val_if_fail (is_valid_uuid(service_uuid), NULL);
+    g_return_val_if_fail (is_valid_uuid(char_uuid), NULL);
+    g_return_val_if_fail (is_valid_uuid(desc_uuid), NULL);
+
+    LocalCharacteristic *characteristic = get_local_characteristic(application, service_uuid, char_uuid);
+    if (characteristic != NULL) {
+        return g_hash_table_lookup(characteristic->descriptors, desc_uuid);
+    }
+    return NULL;
+}
+
+static void binc_internal_descriptor_method_call(GDBusConnection *conn,
+                                                  const gchar *sender,
+                                                  const gchar *path,
+                                                  const gchar *interface,
+                                                  const gchar *method,
+                                                  GVariant *params,
+                                                  GDBusMethodInvocation *invocation,
+                                                  void *userdata) {
+
+    LocalDescriptor *localDescriptor = (LocalDescriptor *) userdata;
+    g_assert(localDescriptor != NULL);
+
+    Application *application = localDescriptor->application;
+    g_assert(application != NULL);
+
+    if (g_str_equal(method, "ReadValue")) {
+        log_debug(TAG, "read descriptor <%s>", localDescriptor->uuid);
+
+        if (localDescriptor->value != NULL) {
+            GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+                                                         localDescriptor->value->data,
+                                                         localDescriptor->value->len,
+                                                         sizeof(guint8));
+            g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
+        } else {
+            g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
+        }
+    }
+}
+
+static const GDBusInterfaceVTable descriptor_table = {
+        .method_call = binc_internal_descriptor_method_call,
+ //       .get_property = descriptor_get_property
+};
+
+int binc_application_add_descriptor(Application *application, const char *service_uuid,
+                                    const char *char_uuid, const char *desc_uuid, int permissions) {
+    g_return_val_if_fail (application != NULL, EINVAL);
+    g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
+
+    LocalCharacteristic *localCharacteristic = get_local_characteristic(application, service_uuid, char_uuid);
+    if (localCharacteristic == NULL) {
+        g_critical("characteristic %s does not exist", char_uuid);
+        return EINVAL;
+    }
+
+    GError *error = NULL;
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(descriptor_introspection_xml, &error);
+    if (error) {
+        log_debug(TAG, "Unable to create descriptor node: %s\n", error->message);
+        g_clear_error(&error);
+        return EINVAL;
+    }
+
+    LocalDescriptor *localDescriptor = g_new0(LocalDescriptor, 1);
+    localDescriptor->uuid = g_strdup(desc_uuid);
+    localDescriptor->application = application;
+    localDescriptor->char_path = g_strdup(localCharacteristic->path);
+    localDescriptor->flags = permissions2Flags(permissions);
+    localDescriptor->path = g_strdup_printf("%s/desc%d",
+                                           localCharacteristic->path,
+                                           g_hash_table_size(localCharacteristic->descriptors));
+    g_hash_table_insert(localCharacteristic->descriptors, g_strdup(desc_uuid), localDescriptor);
+
+    // Register characteristic
+    localDescriptor->registration_id = g_dbus_connection_register_object(application->connection,
+                                                                         localDescriptor->path,
+                                                                        info->interfaces[0],
+                                                                        &descriptor_table,
+                                                                         localDescriptor, NULL, &error);
+    g_dbus_node_info_unref(info);
+
+    if (localDescriptor->registration_id == 0) {
+        log_debug(TAG, "failed to publish local characteristic");
+        log_debug(TAG, "Error %s", error->message);
+        g_clear_error(&error);
+        g_hash_table_remove(localCharacteristic->descriptors, desc_uuid);
+        return EINVAL;
+    }
+
+    log_debug(TAG, "successfully published local descriptor %s", desc_uuid);
+    return 0;
 }
 
 int binc_application_set_char_value(const Application *application, const char *service_uuid,
@@ -490,6 +744,25 @@ int binc_application_set_char_value(const Application *application, const char *
     }
 
     return binc_characteristic_set_value(application, characteristic, byteArray);
+}
+
+int binc_application_set_desc_value(const Application *application, const char *service_uuid,
+                                    const char *char_uuid, const char *desc_uuid, GByteArray *byteArray) {
+
+    g_return_val_if_fail (application != NULL, EINVAL);
+    g_return_val_if_fail (service_uuid != NULL, EINVAL);
+    g_return_val_if_fail (char_uuid != NULL, EINVAL);
+    g_return_val_if_fail (byteArray != NULL, EINVAL);
+    g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
+    g_return_val_if_fail (is_valid_uuid(char_uuid), EINVAL);
+
+    LocalDescriptor *descriptor = get_local_descriptor(application, service_uuid, char_uuid, desc_uuid);
+    if (descriptor == NULL) {
+        g_critical("%s: characteristic with uuid %s does not exist", G_STRFUNC, char_uuid);
+        return EINVAL;
+    }
+
+    return binc_descriptor_set_value(application, descriptor, byteArray);
 }
 
 GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,
@@ -618,11 +891,15 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         read_options_free(options);
 
         // TODO deal with the offset & mtu parameter
-        GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
-                                                     characteristic->value->data,
-                                                     characteristic->value->len,
-                                                     sizeof(guint8));
-        g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
+        if (characteristic->value != NULL) {
+            GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+                                                         characteristic->value->data,
+                                                         characteristic->value->len,
+                                                         sizeof(guint8));
+            g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
+        } else {
+            g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
+        }
     } else if (g_str_equal(method, "WriteValue")) {
         log_debug(TAG, "write <%s>", characteristic->uuid);
 
@@ -752,6 +1029,11 @@ int binc_application_add_characteristic(Application *application, const char *se
     characteristic->path = g_strdup_printf("%s/char%d",
                                            localService->path,
                                            g_hash_table_size(localService->characteristics));
+    characteristic->descriptors = g_hash_table_new_full(
+            g_str_hash,
+            g_str_equal,
+            g_free,
+            (GDestroyNotify) binc_local_desc_free);
     g_hash_table_insert(localService->characteristics, g_strdup(char_uuid), characteristic);
 
     // Register characteristic

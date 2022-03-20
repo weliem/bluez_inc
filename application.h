@@ -52,6 +52,9 @@ int binc_application_add_service(Application *application, const char *service_u
 int binc_application_add_characteristic(Application *application, const char *service_uuid,
                                         const char *char_uuid, guint8 permissions);
 
+int binc_application_add_descriptor(Application *application, const char *service_uuid,
+                                    const char *char_uuid, const char *desc_uuid, int permissions);
+
 void binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback);
 
 void binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback);
@@ -65,6 +68,9 @@ int binc_application_set_char_value(const Application *application, const char *
 
 GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,
                                             const char *char_uuid);
+
+int binc_application_set_desc_value(const Application *application, const char *service_uuid,
+                                    const char *char_uuid, const char *desc_uuid, GByteArray *byteArray);
 
 int binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
                             const GByteArray *byteArray);

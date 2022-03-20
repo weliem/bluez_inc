@@ -44,13 +44,14 @@
 
 #define TAG "Main"
 #define CONNECT_DELAY 100
+#define CUD_CHAR "00002901-0000-1000-8000-00805f9b34fb"
 
 GMainLoop *loop = NULL;
 Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 ServiceHandlerManager *serviceHandlerManager = NULL;
 Advertisement *advertisement = NULL;
-Application *application = NULL;
+Application *app = NULL;
 
 void on_connection_state_changed(Device *device, ConnectionState state, const GError *error) {
     if (error != NULL) {
@@ -271,10 +272,10 @@ void on_local_char_stop_notify(const Application *application, const char* servi
 }
 
 gboolean callback(gpointer data) {
-    if (application != NULL) {
-        binc_adapter_unregister_application(default_adapter, application);
-        binc_application_free(application);
-        application = NULL;
+    if (app != NULL) {
+        binc_adapter_unregister_application(default_adapter, app);
+        binc_application_free(app);
+        app = NULL;
     }
 
     if (advertisement != NULL) {
@@ -346,18 +347,30 @@ int main(void) {
         g_ptr_array_free(adv_service_uuids, TRUE);
 
         // Start application
-        application = binc_create_application(default_adapter);
-        binc_application_add_service(application, HTS_SERVICE_UUID);
+        app = binc_create_application(default_adapter);
+        binc_application_add_service(app, HTS_SERVICE_UUID);
         binc_application_add_characteristic(
-                application,
+                app,
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
                 GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
-        binc_application_set_char_read_cb(application, &on_local_char_read);
-        binc_application_set_char_write_cb(application, &on_local_char_write);
-        binc_application_set_char_start_notify_cb(application, &on_local_char_start_notify);
-        binc_application_set_char_stop_notify_cb(application, &on_local_char_stop_notify);
-        binc_adapter_register_application(default_adapter, application);
+        binc_application_add_descriptor(
+                app,
+                HTS_SERVICE_UUID,
+                TEMPERATURE_CHAR_UUID,
+                CUD_CHAR,
+                GATT_CHR_PROP_READ);
+
+        const guint8 cud[] = "hallo daar";
+        GByteArray *cudArray = g_byte_array_sized_new(sizeof(cud));
+        g_byte_array_append(cudArray, cud, sizeof(cud));
+        binc_application_set_desc_value(app, HTS_SERVICE_UUID, TEMPERATURE_CHAR_UUID, CUD_CHAR, cudArray);
+
+        binc_application_set_char_read_cb(app, &on_local_char_read);
+        binc_application_set_char_write_cb(app, &on_local_char_write);
+        binc_application_set_char_start_notify_cb(app, &on_local_char_start_notify);
+        binc_application_set_char_stop_notify_cb(app, &on_local_char_stop_notify);
+        binc_adapter_register_application(default_adapter, app);
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);

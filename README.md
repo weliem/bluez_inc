@@ -187,7 +187,7 @@ gboolean on_request_authorization(Device *device) {
 }
 ```
 
-In the case of PIN code pairing you will have to provide a PIN code, which you probably need to ask to the user of your application:
+In the case of PIN code pairing you will have to provide a PIN code, which you probably need to ask to the user of your app:
 
 ```c
 guint32 on_request_passkey(Device *device) {
@@ -227,45 +227,45 @@ g_ptr_array_free(adv_service_uuids, TRUE);
 ```
 
 ## Adding services and characteristics
-In order to make your peripheral work you need to create an 'application' in Bluez terminology. The steps are:
-* Create an application
+In order to make your peripheral work you need to create an 'app' in Bluez terminology. The steps are:
+* Create an app
 * Add one or more services
 * Add one or more characteristics
 * Implement read/write/notify callbacks for characteristics
 
-Here is how to setup an application with a service and a characteristic:
+Here is how to setup an app with a service and a characteristic:
 
 ```c
-// Create an application with a service
-application = binc_create_application(default_adapter);
-binc_application_add_service(application, HTS_SERVICE_UUID);
+// Create an app with a service
+app = binc_create_application(default_adapter);
+binc_application_add_service(app, HTS_SERVICE_UUID);
 binc_application_add_characteristic(
-                application,
+                app,
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
                 GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
                 
 // Set the callbacks for read/write
-binc_application_set_char_read_cb(application, &on_local_char_read);
-binc_application_set_char_write_cb(application, &on_local_char_write);
+binc_application_set_char_read_cb(app, &on_local_char_read);
+binc_application_set_char_write_cb(app, &on_local_char_write);
 
-// Register your application
-binc_adapter_register_application(default_adapter, application);
+// Register your app
+binc_adapter_register_application(default_adapter, app);
 ```
 
 There are callbacks to be implemented where you can update the value of a characteristic just before the read/write is done:
 
 ```c
-void on_local_char_read(const Application *application, const char *address, const char* service_uuid, const char* char_uuid) {
+void on_local_char_read(const Application *app, const char *address, const char* service_uuid, const char* char_uuid) {
     if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
         const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
         GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
         g_byte_array_append(byteArray, bytes, sizeof(bytes));
-        binc_application_set_char_value(application, service_uuid, char_uuid, byteArray);
+        binc_application_set_char_value(app, service_uuid, char_uuid, byteArray);
     }
 }
 
-char* on_local_char_write(const Application *application, const char *address, const char *service_uuid,
+char* on_local_char_write(const Application *app, const char *address, const char *service_uuid,
                           const char *char_uuid, GByteArray *byteArray) {
     // Reject all writes
     return BLUEZ_ERROR_REJECTED;
@@ -275,7 +275,7 @@ char* on_local_char_write(const Application *application, const char *address, c
 In order to notify you can use:
 
 ```c
-void binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
+void binc_application_notify(const Application *app, const char *service_uuid, const char *char_uuid,
                              GByteArray *byteArray);
 ```
 
