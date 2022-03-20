@@ -21,6 +21,12 @@
  *
  */
 
+/*
+ * Open issues:
+ *
+ * - We never get 'flags' for a descriptor. So not exposing flags-related methods yet
+ */
+
 #include "descriptor.h"
 #include "device_internal.h"
 #include "utility.h"
@@ -35,11 +41,11 @@ static const char *const DESCRIPTOR_METHOD_WRITE_VALUE = "WriteValue";
 
 struct binc_descriptor {
     Device *device;
+    Characteristic *characteristic;
     GDBusConnection *connection;
     const char *path;
     const char *char_path;
     const char *uuid;
-    const char *char_uuid;
     GList *flags;
 
     OnDescReadCallback on_read_cb;
@@ -68,13 +74,12 @@ void binc_descriptor_free(Descriptor *descriptor) {
     descriptor->path = NULL;
     g_free((char *) descriptor->char_path);
     descriptor->char_path = NULL;
-    g_free((char *) descriptor->char_uuid);
-    descriptor->char_uuid = NULL;
 
+    descriptor->characteristic = NULL;
     g_free(descriptor);
 }
 
-const char *binc_descriptor_to_string(Descriptor *descriptor) {
+const char *binc_descriptor_to_string(const Descriptor *descriptor) {
     g_assert(descriptor != NULL);
 
     GString *flags = g_string_new("[");
@@ -91,7 +96,7 @@ const char *binc_descriptor_to_string(Descriptor *descriptor) {
             descriptor->uuid,
             flags->str,
             0,
-            descriptor->char_uuid);
+            binc_characteristic_get_uuid(descriptor->characteristic));
 
     g_string_free(flags, TRUE);
     return result;
@@ -117,24 +122,21 @@ void binc_descriptor_set_char_path(Descriptor *descriptor, const char *path) {
     descriptor->char_path = g_strdup(path);
 }
 
-const char *binc_descriptor_get_char_path(Descriptor *descriptor) {
+const char *binc_descriptor_get_char_path(const Descriptor *descriptor) {
     g_assert(descriptor != NULL);
     return descriptor->char_path;
 }
 
-const char *binc_descriptor_get_uuid(Descriptor *descriptor) {
+const char *binc_descriptor_get_uuid(const Descriptor *descriptor) {
     g_assert(descriptor != NULL);
     return descriptor->uuid;
 }
 
-void binc_descriptor_set_char_uuid(Descriptor *descriptor, const char *uuid) {
+void binc_descriptor_set_char(Descriptor *descriptor, Characteristic *characteristic) {
     g_assert(descriptor != NULL);
-    g_assert(is_valid_uuid(uuid));
+    g_assert(characteristic != NULL);
 
-    if (descriptor->char_uuid != NULL) {
-        g_free((char *) descriptor->char_uuid);
-    }
-    descriptor->char_uuid = g_strdup(uuid);
+    descriptor->characteristic = characteristic;
 }
 
 void binc_descriptor_set_flags(Descriptor *descriptor, GList *flags) {
@@ -145,7 +147,6 @@ void binc_descriptor_set_flags(Descriptor *descriptor, GList *flags) {
         g_list_free_full(descriptor->flags, g_free);
     }
     descriptor->flags = flags;
-    //descriptor->properties = binc_characteristic_flags_to_int(flags);
 }
 
 static void binc_internal_descriptor_read_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -299,4 +300,9 @@ void binc_descriptor_set_write_cb(Descriptor *descriptor, OnDescWriteCallback ca
 Device *binc_descriptor_get_device(const Descriptor *descriptor) {
     g_assert(descriptor != NULL);
     return descriptor->device;
+}
+
+Characteristic *binc_descriptor_get_char(const Descriptor *descriptor) {
+    g_assert(descriptor != NULL);
+    return descriptor->characteristic;
 }

@@ -23,6 +23,7 @@
 
 #include "service.h"
 #include "characteristic.h"
+#include "utility.h"
 
 struct binc_service {
     Device *device;
@@ -80,8 +81,7 @@ GList *binc_service_get_characteristics(const Service *service) {
 
 Characteristic *binc_service_get_characteristic(const Service *service, const char* char_uuid) {
     g_assert(service != NULL);
-    g_assert(char_uuid != NULL);
-    g_assert(g_uuid_string_is_valid(char_uuid));
+    g_assert(is_valid_uuid(char_uuid));
 
     if (service->characteristics != NULL) {
         for (GList *iterator = service->characteristics; iterator; iterator = iterator->next) {

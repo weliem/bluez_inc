@@ -25,12 +25,10 @@
 #include "logger.h"
 #include "device.h"
 #include "utility.h"
-#include "service.h"
 #include "service_internal.h"
-#include "characteristic.h"
 #include "characteristic_internal.h"
 #include "adapter.h"
-#include "descriptor.h"
+#include "descriptor_internal.h"
 
 static const char *const TAG = "Device";
 static const char *const BLUEZ_DBUS = "org.bluez";
@@ -406,7 +404,7 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                                                                binc_characteristic_get_service_path(characteristic));
                         if (service != NULL) {
                             binc_service_add_characteristic(service, characteristic);
-                            binc_characteristic_set_service_uuid(characteristic, binc_service_get_uuid(service));
+                            binc_characteristic_set_service(characteristic, service);
                             g_hash_table_insert(device->characteristics, g_strdup(object_path), characteristic);
 
                             char *charString = binc_characteristic_to_string(characteristic);
@@ -441,7 +439,7 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                                                                              binc_descriptor_get_char_path(descriptor));
                         if (characteristic != NULL) {
                             binc_characteristic_add_descriptor(characteristic, descriptor);
-                            binc_descriptor_set_char_uuid(descriptor, binc_characteristic_get_uuid(characteristic));
+                            binc_descriptor_set_char(descriptor, characteristic);
                             g_hash_table_insert(device->descriptors, g_strdup(object_path), descriptor);
 
                             const char *descString = binc_descriptor_to_string(descriptor);

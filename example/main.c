@@ -76,7 +76,8 @@ void on_bonding_state_changed(Device *device, BondingState new_state, BondingSta
 }
 
 void on_notification_state_changed(Characteristic *characteristic, const GError *error) {
-    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    const Service *service = binc_characteristic_get_service(characteristic);
+    const char *service_uuid = binc_service_get_uuid(service);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_notification_state_updated != NULL) {
         serviceHandler->on_notification_state_updated(
@@ -88,7 +89,8 @@ void on_notification_state_changed(Characteristic *characteristic, const GError 
 }
 
 void on_notify(Characteristic *characteristic, const GByteArray *byteArray) {
-    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    const Service *service = binc_characteristic_get_service(characteristic);
+    const char *service_uuid = binc_service_get_uuid(service);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
         serviceHandler->on_characteristic_changed(
@@ -101,7 +103,8 @@ void on_notify(Characteristic *characteristic, const GByteArray *byteArray) {
 }
 
 void on_read(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
-    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    const Service *service = binc_characteristic_get_service(characteristic);
+    const char *service_uuid = binc_service_get_uuid(service);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_changed != NULL) {
         serviceHandler->on_characteristic_changed(
@@ -114,7 +117,8 @@ void on_read(Characteristic *characteristic, const GByteArray *byteArray, const 
 }
 
 void on_write(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
-    const char *service_uuid = binc_characteristic_get_service_uuid(characteristic);
+    const Service *service = binc_characteristic_get_service(characteristic);
+    const char *service_uuid = binc_service_get_uuid(service);
     ServiceHandler *serviceHandler = binc_service_handler_manager_get(serviceHandlerManager, service_uuid);
     if (serviceHandler != NULL && serviceHandler->on_characteristic_write != NULL) {
         serviceHandler->on_characteristic_write(

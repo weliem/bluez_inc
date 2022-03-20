@@ -20,7 +20,7 @@ void binc_characteristic_set_notify_callback(Characteristic *characteristic, OnN
 void binc_characteristic_set_notifying_state_change_callback(Characteristic *characteristic,
                                                              OnNotifyingStateChangedCallback callback);
 
-void binc_characteristic_set_service_uuid(Characteristic *characteristic, const char *service_uuid);
+void binc_characteristic_set_service(Characteristic *characteristic, Service *service);
 
 void binc_characteristic_set_service_path(Characteristic *characteristic, const char *service_path);
 
@@ -29,6 +29,8 @@ void binc_characteristic_set_flags(Characteristic *characteristic, GList *flags)
 void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uuid);
 
 void binc_characteristic_set_notifying(Characteristic *characteristic, gboolean notifying);
+
+const char *binc_characteristic_get_service_path(const Characteristic *characteristic);
 
 void binc_characteristic_add_descriptor(Characteristic *characteristic, Descriptor *descriptor);
 

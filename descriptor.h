@@ -31,31 +31,15 @@ typedef void (*OnDescReadCallback)(Descriptor *descriptor, const GByteArray *byt
 
 typedef void (*OnDescWriteCallback)(Descriptor *descriptor, const GByteArray *byteArray, const GError *error);
 
-void binc_descriptor_set_read_cb(Descriptor *descriptor, OnDescReadCallback callback);
-
-void binc_descriptor_set_write_cb(Descriptor *descriptor, OnDescWriteCallback callback);
-
-Descriptor *binc_descriptor_create(Device *device, const char *path);
-
-void binc_descriptor_free(Descriptor *descriptor);
-
 void binc_descriptor_read(Descriptor *descriptor);
 
 void binc_descriptor_write(Descriptor *descriptor, const GByteArray *byteArray);
 
-void binc_descriptor_set_uuid(Descriptor *descriptor, const char *uuid);
+const char *binc_descriptor_get_uuid(const Descriptor *descriptor);
 
-void binc_descriptor_set_char_path(Descriptor *descriptor, const char *path);
+const char *binc_descriptor_to_string(const Descriptor *descriptor);
 
-void binc_descriptor_set_char_uuid(Descriptor *descriptor, const char *uuid);
-
-const char *binc_descriptor_get_char_path(Descriptor *descriptor);
-
-const char *binc_descriptor_get_uuid(Descriptor *descriptor);
-
-const char *binc_descriptor_to_string(Descriptor *descriptor);
-
-void binc_descriptor_set_flags(Descriptor *descriptor, GList *flags);
+Characteristic *binc_descriptor_get_char(const Descriptor *descriptor);
 
 Device *binc_descriptor_get_device(const Descriptor *descriptor);
 

@@ -44,11 +44,12 @@ typedef struct binc_write_data {
 
 struct binc_characteristic {
     Device *device;
+    Service *service;
     GDBusConnection *connection;
     const char *path;
     const char *uuid;
     const char *service_path;
-    const char *service_uuid;
+//    const char *service_uuid;
     gboolean notifying;
     GList *flags;
     guint properties;
@@ -88,8 +89,8 @@ void binc_characteristic_free(Characteristic *characteristic) {
     characteristic->path = NULL;
     g_free((char *) characteristic->service_path);
     characteristic->service_path = NULL;
-    g_free((char *) characteristic->service_uuid);
-    characteristic->service_uuid = NULL;
+//    g_free((char *) characteristic->service_uuid);
+//    characteristic->service_uuid = NULL;
 
     g_free(characteristic);
 }
@@ -111,7 +112,7 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
             characteristic->uuid,
             flags->str,
             characteristic->properties,
-            characteristic->service_uuid);
+            binc_service_get_uuid(characteristic->service));
 
     g_string_free(flags, TRUE);
     return result;
@@ -455,24 +456,25 @@ void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uu
     characteristic->uuid = g_strdup(uuid);
 }
 
-const char *binc_characteristic_get_service_uuid(const Characteristic *characteristic) {
-    g_assert(characteristic != NULL);
-    return characteristic->service_uuid;
-}
+//const char *binc_characteristic_get_service_uuid(const Characteristic *characteristic) {
+//    g_assert(characteristic != NULL);
+//    return characteristic->service_uuid;
+//}
 
 Device *binc_characteristic_get_device(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
     return characteristic->device;
 }
 
-void binc_characteristic_set_service_uuid(Characteristic *characteristic, const char *service_uuid) {
+Service *binc_characteristic_get_service(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
-    g_assert(service_uuid != NULL);
+    return characteristic->service;
+}
 
-    if (characteristic->service_uuid != NULL) {
-        g_free((char *) characteristic->service_uuid);
-    }
-    characteristic->service_uuid = g_strdup(service_uuid);
+void binc_characteristic_set_service(Characteristic *characteristic, Service *service) {
+    g_assert(characteristic != NULL);
+    g_assert(service != NULL);
+    characteristic->service = service;
 }
 
 const char *binc_characteristic_get_service_path(const Characteristic *characteristic) {
@@ -566,6 +568,9 @@ void binc_characteristic_add_descriptor(Characteristic *characteristic, Descript
 }
 
 Descriptor *binc_characteristic_get_descriptor(const Characteristic *characteristic, const char* desc_uuid) {
+    g_assert(characteristic != NULL);
+    g_assert(is_valid_uuid(desc_uuid));
+
     if (characteristic->descriptors != NULL) {
         for (GList *iterator = characteristic->descriptors; iterator; iterator = iterator->next) {
             Descriptor *descriptor = (Descriptor *) iterator->data;
@@ -575,4 +580,9 @@ Descriptor *binc_characteristic_get_descriptor(const Characteristic *characteris
         }
     }
     return NULL;
+}
+
+GList *binc_characteristic_get_descriptors(const Characteristic *characteristic) {
+    g_assert(characteristic != NULL);
+    return characteristic->descriptors;
 }
