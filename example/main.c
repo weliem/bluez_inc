@@ -359,7 +359,7 @@ int main(void) {
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
                 CUD_CHAR,
-                GATT_CHR_PROP_READ);
+                GATT_CHR_PROP_READ | GATT_CHR_PROP_WRITE);
 
         const guint8 cud[] = "hallo daar";
         GByteArray *cudArray = g_byte_array_sized_new(sizeof(cud));

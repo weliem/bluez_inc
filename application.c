@@ -1,6 +1,25 @@
-//
-// Created by martijn on 11-02-22.
-//
+/*
+ *   Copyright (c) 2022 Martijn van Welie
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in all
+ *   copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
+ *
+ */
 
 #include "application.h"
 #include "adapter.h"
@@ -14,7 +33,7 @@
 
 static const char *const TAG = "Application";
 
-static const gchar manager_introspection_xml[] =
+static const gchar object_manager_xml[] =
         "<node name='/'>"
         "  <interface name='org.freedesktop.DBus.ObjectManager'>"
         "    <method name='GetManagedObjects'>"
@@ -23,7 +42,7 @@ static const gchar manager_introspection_xml[] =
         "  </interface>"
         "</node>";
 
-static const gchar service_introspection_xml[] =
+static const gchar service_xml[] =
         "<node name='/'>"
         "  <interface name='org.freedesktop.DBus.Properties'>"
         "        <property type='s' name='UUID' access='read' />"
@@ -34,7 +53,7 @@ static const gchar service_introspection_xml[] =
         "  </interface>"
         "</node>";
 
-static const gchar characteristics_introspection_xml[] =
+static const gchar characteristic_xml[] =
         "<node name='/'>"
         "  <interface name='org.bluez.GattCharacteristic1'>"
         "        <method name='ReadValue'>"
@@ -59,7 +78,7 @@ static const gchar characteristics_introspection_xml[] =
         "  </interface>"
         "</node>";
 
-static const gchar descriptor_introspection_xml[] =
+static const gchar descriptor_xml[] =
         "<node name='/'>"
         "  <interface name='org.bluez.GattDescriptor1'>"
         "        <method name='ReadValue'>"
@@ -148,6 +167,11 @@ static void binc_local_desc_free(LocalDescriptor *localDescriptor) {
         localDescriptor->path = NULL;
     }
 
+    if (localDescriptor->char_path != NULL) {
+        g_free(localDescriptor->char_path);
+        localDescriptor->char_path = NULL;
+    }
+
     if (localDescriptor->uuid != NULL) {
         g_free(localDescriptor->uuid);
         localDescriptor->uuid = NULL;
@@ -165,6 +189,11 @@ static void binc_local_char_free(LocalCharacteristic *localCharacteristic) {
     g_assert(localCharacteristic != NULL);
 
     log_debug(TAG, "freeing characteristic %s", localCharacteristic->path);
+
+    if (localCharacteristic->descriptors != NULL) {
+        g_hash_table_destroy(localCharacteristic->descriptors);
+        localCharacteristic->descriptors = NULL;
+    }
 
     if (localCharacteristic->registration_id != 0) {
         gboolean result = g_dbus_connection_unregister_object(localCharacteristic->application->connection,
@@ -238,6 +267,90 @@ void binc_local_service_free(LocalService *localService) {
     }
 
     g_free(localService);
+}
+
+typedef struct read_options {
+    char *device;
+    guint16 mtu;
+    guint16 offset;
+    char *link_type;
+} ReadOptions;
+
+void read_options_free(ReadOptions *options) {
+    if (options->link_type != NULL) g_free(options->link_type);
+    if (options->device != NULL) g_free(options->device);
+    g_free(options);
+}
+
+static ReadOptions *parse_read_options(GVariant *params) {
+    g_assert(g_str_equal(g_variant_get_type_string(params), "(a{sv})"));
+    ReadOptions *options = g_new0(ReadOptions, 1);
+
+    GVariantIter *optionsVariant;
+    g_variant_get(params, "(a{sv})", &optionsVariant);
+
+    GVariant *property_value;
+    gchar *property_name;
+    while (g_variant_iter_loop(optionsVariant, "{&sv}", &property_name, &property_value)) {
+        if (g_str_equal(property_name, "offset")) {
+            options->offset = g_variant_get_uint16(property_value);
+        } else if (g_str_equal(property_name, "mtu")) {
+            options->mtu = g_variant_get_uint16(property_value);
+        } else if (g_str_equal(property_name, "device")) {
+            options->device = path_to_address(g_variant_get_string(property_value, NULL));
+        } else if (g_str_equal(property_name, "link")) {
+            options->link_type = g_strdup(g_variant_get_string(property_value, NULL));
+        }
+    }
+    g_variant_iter_free(optionsVariant);
+
+    log_debug(TAG, "read with offset=%u, mtu=%u, link=%s, device=%s", (unsigned int) options->offset,
+              (unsigned int) options->mtu, options->link_type, options->device);
+
+    return options;
+}
+
+typedef struct write_options {
+    char *write_type;
+    char *device;
+    guint16 mtu;
+    guint16 offset;
+    char *link_type;
+} WriteOptions;
+
+void write_options_free(WriteOptions *options) {
+    if (options->link_type != NULL) g_free(options->link_type);
+    if (options->device != NULL) g_free(options->device);
+    if (options->write_type != NULL) g_free(options->write_type);
+    g_free(options);
+}
+
+static WriteOptions *parse_write_options(GVariant *optionsVariant) {
+    g_assert(g_str_equal(g_variant_get_type_string(optionsVariant), "a{sv}"));
+    WriteOptions *options = g_new0(WriteOptions, 1);
+
+    GVariantIter iter;
+    g_variant_iter_init(&iter, optionsVariant);
+    GVariant *property_value;
+    gchar *property_name;
+    while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &property_value)) {
+        if (g_str_equal(property_name, "offset")) {
+            options->offset = g_variant_get_uint16(property_value);
+        } else if (g_str_equal(property_name, "type")) {
+            options->write_type = g_strdup(g_variant_get_string(property_value, NULL));
+        } else if (g_str_equal(property_name, "mtu")) {
+            options->mtu = g_variant_get_uint16(property_value);
+        } else if (g_str_equal(property_name, "device")) {
+            options->device = path_to_address(g_variant_get_string(property_value, NULL));
+        } else if (g_str_equal(property_name, "link")) {
+            options->link_type = g_strdup(g_variant_get_string(property_value, NULL));
+        }
+    }
+
+    log_debug(TAG, "write with offset=%u, mtu=%u, link=%s, device=%s", (unsigned int) options->offset,
+              (unsigned int) options->mtu, options->link_type, options->device);
+
+    return options;
 }
 
 static void add_char_path(gpointer key, gpointer value, gpointer userdata) {
@@ -425,7 +538,7 @@ void binc_application_publish(Application *application, const Adapter *adapter) 
     g_assert(adapter != NULL);
 
     GError *error = NULL;
-    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(manager_introspection_xml, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(object_manager_xml, &error);
     if (error) {
         log_debug(TAG, "Unable to create manager node: %s\n", error->message);
         g_clear_error(&error);
@@ -436,7 +549,9 @@ void binc_application_publish(Application *application, const Adapter *adapter) 
                                                                      application->path,
                                                                      info->interfaces[0],
                                                                      &application_method_table,
-                                                                     application, NULL, &error);
+                                                                     application,
+                                                                     NULL,
+                                                                     &error);
     g_dbus_node_info_unref(info);
 
     if (application->registration_id == 0 && error != NULL) {
@@ -497,7 +612,7 @@ int binc_application_add_service(Application *application, const char *service_u
     g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
 
     GError *error = NULL;
-    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(service_introspection_xml, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(service_xml, &error);
     if (error) {
         log_debug(TAG, "Unable to create service node: %s\n", error->message);
         g_clear_error(&error);
@@ -522,7 +637,9 @@ int binc_application_add_service(Application *application, const char *service_u
                                                                       localService->path,
                                                                       info->interfaces[0],
                                                                       &service_table,
-                                                                      localService, NULL, &error);
+                                                                      localService,
+                                                                      NULL,
+                                                                      &error);
     g_dbus_node_info_unref(info);
 
     if (localService->registration_id == 0) {
@@ -537,7 +654,6 @@ int binc_application_add_service(Application *application, const char *service_u
     log_debug(TAG, "successfully published local service %s", service_uuid);
     return 0;
 }
-
 
 
 static LocalService *binc_application_get_service(const Application *application, const char *service_uuid) {
@@ -592,7 +708,7 @@ static int binc_characteristic_set_value(const Application *application, LocalCh
 }
 
 static int binc_descriptor_set_value(const Application *application, LocalDescriptor *descriptor,
-                                         GByteArray *byteArray) {
+                                     GByteArray *byteArray) {
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (descriptor != NULL, EINVAL);
     g_return_val_if_fail (byteArray != NULL, EINVAL);
@@ -629,7 +745,7 @@ static LocalCharacteristic *get_local_characteristic(const Application *applicat
 }
 
 static LocalDescriptor *get_local_descriptor(const Application *application, const char *service_uuid,
-                                                     const char *char_uuid, const char *desc_uuid) {
+                                             const char *char_uuid, const char *desc_uuid) {
 
     g_return_val_if_fail (application != NULL, NULL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), NULL);
@@ -644,13 +760,13 @@ static LocalDescriptor *get_local_descriptor(const Application *application, con
 }
 
 static void binc_internal_descriptor_method_call(GDBusConnection *conn,
-                                                  const gchar *sender,
-                                                  const gchar *path,
-                                                  const gchar *interface,
-                                                  const gchar *method,
-                                                  GVariant *params,
-                                                  GDBusMethodInvocation *invocation,
-                                                  void *userdata) {
+                                                 const gchar *sender,
+                                                 const gchar *path,
+                                                 const gchar *interface,
+                                                 const gchar *method,
+                                                 GVariant *params,
+                                                 GDBusMethodInvocation *invocation,
+                                                 void *userdata) {
 
     LocalDescriptor *localDescriptor = (LocalDescriptor *) userdata;
     g_assert(localDescriptor != NULL);
@@ -670,12 +786,32 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
         } else {
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
         }
+    } else if(g_str_equal(method, "WriteValue")) {
+
+
+        g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
+        GVariant *valueVariant, *optionsVariant;
+        g_variant_get(params, "(@ay@a{sv})", &valueVariant, &optionsVariant);
+        WriteOptions *options = parse_write_options(optionsVariant);
+        g_variant_unref(optionsVariant);
+
+        log_debug(TAG, "write descriptor <%s> by %s", localDescriptor->uuid, options->device);
+
+        size_t data_length = 0;
+        guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
+        GByteArray *byteArray = g_byte_array_sized_new(data_length);
+        g_byte_array_append(byteArray, data, data_length);
+        g_variant_unref(valueVariant);
+
+        binc_descriptor_set_value(application, localDescriptor, byteArray);
+
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     }
 }
 
 static const GDBusInterfaceVTable descriptor_table = {
         .method_call = binc_internal_descriptor_method_call,
- //       .get_property = descriptor_get_property
+        //       .get_property = descriptor_get_property
 };
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
@@ -690,7 +826,7 @@ int binc_application_add_descriptor(Application *application, const char *servic
     }
 
     GError *error = NULL;
-    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(descriptor_introspection_xml, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(descriptor_xml, &error);
     if (error) {
         log_debug(TAG, "Unable to create descriptor node: %s\n", error->message);
         g_clear_error(&error);
@@ -703,16 +839,18 @@ int binc_application_add_descriptor(Application *application, const char *servic
     localDescriptor->char_path = g_strdup(localCharacteristic->path);
     localDescriptor->flags = permissions2Flags(permissions);
     localDescriptor->path = g_strdup_printf("%s/desc%d",
-                                           localCharacteristic->path,
-                                           g_hash_table_size(localCharacteristic->descriptors));
+                                            localCharacteristic->path,
+                                            g_hash_table_size(localCharacteristic->descriptors));
     g_hash_table_insert(localCharacteristic->descriptors, g_strdup(desc_uuid), localDescriptor);
 
     // Register characteristic
     localDescriptor->registration_id = g_dbus_connection_register_object(application->connection,
                                                                          localDescriptor->path,
-                                                                        info->interfaces[0],
-                                                                        &descriptor_table,
-                                                                         localDescriptor, NULL, &error);
+                                                                         info->interfaces[0],
+                                                                         &descriptor_table,
+                                                                         localDescriptor,
+                                                                         NULL,
+                                                                         &error);
     g_dbus_node_info_unref(info);
 
     if (localDescriptor->registration_id == 0) {
@@ -781,89 +919,7 @@ GByteArray *binc_application_get_char_value(const Application *application, cons
     return NULL;
 }
 
-typedef struct read_options {
-    char *device;
-    guint16 mtu;
-    guint16 offset;
-    char *link_type;
-} ReadOptions;
 
-void read_options_free(ReadOptions *options) {
-    if (options->link_type != NULL) g_free(options->link_type);
-    if (options->device != NULL) g_free(options->device);
-    g_free(options);
-}
-
-static ReadOptions *parse_read_options(GVariant *params) {
-    g_assert(g_str_equal(g_variant_get_type_string(params), "(a{sv})"));
-    ReadOptions *options = g_new0(ReadOptions, 1);
-
-    GVariantIter *optionsVariant;
-    g_variant_get(params, "(a{sv})", &optionsVariant);
-
-    GVariant *property_value;
-    gchar *property_name;
-    while (g_variant_iter_loop(optionsVariant, "{&sv}", &property_name, &property_value)) {
-        if (g_str_equal(property_name, "offset")) {
-            options->offset = g_variant_get_uint16(property_value);
-        } else if (g_str_equal(property_name, "mtu")) {
-            options->mtu = g_variant_get_uint16(property_value);
-        } else if (g_str_equal(property_name, "device")) {
-            options->device = path_to_address(g_variant_get_string(property_value, NULL));
-        } else if (g_str_equal(property_name, "link")) {
-            options->link_type = g_strdup(g_variant_get_string(property_value, NULL));
-        }
-    }
-    g_variant_iter_free(optionsVariant);
-
-    log_debug(TAG, "read with offset=%u, mtu=%u, link=%s, device=%s", (unsigned int) options->offset,
-              (unsigned int) options->mtu, options->link_type, options->device);
-
-    return options;
-}
-
-typedef struct write_options {
-    char *write_type;
-    char *device;
-    guint16 mtu;
-    guint16 offset;
-    char *link_type;
-} WriteOptions;
-
-void write_options_free(WriteOptions *options) {
-    if (options->link_type != NULL) g_free(options->link_type);
-    if (options->device != NULL) g_free(options->device);
-    if (options->write_type != NULL) g_free(options->write_type);
-    g_free(options);
-}
-
-static WriteOptions *parse_write_options(GVariant *optionsVariant) {
-    g_assert(g_str_equal(g_variant_get_type_string(optionsVariant), "a{sv}"));
-    WriteOptions *options = g_new0(WriteOptions, 1);
-
-    GVariantIter iter;
-    g_variant_iter_init(&iter, optionsVariant);
-    GVariant *property_value;
-    gchar *property_name;
-    while (g_variant_iter_loop(&iter, "{&sv}", &property_name, &property_value)) {
-        if (g_str_equal(property_name, "offset")) {
-            options->offset = g_variant_get_uint16(property_value);
-        } else if (g_str_equal(property_name, "type")) {
-            options->write_type = g_strdup(g_variant_get_string(property_value, NULL));
-        } else if (g_str_equal(property_name, "mtu")) {
-            options->mtu = g_variant_get_uint16(property_value);
-        } else if (g_str_equal(property_name, "device")) {
-            options->device = path_to_address(g_variant_get_string(property_value, NULL));
-        } else if (g_str_equal(property_name, "link")) {
-            options->link_type = g_strdup(g_variant_get_string(property_value, NULL));
-        }
-    }
-
-    log_debug(TAG, "write with offset=%u, mtu=%u, link=%s, device=%s", (unsigned int) options->offset,
-              (unsigned int) options->mtu, options->link_type, options->device);
-
-    return options;
-}
 
 static void binc_internal_characteristic_method_call(GDBusConnection *conn,
                                                      const gchar *sender,
@@ -1011,7 +1067,7 @@ int binc_application_add_characteristic(Application *application, const char *se
 
     GError *error = NULL;
     GDBusNodeInfo *info = NULL;
-    info = g_dbus_node_info_new_for_xml(characteristics_introspection_xml, &error);
+    info = g_dbus_node_info_new_for_xml(characteristic_xml, &error);
     if (error) {
         log_debug(TAG, "Unable to create node: %s\n", error->message);
         g_clear_error(&error);
@@ -1041,7 +1097,9 @@ int binc_application_add_characteristic(Application *application, const char *se
                                                                         characteristic->path,
                                                                         info->interfaces[0],
                                                                         &characteristic_table,
-                                                                        characteristic, NULL, &error);
+                                                                        characteristic,
+                                                                        NULL,
+                                                                        &error);
     g_dbus_node_info_unref(info);
 
     if (characteristic->registration_id == 0) {
@@ -1119,7 +1177,8 @@ int binc_application_notify(const Application *application, const char *service_
                                                     characteristic->path,
                                                     "org.freedesktop.DBus.Properties",
                                                     "PropertiesChanged",
-                                                    g_variant_new("(sa{sv}as)", "org.bluez.GattCharacteristic1",
+                                                    g_variant_new("(sa{sv}as)",
+                                                                  "org.bluez.GattCharacteristic1",
                                                                   properties_builder, invalidated_builder),
                                                     &error);
 
