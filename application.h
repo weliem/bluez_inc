@@ -59,6 +59,17 @@ typedef void (*onLocalCharacteristicStartNotify)(const Application *application,
 typedef void (*onLocalCharacteristicStopNotify)(const Application *application, const char *service_uuid,
                                                 const char *char_uuid);
 
+// This callback is called just before the descriptor's value is returned.
+// Use it to update the descriptor before it is read
+typedef void (*onLocalDescriptorRead)(const Application *application, const char *address,
+                                          const char *service_uuid, const char *char_uuid, const char *desc_uuid);
+
+// This callback is called just before the descriptor's value is set.
+// Use it to accept (return NULL), or reject (return BLUEZ_ERROR_*) the byte array
+typedef char *(*onLocalDescriptorWrite)(const Application *application, const char *address,
+                                            const char *service_uuid, const char *char_uuid,
+                                            const char *desc_uuid, const GByteArray *byteArray);
+
 // Methods
 Application *binc_create_application(const Adapter *adapter);
 
@@ -72,7 +83,7 @@ int binc_application_add_characteristic(Application *application, const char *se
                                         const char *char_uuid, guint8 permissions);
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
-                                    const char *char_uuid, const char *desc_uuid, int permissions);
+                                    const char *char_uuid, const char *desc_uuid, guint8 permissions);
 
 void binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback);
 
@@ -87,6 +98,10 @@ int binc_application_set_char_value(const Application *application, const char *
 
 GByteArray *binc_application_get_char_value(const Application *application, const char *service_uuid,
                                             const char *char_uuid);
+
+void binc_application_set_desc_read_cb(Application *application, onLocalDescriptorRead callback);
+
+void binc_application_set_desc_write_cb(Application *application, onLocalDescriptorWrite callback);
 
 int binc_application_set_desc_value(const Application *application, const char *service_uuid,
                                     const char *char_uuid, const char *desc_uuid, GByteArray *byteArray);

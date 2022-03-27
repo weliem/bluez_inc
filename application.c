@@ -108,6 +108,8 @@ struct binc_application {
     onLocalCharacteristicUpdated on_char_updated;
     onLocalCharacteristicStartNotify on_char_start_notify;
     onLocalCharacteristicStopNotify on_char_stop_notify;
+    onLocalDescriptorWrite on_desc_write;
+    onLocalDescriptorRead on_desc_read;
 };
 
 typedef struct binc_local_service {
@@ -136,6 +138,8 @@ typedef struct local_descriptor {
     char *path;
     char *char_path;
     char *uuid;
+    char *char_uuid;
+    char *service_uuid;
     guint registration_id;
     GByteArray *value;
     guint8 permissions;
@@ -175,6 +179,16 @@ static void binc_local_desc_free(LocalDescriptor *localDescriptor) {
     if (localDescriptor->uuid != NULL) {
         g_free(localDescriptor->uuid);
         localDescriptor->uuid = NULL;
+    }
+
+    if (localDescriptor->char_uuid != NULL) {
+        g_free(localDescriptor->char_uuid);
+        localDescriptor->char_uuid = NULL;
+    }
+
+    if (localDescriptor->service_uuid != NULL) {
+        g_free(localDescriptor->service_uuid);
+        localDescriptor->service_uuid = NULL;
     }
 
     if (localDescriptor->flags != NULL) {
@@ -775,7 +789,15 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
     g_assert(application != NULL);
 
     if (g_str_equal(method, "ReadValue")) {
-        log_debug(TAG, "read descriptor <%s>", localDescriptor->uuid);
+        ReadOptions *options = parse_read_options(params);
+
+        log_debug(TAG, "read descriptor <%s> by ", localDescriptor->uuid, options->device);
+
+        if (application->on_desc_read != NULL) {
+            application->on_desc_read(localDescriptor->application, options->device, localDescriptor->service_uuid,
+                                      localDescriptor->char_uuid, localDescriptor->uuid);
+        }
+        read_options_free(options);
 
         if (localDescriptor->value != NULL) {
             GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
@@ -787,8 +809,6 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
         }
     } else if(g_str_equal(method, "WriteValue")) {
-
-
         g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
         GVariant *valueVariant, *optionsVariant;
         g_variant_get(params, "(@ay@a{sv})", &valueVariant, &optionsVariant);
@@ -803,6 +823,24 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
         g_byte_array_append(byteArray, data, data_length);
         g_variant_unref(valueVariant);
 
+        // Allow application to accept/reject the characteristic value before setting it
+        char *result = NULL;
+        if (application->on_desc_write != NULL) {
+            result = application->on_desc_write(localDescriptor->application,
+                                                options->device,
+                                                localDescriptor->service_uuid,
+                                                localDescriptor->char_uuid,
+                                                localDescriptor->uuid,
+                                                byteArray);
+        }
+        write_options_free(options);
+
+        if (result) {
+            g_dbus_method_invocation_return_dbus_error(invocation, result, "write error");
+            log_debug(TAG, "write error");
+            return;
+        }
+
         binc_descriptor_set_value(application, localDescriptor, byteArray);
 
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
@@ -815,7 +853,7 @@ static const GDBusInterfaceVTable descriptor_table = {
 };
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
-                                    const char *char_uuid, const char *desc_uuid, int permissions) {
+                                    const char *char_uuid, const char *desc_uuid, guint8 permissions) {
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
 
@@ -837,6 +875,8 @@ int binc_application_add_descriptor(Application *application, const char *servic
     localDescriptor->uuid = g_strdup(desc_uuid);
     localDescriptor->application = application;
     localDescriptor->char_path = g_strdup(localCharacteristic->path);
+    localDescriptor->char_uuid = g_strdup(char_uuid);
+    localDescriptor->service_uuid = g_strdup(service_uuid);
     localDescriptor->flags = permissions2Flags(permissions);
     localDescriptor->path = g_strdup_printf("%s/desc%d",
                                             localCharacteristic->path,
@@ -1133,6 +1173,20 @@ binc_application_set_char_write_cb(Application *application, onLocalCharacterist
     g_assert(callback != NULL);
 
     application->on_char_write = callback;
+}
+
+void binc_application_set_desc_read_cb(Application *application, onLocalDescriptorRead callback) {
+    g_assert(application != NULL);
+    g_assert(callback != NULL);
+
+    application->on_desc_read = callback;
+}
+
+void binc_application_set_desc_write_cb(Application *application, onLocalDescriptorWrite callback) {
+    g_assert(application != NULL);
+    g_assert(callback != NULL);
+
+    application->on_desc_write = callback;
 }
 
 void binc_application_set_char_start_notify_cb(Application *application, onLocalCharacteristicStartNotify callback) {
