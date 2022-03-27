@@ -52,8 +52,6 @@ static void cts_onCharacteristicsDiscovered(ServiceHandler *service_handler, Dev
 
     binc_device_read_char(device, CTS_SERVICE, LOCAL_TIME_INFORMATION_CHAR);
     binc_device_read_char(device, CTS_SERVICE, REFERENCE_TIME_INFORMATION_CHAR);
-
-    binc_device_read_desc(device, CTS_SERVICE, CURRENT_TIME_CHAR, CUD_CHAR);
 }
 
 static void cts_onNotificationStateUpdated(ServiceHandler *service_handler,
