@@ -49,7 +49,6 @@ struct binc_characteristic {
     const char *path;
     const char *uuid;
     const char *service_path;
-//    const char *service_uuid;
     gboolean notifying;
     GList *flags;
     guint properties;
@@ -83,14 +82,25 @@ void binc_characteristic_free(Characteristic *characteristic) {
         characteristic->flags = NULL;
     }
 
-    g_free((char *) characteristic->uuid);
-    characteristic->uuid = NULL;
-    g_free((char *) characteristic->path);
-    characteristic->path = NULL;
-    g_free((char *) characteristic->service_path);
-    characteristic->service_path = NULL;
-//    g_free((char *) characteristic->service_uuid);
-//    characteristic->service_uuid = NULL;
+    if (characteristic->descriptors != NULL) {
+        g_list_free(characteristic->descriptors);
+        characteristic->descriptors = NULL;
+    }
+
+    if (characteristic->uuid != NULL) {
+        g_free((char *) characteristic->uuid);
+        characteristic->uuid = NULL;
+    }
+
+    if (characteristic->path != NULL) {
+        g_free((char *) characteristic->path);
+        characteristic->path = NULL;
+    }
+
+    if (characteristic->service_path != NULL) {
+        g_free((char *) characteristic->service_path);
+        characteristic->service_path = NULL;
+    }
 
     g_free(characteristic);
 }

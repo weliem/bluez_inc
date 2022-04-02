@@ -173,7 +173,10 @@ static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
 
     GPtrArray *services_filter = adapter->discovery_filter.services;
     if (services_filter != NULL) {
-        for (int i=0; i< services_filter->len; i++) {
+        guint count = services_filter->len;
+        if (count == 0) return TRUE;
+
+        for (int i=0; i< count; i++) {
                const char* uuid_filter = g_ptr_array_index(services_filter, i);
                if (binc_device_has_service(device, uuid_filter)) {
                    return TRUE;
