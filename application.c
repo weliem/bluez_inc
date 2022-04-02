@@ -372,7 +372,7 @@ static void add_char_path(gpointer key, gpointer value, gpointer userdata) {
     g_variant_builder_add((GVariantBuilder *) userdata, "o", localCharacteristic->path);
 }
 
-static GVariant *binc_local_service_get_characteristics(LocalService *localService) {
+static GVariant *binc_local_service_get_characteristics(const LocalService *localService) {
     g_assert(localService != NULL);
 
     GVariantBuilder *characteristics_builder = g_variant_builder_new(G_VARIANT_TYPE("ao"));
@@ -387,7 +387,7 @@ static void add_desc_path(gpointer key, gpointer value, gpointer userdata) {
     g_variant_builder_add((GVariantBuilder *) userdata, "o", localDescriptor->path);
 }
 
-static GVariant *binc_local_characteristic_get_descriptors(LocalCharacteristic *localCharacteristic) {
+static GVariant *binc_local_characteristic_get_descriptors(const LocalCharacteristic *localCharacteristic) {
     g_assert(localCharacteristic != NULL);
 
     GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("ao"));
@@ -397,7 +397,7 @@ static GVariant *binc_local_characteristic_get_descriptors(LocalCharacteristic *
     return result;
 }
 
-static GVariant *binc_local_characteristic_get_flags(LocalCharacteristic *localCharacteristic) {
+static GVariant *binc_local_characteristic_get_flags(const LocalCharacteristic *localCharacteristic) {
     g_assert(localCharacteristic != NULL);
 
     GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
@@ -409,7 +409,7 @@ static GVariant *binc_local_characteristic_get_flags(LocalCharacteristic *localC
     return result;
 }
 
-static GVariant *binc_local_descriptor_get_flags(LocalDescriptor *localDescriptor) {
+static GVariant *binc_local_descriptor_get_flags(const LocalDescriptor *localDescriptor) {
     g_assert(localDescriptor != NULL);
 
     GVariantBuilder *flags_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
@@ -419,6 +419,111 @@ static GVariant *binc_local_descriptor_get_flags(LocalDescriptor *localDescripto
     GVariant *result = g_variant_builder_end(flags_builder);
     g_variant_builder_unref(flags_builder);
     return result;
+}
+
+static void add_descriptors(GVariantBuilder *builder,
+                            LocalCharacteristic *localCharacteristic) {
+    // NOTE that the CCCD is automatically added by Bluez so no need to add it.
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, localCharacteristic->descriptors);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        LocalDescriptor *localDescriptor = (LocalDescriptor *) value;
+        log_debug(TAG, "adding %s", localDescriptor->path);
+
+        GVariantBuilder *descriptors_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
+        GVariantBuilder *desc_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+
+        GByteArray *byteArray = localDescriptor->value;
+        GVariant *byteArrayVariant = NULL;
+        if (byteArray != NULL) {
+            byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data,
+                                                         byteArray->len, sizeof(guint8));
+            g_variant_builder_add(desc_properties_builder, "{sv}", "Value", byteArrayVariant);
+        }
+        g_variant_builder_add(desc_properties_builder, "{sv}", "UUID",
+                              g_variant_new_string(localDescriptor->uuid));
+        g_variant_builder_add(desc_properties_builder, "{sv}", "Characteristic",
+                              g_variant_new("o", localDescriptor->char_path));
+        g_variant_builder_add(desc_properties_builder, "{sv}", "Flags",
+                              binc_local_descriptor_get_flags(localDescriptor));
+
+        // Add the descriptor to result
+        g_variant_builder_add(descriptors_builder, "{sa{sv}}", GATT_DESC_INTERFACE,
+                              desc_properties_builder);
+        g_variant_builder_unref(desc_properties_builder);
+        g_variant_builder_add(builder, "{oa{sa{sv}}}", localDescriptor->path, descriptors_builder);
+        g_variant_builder_unref(descriptors_builder);
+    }
+}
+
+static void add_characteristics(GVariantBuilder *builder, LocalService *localService) {
+    // Build service characteristics
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, localService->characteristics);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        LocalCharacteristic *localCharacteristic = (LocalCharacteristic *) value;
+        log_debug(TAG, "adding %s", localCharacteristic->path);
+
+        GVariantBuilder *characteristic_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
+        GVariantBuilder *char_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+
+        // Build characteristic properties
+        GByteArray *byteArray = localCharacteristic->value;
+        GVariant *byteArrayVariant = NULL;
+        if (byteArray != NULL) {
+            byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data,
+                                                         byteArray->len, sizeof(guint8));
+            g_variant_builder_add(char_properties_builder, "{sv}", "Value", byteArrayVariant);
+        }
+        g_variant_builder_add(char_properties_builder, "{sv}", "UUID",
+                              g_variant_new_string(localCharacteristic->uuid));
+        g_variant_builder_add(char_properties_builder, "{sv}", "Service",
+                              g_variant_new("o", localService->path));
+        g_variant_builder_add(char_properties_builder, "{sv}", "Flags",
+                              binc_local_characteristic_get_flags(localCharacteristic));
+        g_variant_builder_add(char_properties_builder, "{sv}", "Notifying",
+                              g_variant_new("b", localCharacteristic->notifying));
+        g_variant_builder_add(char_properties_builder, "{sv}", "Descriptors",
+                              binc_local_characteristic_get_descriptors(localCharacteristic));
+
+        // Add the characteristic to result
+        g_variant_builder_add(characteristic_builder, "{sa{sv}}", GATT_CHAR_INTERFACE,
+                              char_properties_builder);
+        g_variant_builder_unref(char_properties_builder);
+        g_variant_builder_add(builder, "{oa{sa{sv}}}", localCharacteristic->path, characteristic_builder);
+        g_variant_builder_unref(characteristic_builder);
+
+        add_descriptors(builder, localCharacteristic);
+    }
+}
+
+static void add_services(Application *application, GVariantBuilder *builder) {
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, application->services);
+    while (g_hash_table_iter_next(&iter, (gpointer) &key, &value)) {
+        LocalService *localService = (LocalService *) value;
+        log_debug(TAG, "adding %s", localService->path);
+        GVariantBuilder *service_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
+
+        // Build service properties
+        GVariantBuilder *service_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+        g_variant_builder_add(service_properties_builder, "{sv}", "UUID",
+                              g_variant_new_string((char *) key));
+        g_variant_builder_add(service_properties_builder, "{sv}", "Primary",
+                              g_variant_new_boolean(TRUE));
+        g_variant_builder_add(service_properties_builder, "{sv}", "Characteristics",
+                              binc_local_service_get_characteristics(localService));
+
+        // Add the service to result
+        g_variant_builder_add(service_builder, "{sa{sv}}", GATT_SERV_INTERFACE, service_properties_builder);
+        g_variant_builder_unref(service_properties_builder);
+        g_variant_builder_add(builder, "{oa{sa{sv}}}", localService->path, service_builder);
+        g_variant_builder_unref(service_builder);
+        add_characteristics(builder, localService);
+    }
 }
 
 static void binc_internal_application_method_call(GDBusConnection *conn,
@@ -434,111 +539,13 @@ static void binc_internal_application_method_call(GDBusConnection *conn,
     g_assert(application != NULL);
 
     if (g_str_equal(method, "GetManagedObjects")) {
-        log_debug(TAG, "GetManagedObjects");
-
-        /* Main Builder */
         GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{oa{sa{sv}}}"));
-
-        // Add services
         if (application->services != NULL && g_hash_table_size(application->services) > 0) {
-            GHashTableIter iter;
-            gpointer key, value;
-            g_hash_table_iter_init(&iter, application->services);
-            while (g_hash_table_iter_next(&iter, (gpointer) &key, &value)) {
-                LocalService *localService = (LocalService *) value;
-                log_debug(TAG, "adding %s", localService->path);
-                GVariantBuilder *service_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
-
-                // Build service properties
-                GVariantBuilder *service_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-                g_variant_builder_add(service_properties_builder, "{sv}", "UUID", g_variant_new_string((char *) key));
-                g_variant_builder_add(service_properties_builder, "{sv}", "Primary", g_variant_new_boolean(TRUE));
-                g_variant_builder_add(service_properties_builder, "{sv}", "Characteristics",
-                                      binc_local_service_get_characteristics(localService));
-
-                // Add the service to result
-                g_variant_builder_add(service_builder, "{sa{sv}}", GATT_SERV_INTERFACE, service_properties_builder);
-                g_variant_builder_unref(service_properties_builder);
-                g_variant_builder_add(builder, "{oa{sa{sv}}}", localService->path, service_builder);
-                g_variant_builder_unref(service_builder);
-
-                // Build service characteristics
-                GHashTableIter iter2;
-                gpointer key2, value2;
-                g_hash_table_iter_init(&iter2, localService->characteristics);
-                while (g_hash_table_iter_next(&iter2, &key2, &value2)) {
-                    LocalCharacteristic *localCharacteristic = (LocalCharacteristic *) value2;
-                    log_debug(TAG, "adding %s", localCharacteristic->path);
-
-                    GVariantBuilder *characteristic_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
-                    GVariantBuilder *char_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-
-                    // Build characteristic properties
-                    GByteArray *byteArray = localCharacteristic->value;
-                    GVariant *byteArrayVariant = NULL;
-                    if (byteArray != NULL) {
-                        byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data,
-                                                                     byteArray->len, sizeof(guint8));
-                        g_variant_builder_add(char_properties_builder, "{sv}", "Value", byteArrayVariant);
-                    }
-                    g_variant_builder_add(char_properties_builder, "{sv}", "UUID",
-                                          g_variant_new_string(localCharacteristic->uuid));
-                    g_variant_builder_add(char_properties_builder, "{sv}", "Service",
-                                          g_variant_new("o", localService->path));
-                    g_variant_builder_add(char_properties_builder, "{sv}", "Flags",
-                                          binc_local_characteristic_get_flags(localCharacteristic));
-                    g_variant_builder_add(char_properties_builder, "{sv}", "Notifying",
-                                          g_variant_new("b", localCharacteristic->notifying));
-                    g_variant_builder_add(char_properties_builder, "{sv}", "Descriptors",
-                                          binc_local_characteristic_get_descriptors(localCharacteristic));
-
-                    // Add the characteristic to result
-                    g_variant_builder_add(characteristic_builder, "{sa{sv}}", GATT_CHAR_INTERFACE,
-                                          char_properties_builder);
-                    g_variant_builder_unref(char_properties_builder);
-                    g_variant_builder_add(builder, "{oa{sa{sv}}}", localCharacteristic->path, characteristic_builder);
-                    g_variant_builder_unref(characteristic_builder);
-
-                    // TODO Add descriptors
-                    // NOTE that the CCCD is automatically added by Bluez so no need to add it.
-                    GHashTableIter iter3;
-                    gpointer key3, value3;
-                    g_hash_table_iter_init(&iter3, localCharacteristic->descriptors);
-                    while (g_hash_table_iter_next(&iter3, &key3, &value3)) {
-                        LocalDescriptor *localDescriptor = (LocalDescriptor *) value3;
-                        log_debug(TAG, "adding %s", localDescriptor->path);
-
-                        GVariantBuilder *descriptors_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sa{sv}}"));
-                        GVariantBuilder *desc_properties_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-
-                        GByteArray *byteArray2 = localDescriptor->value;
-                        GVariant *byteArrayVariant2 = NULL;
-                        if (byteArray != NULL) {
-                            byteArrayVariant2 = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray2->data,
-                                                                          byteArray2->len, sizeof(guint8));
-                            g_variant_builder_add(desc_properties_builder, "{sv}", "Value", byteArrayVariant2);
-                        }
-                        g_variant_builder_add(desc_properties_builder, "{sv}", "UUID",
-                                              g_variant_new_string(localDescriptor->uuid));
-                        g_variant_builder_add(desc_properties_builder, "{sv}", "Characteristic",
-                                              g_variant_new("o", localDescriptor->char_path));
-                        g_variant_builder_add(desc_properties_builder, "{sv}", "Flags",
-                                              binc_local_descriptor_get_flags(localDescriptor));
-
-                        // Add the characteristic to result
-                        g_variant_builder_add(descriptors_builder, "{sa{sv}}", GATT_DESC_INTERFACE,
-                                              desc_properties_builder);
-                        g_variant_builder_unref(desc_properties_builder);
-                        g_variant_builder_add(builder, "{oa{sa{sv}}}", localDescriptor->path, descriptors_builder);
-                        g_variant_builder_unref(descriptors_builder);
-                    }
-                }
-            }
+            add_services(application, builder);
         }
-
-        // Build the final variant
         GVariant *result = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
+
         g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
     }
 }
