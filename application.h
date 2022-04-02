@@ -75,7 +75,7 @@ Application *binc_create_application(const Adapter *adapter);
 
 void binc_application_free(Application *application);
 
-const char *binc_application_get_path(Application *application);
+const char *binc_application_get_path(const Application *application);
 
 int binc_application_add_service(Application *application, const char *service_uuid);
 

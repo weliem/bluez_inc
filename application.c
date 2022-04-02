@@ -33,6 +33,14 @@
 
 static const char *const TAG = "Application";
 
+static const char *const CHARACTERISTIC_METHOD_READ_VALUE = "ReadValue";
+static const char *const CHARACTERISTIC_METHOD_WRITE_VALUE = "WriteValue";
+static const char *const CHARACTERISTIC_METHOD_STOP_NOTIFY = "StopNotify";
+static const char *const CHARACTERISTIC_METHOD_START_NOTIFY = "StartNotify";
+static const char *const CHARACTERISTIC_METHOD_CONFIRM = "Confirm";
+static const char *const DESCRIPTOR_METHOD_READ_VALUE = "ReadValue";
+static const char *const DESCRIPTOR_METHOD_WRITE_VALUE = "WriteValue";
+
 static const gchar object_manager_xml[] =
         "<node name='/'>"
         "  <interface name='org.freedesktop.DBus.ObjectManager'>"
@@ -684,7 +692,7 @@ static LocalService *binc_application_get_service(const Application *application
     return g_hash_table_lookup(application->services, service_uuid);
 }
 
-static GList *permissions2Flags(guint8 permissions) {
+static GList *permissions2Flags(const guint8 permissions) {
     GList *list = NULL;
 
     if (permissions & GATT_CHR_PROP_READ) {
@@ -795,7 +803,7 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
     Application *application = localDescriptor->application;
     g_assert(application != NULL);
 
-    if (g_str_equal(method, "ReadValue")) {
+    if (g_str_equal(method, DESCRIPTOR_METHOD_READ_VALUE)) {
         ReadOptions *options = parse_read_options(params);
 
         log_debug(TAG, "read descriptor <%s> by ", localDescriptor->uuid, options->device);
@@ -815,7 +823,7 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
         } else {
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
         }
-    } else if(g_str_equal(method, "WriteValue")) {
+    } else if (g_str_equal(method, DESCRIPTOR_METHOD_WRITE_VALUE)) {
         g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
         GVariant *valueVariant, *optionsVariant;
         g_variant_get(params, "(@ay@a{sv})", &valueVariant, &optionsVariant);
@@ -856,7 +864,6 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
 
 static const GDBusInterfaceVTable descriptor_table = {
         .method_call = binc_internal_descriptor_method_call,
-        //       .get_property = descriptor_get_property
 };
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
@@ -967,7 +974,6 @@ GByteArray *binc_application_get_char_value(const Application *application, cons
 }
 
 
-
 static void binc_internal_characteristic_method_call(GDBusConnection *conn,
                                                      const gchar *sender,
                                                      const gchar *path,
@@ -983,7 +989,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
     Application *application = characteristic->application;
     g_assert(application != NULL);
 
-    if (g_str_equal(method, "ReadValue")) {
+    if (g_str_equal(method, CHARACTERISTIC_METHOD_READ_VALUE)) {
         log_debug(TAG, "read <%s>", characteristic->uuid);
 
         ReadOptions *options = parse_read_options(params);
@@ -1003,7 +1009,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         } else {
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
         }
-    } else if (g_str_equal(method, "WriteValue")) {
+    } else if (g_str_equal(method, CHARACTERISTIC_METHOD_WRITE_VALUE)) {
         log_debug(TAG, "write <%s>", characteristic->uuid);
 
         g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
@@ -1040,7 +1046,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         binc_application_notify(application, characteristic->service_uuid, characteristic->uuid, byteArray);
 
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
-    } else if (g_str_equal(method, "StartNotify")) {
+    } else if (g_str_equal(method, CHARACTERISTIC_METHOD_START_NOTIFY)) {
         log_debug(TAG, "start notify <%s>", characteristic->uuid);
 
         characteristic->notifying = TRUE;
@@ -1050,7 +1056,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
             application->on_char_start_notify(characteristic->application, characteristic->service_uuid,
                                               characteristic->uuid);
         }
-    } else if (g_str_equal(method, "StopNotify")) {
+    } else if (g_str_equal(method, CHARACTERISTIC_METHOD_STOP_NOTIFY)) {
         log_debug(TAG, "stop notify <%s>", characteristic->uuid);
 
         characteristic->notifying = FALSE;
@@ -1060,7 +1066,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
             application->on_char_stop_notify(characteristic->application, characteristic->service_uuid,
                                              characteristic->uuid);
         }
-    } else if (g_str_equal(method, "Confirm")) {
+    } else if (g_str_equal(method, CHARACTERISTIC_METHOD_CONFIRM)) {
         log_debug(TAG, "indication confirmed <%s>", characteristic->uuid);
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     }
@@ -1161,21 +1167,19 @@ int binc_application_add_characteristic(Application *application, const char *se
     return 0;
 }
 
-const char *binc_application_get_path(Application *application) {
+const char *binc_application_get_path(const Application *application) {
     g_assert(application != NULL);
     return application->path;
 }
 
-void
-binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback) {
+void binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback) {
     g_assert(application != NULL);
     g_assert(callback != NULL);
 
     application->on_char_read = callback;
 }
 
-void
-binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback) {
+void binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback) {
     g_assert(application != NULL);
     g_assert(callback != NULL);
 
