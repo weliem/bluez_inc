@@ -149,13 +149,13 @@ void on_scan_result(Adapter *adapter, Device *device) {
     log_debug(TAG, deviceToString);
     g_free(deviceToString);
 
-    binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
-    binc_device_set_services_resolved_callback(device, &on_services_resolved);
-    binc_device_set_bonding_state_changed_callback(device, &on_bonding_state_changed);
-    binc_device_set_read_char_callback(device, &on_read);
-    binc_device_set_write_char_callback(device, &on_write);
-    binc_device_set_notify_char_callback(device, &on_notify);
-    binc_device_set_notify_state_callback(device, &on_notification_state_changed);
+    binc_device_set_connection_state_change_cb(device, &on_connection_state_changed);
+    binc_device_set_services_resolved_cb(device, &on_services_resolved);
+    binc_device_set_bonding_state_changed_cb(device, &on_bonding_state_changed);
+    binc_device_set_read_char_cb(device, &on_read);
+    binc_device_set_write_char_cb(device, &on_write);
+    binc_device_set_notify_char_cb(device, &on_notify);
+    binc_device_set_notify_state_cb(device, &on_notification_state_changed);
     binc_device_set_read_desc_cb(device, &on_desc_read);
     binc_device_connect(device);
 }
@@ -214,11 +214,11 @@ int main(void) {
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
-        binc_agent_set_request_authorization_callback(agent, &on_request_authorization);
-        binc_agent_set_request_passkey_callback(agent, &on_request_passkey);
+        binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
+        binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
 
         // Make sure the adapter is on
-        binc_adapter_set_powered_state_callback(default_adapter, &on_powered_state_changed);
+        binc_adapter_set_powered_state_cb(default_adapter, &on_powered_state_changed);
         if (!binc_adapter_get_powered_state(default_adapter)) {
             binc_adapter_power_on(default_adapter);
         }
@@ -228,8 +228,8 @@ int main(void) {
         g_ptr_array_add(service_uuids, HTS_SERVICE_UUID);
 
         // Set discovery callbacks and start discovery
-        binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
-        binc_adapter_set_discovery_state_callback(default_adapter, &on_discovery_state_changed);
+        binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
+        binc_adapter_set_discovery_state_cb(default_adapter, &on_discovery_state_changed);
         binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
         g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);

@@ -123,7 +123,7 @@ int main(void) {
         log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
 
         // Make sure the adapter is on
-        binc_adapter_set_powered_state_callback(default_adapter, &on_powered_state_changed);
+        binc_adapter_set_powered_state_cb(default_adapter, &on_powered_state_changed);
         if (!binc_adapter_get_powered_state(default_adapter)) {
             binc_adapter_power_on(default_adapter);
         }

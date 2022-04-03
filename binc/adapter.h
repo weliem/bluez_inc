@@ -71,11 +71,11 @@ const char *binc_adapter_get_discovery_state_name(const Adapter *adapter);
 
 gboolean binc_adapter_get_powered_state(const Adapter *adapter);
 
-void binc_adapter_set_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback);
+void binc_adapter_set_discovery_cb(Adapter *adapter, AdapterDiscoveryResultCallback callback);
 
-void binc_adapter_set_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback);
+void binc_adapter_set_discovery_state_cb(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback);
 
-void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
+void binc_adapter_set_powered_state_cb(Adapter *adapter, AdapterPoweredStateChangeCallback callback);
 
 GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter);
 

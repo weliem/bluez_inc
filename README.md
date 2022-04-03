@@ -28,7 +28,7 @@ int main(void) {
     
     // ...
     
-    binc_adapter_set_discovery_callback(default_adapter, &on_scan_result);
+    binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
     binc_adapter_set_discovery_filter(default_adapter, -100, NULL);
     binc_adapter_start_discovery(default_adapter);
 }
@@ -41,11 +41,11 @@ void on_scan_result(Adapter *adapter, Device *device) {
     const char* name = binc_device_get_name(device);
     if (name != NULL && g_str_has_prefix(name, "Polar")) {
         binc_adapter_stop_discovery(adapter);
-        binc_device_set_connection_state_change_callback(device, &on_connection_state_changed);
-        binc_device_set_services_resolved_callback(device, &on_services_resolved);
-        binc_device_set_read_char_callback(device, &on_read);
-        binc_device_set_write_char_callback(device, &on_write);
-        binc_device_set_notify_char_callback(device, &on_notify);
+        binc_device_set_connection_state_change_cb(device, &on_connection_state_changed);
+        binc_device_set_services_resolved_cb(device, &on_services_resolved);
+        binc_device_set_read_char_cb(device, &on_read);
+        binc_device_set_write_char_cb(device, &on_write);
+        binc_device_set_notify_char_cb(device, &on_notify);
         binc_device_connect(device);
     }
 }
@@ -96,7 +96,7 @@ void on_services_resolved(Device *device) {
 }
 ```
 
-Like all BLE operations, reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_callback(device, &on_read)`. 
+Like all BLE operations, reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_cb(device, &on_read)`. 
 
 ```c
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
@@ -115,7 +115,7 @@ void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *erro
 }
 ```
 
-Writing to characteristics works in a similar way. Register your callback using `binc_device_set_write_char_callback(device, &on_write)`. Make sure you check if you can write to the characteristic before attempting it:
+Writing to characteristics works in a similar way. Register your callback using `binc_device_set_write_char_cb(device, &on_write)`. Make sure you check if you can write to the characteristic before attempting it:
 
 ```c
 void on_services_resolved(Device *device) {
@@ -135,7 +135,7 @@ void on_services_resolved(Device *device) {
 
 ## Receiving notifications
 
-Bluez treats notifications and indications in the same way, calling them 'notifications'. If you want to receive notifications you have to 'start' them by calling `binc_characteristic_start_notify()`. As usual, first register your callback by calling `binc_device_set_notify_char_callback(device, &on_notify)`. Here is an example:
+Bluez treats notifications and indications in the same way, calling them 'notifications'. If you want to receive notifications you have to 'start' them by calling `binc_characteristic_start_notify()`. As usual, first register your callback by calling `binc_device_set_notify_char_cb(device, &on_notify)`. Here is an example:
 
 ```c
 void on_services_resolved(Device *device) {
@@ -173,8 +173,8 @@ int main(void) {
     // ...
         
     agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
-    binc_agent_set_request_authorization_callback(agent, &on_request_authorization);
-    binc_agent_set_request_passkey_callback(agent, &on_request_passkey);
+    binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
+    binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
 }
 ```
 

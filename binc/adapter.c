@@ -760,21 +760,21 @@ void binc_adapter_power_off(Adapter *adapter) {
     adapter_set_property(adapter, ADAPTER_PROPERTY_POWERED, g_variant_new("b", FALSE));
 }
 
-void binc_adapter_set_discovery_callback(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
+void binc_adapter_set_discovery_cb(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
 
     adapter->discoveryResultCallback = callback;
 }
 
-void binc_adapter_set_discovery_state_callback(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback) {
+void binc_adapter_set_discovery_state_cb(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
 
     adapter->discoveryStateCallback = callback;
 }
 
-void binc_adapter_set_powered_state_callback(Adapter *adapter, AdapterPoweredStateChangeCallback callback) {
+void binc_adapter_set_powered_state_cb(Adapter *adapter, AdapterPoweredStateChangeCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
 

@@ -373,11 +373,11 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                         g_free(uuid);
                     } else if (g_str_equal(interface_name, INTERFACE_CHARACTERISTIC)) {
                         Characteristic *characteristic = binc_characteristic_create(device, object_path);
-                        binc_characteristic_set_read_callback(characteristic, &binc_on_characteristic_read);
-                        binc_characteristic_set_write_callback(characteristic, &binc_on_characteristic_write);
-                        binc_characteristic_set_notify_callback(characteristic, &binc_on_characteristic_notify);
-                        binc_characteristic_set_notifying_state_change_callback(characteristic,
-                                                                                &binc_on_characteristic_notification_state_changed);
+                        binc_characteristic_set_read_cb(characteristic, &binc_on_characteristic_read);
+                        binc_characteristic_set_write_cb(characteristic, &binc_on_characteristic_write);
+                        binc_characteristic_set_notify_cb(characteristic, &binc_on_characteristic_notify);
+                        binc_characteristic_set_notifying_state_change_cb(characteristic,
+                                                                          &binc_on_characteristic_notification_state_changed);
 
                         const gchar *property_name;
                         GVariantIter iter3;
@@ -488,7 +488,7 @@ static void binc_collect_gatt_tree(Device *device) {
                            device);
 }
 
-void binc_device_set_bonding_state_changed_callback(Device *device, BondingStateChangedCallback callback) {
+void binc_device_set_bonding_state_changed_cb(Device *device, BondingStateChangedCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
 
@@ -709,7 +709,7 @@ void binc_device_disconnect(Device *device) {
 }
 
 
-void binc_device_set_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback) {
+void binc_device_set_connection_state_change_cb(Device *device, ConnectionStateChangedCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
 
@@ -721,7 +721,7 @@ GList *binc_device_get_services(const Device *device) {
     return device->services_list;
 }
 
-void binc_device_set_services_resolved_callback(Device *device, ServicesResolvedCallback callback) {
+void binc_device_set_services_resolved_cb(Device *device, ServicesResolvedCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
 
@@ -764,7 +764,7 @@ binc_device_get_characteristic(const Device *device, const char *service_uuid, c
     return NULL;
 }
 
-void binc_device_set_read_char_callback(Device *device, OnReadCallback callback) {
+void binc_device_set_read_char_cb(Device *device, OnReadCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
     device->on_read_callback = callback;
@@ -822,7 +822,7 @@ gboolean binc_device_write_desc(const Device *device, const char *service_uuid,
     return TRUE;
 }
 
-void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback) {
+void binc_device_set_write_char_cb(Device *device, OnWriteCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
     device->on_write_callback = callback;
@@ -842,13 +842,13 @@ gboolean binc_device_write_char(const Device *device, const char *service_uuid, 
     return FALSE;
 }
 
-void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback) {
+void binc_device_set_notify_char_cb(Device *device, OnNotifyCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
     device->on_notify_callback = callback;
 }
 
-void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChangedCallback callback) {
+void binc_device_set_notify_state_cb(Device *device, OnNotifyingStateChangedCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
     device->on_notify_state_callback = callback;

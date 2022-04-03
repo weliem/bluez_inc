@@ -45,9 +45,6 @@ typedef void (*BondingStateChangedCallback)(Device *device, BondingState new_sta
                                             const GError *error);
 
 
-
-
-
 /**
  * Connect to a device asynchronously
  *
@@ -61,35 +58,38 @@ void binc_device_pair(Device *device);
 
 void binc_device_disconnect(Device *device);
 
-void binc_device_set_read_char_callback(Device *device, OnReadCallback callback);
+void binc_device_set_read_char_cb(Device *device, OnReadCallback callback);
 
-gboolean binc_device_read_char(const Device *device, const char* service_uuid, const char *characteristic_uuid);
+gboolean binc_device_read_char(const Device *device, const char *service_uuid, const char *characteristic_uuid);
 
-void binc_device_set_write_char_callback(Device *device, OnWriteCallback callback);
+void binc_device_set_write_char_cb(Device *device, OnWriteCallback callback);
 
-gboolean binc_device_write_char(const Device *device, const char* service_uuid,
+gboolean binc_device_write_char(const Device *device, const char *service_uuid,
                                 const char *characteristic_uuid, const GByteArray *byteArray, WriteType writeType);
 
-void binc_device_set_notify_char_callback(Device *device, OnNotifyCallback callback);
+void binc_device_set_notify_char_cb(Device *device, OnNotifyCallback callback);
 
-void binc_device_set_notify_state_callback(Device *device, OnNotifyingStateChangedCallback callback);
+void binc_device_set_notify_state_cb(Device *device, OnNotifyingStateChangedCallback callback);
 
-gboolean binc_device_start_notify(const Device *device, const char* service_uuid, const char *characteristic_uuid);
+gboolean binc_device_start_notify(const Device *device, const char *service_uuid, const char *characteristic_uuid);
 
-gboolean binc_device_read_desc(const Device *device, const char* service_uuid,
+gboolean binc_device_read_desc(const Device *device, const char *service_uuid,
                                const char *characteristic_uuid, const char *desc_uuid);
 
-gboolean binc_device_write_desc(const Device *device, const char* service_uuid,
+gboolean binc_device_write_desc(const Device *device, const char *service_uuid,
                                 const char *characteristic_uuid, const char *desc_uuid, const GByteArray *byteArray);
+
 void binc_device_set_read_desc_cb(Device *device, OnDescReadCallback callback);
+
 void binc_device_set_write_desc_cb(Device *device, OnDescWriteCallback callback);
-void binc_device_set_connection_state_change_callback(Device *device, ConnectionStateChangedCallback callback);
 
-void binc_device_set_services_resolved_callback(Device *device, ServicesResolvedCallback callback);
+void binc_device_set_connection_state_change_cb(Device *device, ConnectionStateChangedCallback callback);
 
-void binc_device_set_bonding_state_changed_callback(Device *device, BondingStateChangedCallback callback);
+void binc_device_set_services_resolved_cb(Device *device, ServicesResolvedCallback callback);
 
-gboolean binc_device_has_service(const Device *device, const char* service_uuid);
+void binc_device_set_bonding_state_changed_cb(Device *device, BondingStateChangedCallback callback);
+
+gboolean binc_device_has_service(const Device *device, const char *service_uuid);
 
 GList *binc_device_get_services(const Device *device);
 

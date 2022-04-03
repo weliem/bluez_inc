@@ -283,13 +283,13 @@ Agent *binc_agent_create(Adapter *adapter, const char *path, IoCapability io_cap
     return agent;
 }
 
-void binc_agent_set_request_authorization_callback(Agent *agent, AgentRequestAuthorizationCallback callback) {
+void binc_agent_set_request_authorization_cb(Agent *agent, AgentRequestAuthorizationCallback callback) {
     g_assert(agent != NULL);
     g_assert(callback != NULL);
     agent->request_authorization_callback = callback;
 }
 
-void binc_agent_set_request_passkey_callback(Agent *agent, AgentRequestPasskeyCallback callback) {
+void binc_agent_set_request_passkey_cb(Agent *agent, AgentRequestPasskeyCallback callback) {
     g_assert(agent != NULL);
     g_assert(callback != NULL);
     agent->request_passkey_callback = callback;

@@ -416,26 +416,26 @@ void binc_characteristic_stop_notify(Characteristic *characteristic) {
                            characteristic);
 }
 
-void binc_characteristic_set_read_callback(Characteristic *characteristic, OnReadCallback callback) {
+void binc_characteristic_set_read_cb(Characteristic *characteristic, OnReadCallback callback) {
     g_assert(characteristic != NULL);
     g_assert(callback != NULL);
     characteristic->on_read_callback = callback;
 }
 
-void binc_characteristic_set_write_callback(Characteristic *characteristic, OnWriteCallback callback) {
+void binc_characteristic_set_write_cb(Characteristic *characteristic, OnWriteCallback callback) {
     g_assert(characteristic != NULL);
     g_assert(callback != NULL);
     characteristic->on_write_callback = callback;
 }
 
-void binc_characteristic_set_notify_callback(Characteristic *characteristic, OnNotifyCallback callback) {
+void binc_characteristic_set_notify_cb(Characteristic *characteristic, OnNotifyCallback callback) {
     g_assert(characteristic != NULL);
     g_assert(callback != NULL);
     characteristic->on_notify_callback = callback;
 }
 
-void binc_characteristic_set_notifying_state_change_callback(Characteristic *characteristic,
-                                                             OnNotifyingStateChangedCallback callback) {
+void binc_characteristic_set_notifying_state_change_cb(Characteristic *characteristic,
+                                                       OnNotifyingStateChangedCallback callback) {
     g_assert(characteristic != NULL);
     g_assert(callback != NULL);
 
