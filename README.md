@@ -4,7 +4,7 @@
 The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood. 
 As a result, it looks like a 'normal' C library for Bluetooth!
 
-The library supports both Central and Peripheral roles.
+The library focuses on BLE and supports both **Central** and **Peripheral** roles.
 
 
 ## Discovering devices
@@ -34,6 +34,7 @@ int main(void) {
 }
 ```
 
+When you pass 'NULL' as the last argument to `binc_adapter_set_discovery_filter`, you indicate that you don't want to filter on service UUIDs. Otherwise you can pass a GPtrArray with a number of service UUIDs that you want to filter on.
 The discovery will deliver all found devices on the callback you provided. You typically check if it is the device you are looking for, stop the discovery and then connect to it:
 
 ```c
@@ -55,7 +56,8 @@ As you can see, just before connecting, you must set up some callbacks for recei
 ## Connecting, service discovery and disconnecting
 
 You connect by calling `binc_device_connect(device)`. Then the following sequence will happen:
-* when the device is connected the *connection_state* changes and your registered callback will be called. However, you cannot use the device yet because the service discovery has not yet been done.
+* first, the *connection_state* will change to 'connecting'.
+* when the device is connected, the *connection_state* changes and your registered callback will be called. However, you cannot use the device yet because the service discovery has not yet been done.
 * Bluez will then start the service discovery automatically and when it finishes, the *services_resolved* callback is called. So the *service_resolved* callback is the right place to start reading and writing characteristics or starting notifications. 
 
 ```c
@@ -89,28 +91,27 @@ void on_services_resolved(Device *device) {
         binc_characteristic_read(manufacturer);
     }
 
-    Characteristic *model = binc_device_get_characteristic(device, DIS_SERVICE, MODEL_CHAR);
-    if (model != NULL) {
-        binc_characteristic_read(model);
-    }
+    binc_device_read_char(device, DIS_SERVICE, DIS_MODEL_CHAR);
 }
 ```
 
+As you can see, there is also a convenience method `binc_device_read_char` that will look up a characteristic and do a read if the characteristic is found.
 Like all BLE operations, reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_cb(device, &on_read)`. 
 
 ```c
 void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
     const char* uuid = binc_characteristic_get_uuid(characteristic);
-    if (byteArray != NULL) {
-        if (g_str_equal(uuid, DIS_MANUFACTURER_CHAR)) {
-            log_debug(TAG, "manufacturer = %s", byteArray->data);
-        } else if (g_str_equal(uuid, MODEL_CHAR)) {
-            log_debug(TAG, "model = %s", byteArray->data);
-        }
-    }
-
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
+        return;
+    }
+    
+    if (byteArray == NULL) return;
+    
+    if (g_str_equal(uuid, DIS_MANUFACTURER_CHAR)) {
+        log_debug(TAG, "manufacturer = %s", byteArray->data);
+    } else if (g_str_equal(uuid, MODEL_CHAR)) {
+        log_debug(TAG, "model = %s", byteArray->data);
     }
 }
 ```
@@ -157,12 +158,15 @@ void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser_set_offset(parser, 1);
     if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
-        float spo2_value = parser_get_float(parser);
-        log_debug(TAG, "temperature %.1f", spo2_value);
+        float temperature = parser_get_float(parser);
+        log_debug(TAG, "temperature %.1f", temperature);
     } 
     parser_free(parser);
 }
 ```
+
+The **Parser** object is a helper object that will help you parsing byte arrays.
+
 ## Bonding
 Bonding is possible with this library. It supports 'confirmation' bonding (JustWorks) and PIN code bonding (passphrase).
 First you need to register an Agent and set the callbacks for these 2 types of bonding. When creating the agent you can also choose the IO capabilities for your applications, i.e. DISPLAY_ONLY, DISPLAY_YES_NO, KEYBOARD_ONLY, NO_INPUT_NO_OUTPUT, KEYBOARD_DISPLAY. Note that this will affect the bonding behavior.
@@ -226,11 +230,13 @@ binc_adapter_start_advertising(default_adapter, advertisement);
 g_ptr_array_free(adv_service_uuids, TRUE);
 ```
 
+The library also supports setting *manufacturer data* and *service data*.
+
 ## Adding services and characteristics
 In order to make your peripheral work you need to create an 'app' in Bluez terminology. The steps are:
 * Create an app
 * Add one or more services
-* Add one or more characteristics
+* Add one or more characteristics and descriptors
 * Implement read/write/notify callbacks for characteristics
 
 Here is how to setup an app with a service and a characteristic:
@@ -278,6 +284,13 @@ In order to notify you can use:
 void binc_application_notify(const Application *app, const char *service_uuid, const char *char_uuid,
                              GByteArray *byteArray);
 ```
+
+## Examples
+
+The repository includes an example for both the **Central** and **Peripheral** role. 
+
+* The *central* example scans for thermometers and reads the thermometer value once it connects.
+* The *peripheral* example acts as a thermometer and can be used in combination with the central example.
 
 ## Bluez documentation
 
