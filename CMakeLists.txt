@@ -11,7 +11,6 @@ pkg_check_modules(GLIB glib-2.0 gio-2.0 REQUIRED)
 include_directories(${GLIB_INCLUDE_DIRS})
 
 add_subdirectory(binc)
+add_subdirectory(examples/central)
+add_subdirectory(examples/peripheral)
 
-add_executable(test example/main.c)
-# add_executable(peripheral example/peripheral.c)
-target_link_libraries(${PROJECT_NAME} ${GLIB_LIBRARIES} m Binc)
