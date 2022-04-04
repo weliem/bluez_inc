@@ -98,6 +98,7 @@ struct binc_device {
     GList *services_list;
     GHashTable *characteristics;
     GHashTable *descriptors;
+    gboolean is_central;
 
     OnReadCallback on_read_callback;
     OnWriteCallback on_write_callback;
@@ -1039,6 +1040,16 @@ void binc_device_set_service_data(Device *device, GHashTable *service_data) {
 
     binc_device_free_service_data(device);
     device->service_data = service_data;
+}
+
+void binc_device_set_is_central(Device *device, gboolean is_central) {
+    g_assert(device != NULL);
+    device->is_central = is_central;
+}
+
+gboolean binc_device_is_central(const Device *device) {
+    g_assert(device != NULL);
+    return device->is_central;
 }
 
 GDBusConnection *binc_device_get_dbus_connection(const Device *device) {

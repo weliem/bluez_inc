@@ -130,6 +130,8 @@ BondingState binc_device_get_bonding_state(const Device *device);
 
 Adapter *binc_device_get_adapter(const Device *device);
 
+gboolean binc_device_is_central(const Device *device);
+
 char *binc_device_to_string(const Device *device);
 
 #endif //BINC_DEVICE_H

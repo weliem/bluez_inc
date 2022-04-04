@@ -176,11 +176,11 @@ static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
         guint count = services_filter->len;
         if (count == 0) return TRUE;
 
-        for (int i=0; i< count; i++) {
-               const char* uuid_filter = g_ptr_array_index(services_filter, i);
-               if (binc_device_has_service(device, uuid_filter)) {
-                   return TRUE;
-               }
+        for (int i = 0; i < count; i++) {
+            const char *uuid_filter = g_ptr_array_index(services_filter, i);
+            if (binc_device_has_service(device, uuid_filter)) {
+                return TRUE;
+            }
         }
         return FALSE;
     }
@@ -261,12 +261,14 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
             }
 
             g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
-            if (adapter->discovery_state == STARTED && binc_device_get_connection_state(device)==DISCONNECTED) {
+            if (adapter->discovery_state == STARTED && binc_device_get_connection_state(device) == DISCONNECTED) {
                 deliver_discovery_result(adapter, device);
             }
 
-            if (binc_device_get_connection_state(device)==CONNECTED) {
-                // Remote device connected to adapter
+            if (binc_device_get_connection_state(device) == CONNECTED &&
+                binc_device_get_rssi(device) == -255 &&
+                binc_device_get_uuids(device) == NULL) {
+                binc_device_set_is_central(device, TRUE);
                 log_debug(TAG, "remote central connected %s", binc_device_get_address(device));
             }
         }
@@ -323,7 +325,6 @@ static void binc_internal_device_getall_properties(Adapter *adapter, Device *dev
 }
 
 
-
 static void binc_internal_device_changed(GDBusConnection *conn,
                                          const gchar *sender,
                                          const gchar *path,
@@ -364,8 +365,7 @@ static void binc_internal_device_changed(GDBusConnection *conn,
         }
 
         ConnectionState newState = binc_device_get_connection_state(device);
-        if (oldState == CONNECTED && newState == DISCONNECTED) {
-            // Only remote centrals go directly from connected to disconnected
+        if (oldState == CONNECTED && newState == DISCONNECTED && binc_device_is_central(device)) {
             log_debug(TAG, "remote central disconnected %s", binc_device_get_address(device));
         }
     }
@@ -452,8 +452,8 @@ static void remove_signal_subscribers(Adapter *adapter) {
 }
 
 void free_discovery_filter(Adapter *adapter) {
-    for (int i=0; i < adapter->discovery_filter.services->len; i++) {
-        char* uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
+    for (int i = 0; i < adapter->discovery_filter.services->len; i++) {
+        char *uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
         g_free(uuid_filter);
     }
     g_ptr_array_free(adapter->discovery_filter.services, TRUE);
@@ -481,10 +481,10 @@ void binc_adapter_free(Adapter *adapter) {
     g_free(adapter);
 }
 
-static Adapter *binc_internal_get_adapter_by_path(GPtrArray *adapters, const char* path) {
+static Adapter *binc_internal_get_adapter_by_path(GPtrArray *adapters, const char *path) {
     for (int i = 0; i < adapters->len; i++) {
         Adapter *adapter = g_ptr_array_index(adapters, i);
-        const char* adapter_path = binc_adapter_get_path(adapter);
+        const char *adapter_path = binc_adapter_get_path(adapter);
         if (g_str_has_prefix(path, adapter_path)) {
             return adapter;
         }
@@ -542,7 +542,7 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
                         }
                     }
                     g_ptr_array_add(binc_adapters, adapter);
-                } else if(g_str_equal(interface_name, INTERFACE_DEVICE)) {
+                } else if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
                     Adapter *adapter = binc_internal_get_adapter_by_path(binc_adapters, object_path);
                     Device *device = binc_create_device(object_path, adapter);
                     g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
@@ -683,7 +683,7 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
 }
 
 
-GList* binc_adapter_get_devices(const Adapter *adapter) {
+GList *binc_adapter_get_devices(const Adapter *adapter) {
     return g_hash_table_get_values(adapter->devices_cache);
 }
 
