@@ -37,6 +37,8 @@ typedef void (*AdapterDiscoveryStateChangeCallback)(Adapter *adapter, DiscoveryS
 
 typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter, gboolean state);
 
+typedef void (*RemoteCentralConnectionStateCallback)(Adapter *adapter, Device *device);
+
 /**
  * Get the default bluetooth adapter
  *
@@ -86,5 +88,7 @@ void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisemen
 void binc_adapter_register_application(Adapter *adapter, Application *application);
 
 void binc_adapter_unregister_application(Adapter *adapter, Application *application);
+
+void binc_adapter_set_remote_central_cb(Adapter *adapter, RemoteCentralConnectionStateCallback callback);
 
 #endif //BINC_ADAPTER_H

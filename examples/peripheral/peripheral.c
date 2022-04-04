@@ -48,6 +48,10 @@ void on_powered_state_changed(Adapter *adapter, gboolean state) {
     log_debug(TAG, "powered '%s' (%s)", state ? "on" : "off", binc_adapter_get_path(adapter));
 }
 
+void on_central_state_changed(Adapter *adapter, Device *device) {
+    log_debug(TAG, "remote central %s is %s", binc_device_get_address(device), binc_device_get_connection_state_name(device));
+}
+
 void on_local_char_read(const Application *application, const char *address, const char *service_uuid,
                         const char *char_uuid) {
     if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
@@ -127,6 +131,9 @@ int main(void) {
         if (!binc_adapter_get_powered_state(default_adapter)) {
             binc_adapter_power_on(default_adapter);
         }
+
+        // Setup remote central connection state callback
+        binc_adapter_set_remote_central_cb(default_adapter, &on_central_state_changed);
 
         GPtrArray *adv_service_uuids = g_ptr_array_new();
         g_ptr_array_add(adv_service_uuids, HTS_SERVICE_UUID);

@@ -83,7 +83,7 @@ struct binc_adapter {
     AdapterDiscoveryResultCallback discoveryResultCallback;
     AdapterDiscoveryStateChangeCallback discoveryStateCallback;
     AdapterPoweredStateChangeCallback poweredStateCallback;
-
+    RemoteCentralConnectionStateCallback centralStateCallback;
     GHashTable *devices_cache;
 
     Advertisement *advertisement;
@@ -269,7 +269,9 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
                 binc_device_get_rssi(device) == -255 &&
                 binc_device_get_uuids(device) == NULL) {
                 binc_device_set_is_central(device, TRUE);
-                log_debug(TAG, "remote central connected %s", binc_device_get_address(device));
+                if (adapter->centralStateCallback != NULL) {
+                    adapter->centralStateCallback(adapter, device);
+                }
             }
         }
     }
@@ -366,7 +368,9 @@ static void binc_internal_device_changed(GDBusConnection *conn,
 
         ConnectionState newState = binc_device_get_connection_state(device);
         if (oldState == CONNECTED && newState == DISCONNECTED && binc_device_is_central(device)) {
-            log_debug(TAG, "remote central disconnected %s", binc_device_get_address(device));
+            if (adapter->centralStateCallback != NULL) {
+                adapter->centralStateCallback(adapter, device);
+            }
         }
     }
 
@@ -957,4 +961,9 @@ void binc_adapter_unregister_application(Adapter *adapter, Application *applicat
                            NULL,
                            (GAsyncReadyCallback) binc_internal_unregister_appl_cb, adapter);
 
+}
+
+void binc_adapter_set_remote_central_cb(Adapter *adapter, RemoteCentralConnectionStateCallback callback) {
+    g_assert(adapter != NULL);
+    adapter->centralStateCallback = callback;
 }
