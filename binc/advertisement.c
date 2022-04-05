@@ -69,9 +69,11 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
         ret = advertisement->local_name ? g_variant_new_string(advertisement->local_name) : NULL;
     } else if (g_str_equal(property_name, "ServiceUUIDs")) {
         GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-        for (int i = 0; i < advertisement->services->len; i++) {
-            char *service_uuid = g_ptr_array_index(advertisement->services, i);
-            g_variant_builder_add(builder, "s", service_uuid);
+        if (advertisement->services != NULL) {
+            for (int i = 0; i < advertisement->services->len; i++) {
+                char *service_uuid = g_ptr_array_index(advertisement->services, i);
+                g_variant_builder_add(builder, "s", service_uuid);
+            }
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
