@@ -867,16 +867,15 @@ static void binc_internal_stop_advertising_cb(GObject *source_object, GAsyncResu
         log_debug(TAG, "failed to unregister advertisement (error %d: %s)", error->code, error->message);
         g_clear_error(&error);
     } else {
+        binc_advertisement_unregister(adapter->advertisement, adapter);
         log_debug(TAG, "stopped advertising");
     }
+
 }
 
 void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisement) {
     g_assert(adapter != NULL);
     g_assert(advertisement != NULL);
-
-//    adapter->advertisement = advertisement;
-//    binc_advertisement_register(advertisement, adapter);
 
     g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
                            "org.bluez",

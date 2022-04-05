@@ -112,6 +112,8 @@ static const GDBusInterfaceVTable advertisement_method_table = {
 };
 
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter) {
+    g_assert(advertisement != NULL);
+    g_assert(adapter != NULL);
 
     static const gchar advertisement_xml[] =
             "<node name='/'>"
@@ -134,10 +136,21 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
                                                                        advertisement, NULL, &error);
 
     if (error != NULL) {
-        log_debug(TAG, "registering advertisement failed");
+        log_debug(TAG, "registering advertisement failed: %s", error->message);
         g_clear_error(&error);
     }
     g_dbus_node_info_unref(info);
+}
+
+void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter) {
+    g_assert(advertisement != NULL);
+    g_assert(adapter != NULL);
+
+    gboolean result = g_dbus_connection_unregister_object(binc_adapter_get_dbus_connection(adapter),
+                                                                         advertisement->registration_id);
+    if (!result) {
+        log_debug(TAG, "failed to unregister advertisement");
+    }
 }
 
 static void byte_array_free(GByteArray *byteArray) { g_byte_array_free(byteArray, TRUE); }

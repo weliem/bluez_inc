@@ -43,4 +43,6 @@ const char *binc_advertisement_get_path(const Advertisement *advertisement);
 
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter);
 
+void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter);
+
 #endif //BINC_ADVERTISEMENT_H
