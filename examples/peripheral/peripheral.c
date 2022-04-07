@@ -120,6 +120,7 @@ int main(void) {
     // Get a DBus connection
     GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
 
+    // Setup handler for CTRL+C
     if (signal(SIGINT, cleanup_handler) == SIG_ERR)
         g_print("can't catch SIGINT\n");
 
@@ -141,6 +142,7 @@ int main(void) {
         // Setup remote central connection state callback
         binc_adapter_set_remote_central_cb(default_adapter, &on_central_state_changed);
 
+        // Setup advertisement
         GPtrArray *adv_service_uuids = g_ptr_array_new();
         g_ptr_array_add(adv_service_uuids, HTS_SERVICE_UUID);
 
@@ -180,7 +182,7 @@ int main(void) {
     }
 
     // Bail out after some time
-    g_timeout_add_seconds(60, callback, loop);
+    g_timeout_add_seconds(600, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
