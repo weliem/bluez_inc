@@ -34,6 +34,7 @@ static const char *const BLUEZ_DBUS = "org.bluez";
 static const char *const INTERFACE_ADAPTER = "org.bluez.Adapter1";
 static const char *const INTERFACE_DEVICE = "org.bluez.Device1";
 static const char *const INTERFACE_OBJECT_MANAGER = "org.freedesktop.DBus.ObjectManager";
+static const char *const INTERFACE_GATT_MANAGER = "org.bluez.GattManager1";
 static const char *const INTERFACE_PROPERTIES = "org.freedesktop.DBus.Properties";
 
 static const char *const METHOD_START_DISCOVERY = "StartDiscovery";
@@ -366,10 +367,13 @@ static void binc_internal_device_changed(GDBusConnection *conn,
             deliver_discovery_result(adapter, device);
         }
 
-        ConnectionState newState = binc_device_get_connection_state(device);
-        if (oldState == CONNECTED && newState == DISCONNECTED && binc_device_is_central(device)) {
-            if (adapter->centralStateCallback != NULL) {
-                adapter->centralStateCallback(adapter, device);
+        if (binc_device_is_central(device)) {
+            ConnectionState newState = binc_device_get_connection_state(device);
+            if ((oldState == CONNECTED && newState == DISCONNECTED) ||
+                (oldState == DISCONNECTED && newState == CONNECTED)) {
+                if (adapter->centralStateCallback != NULL) {
+                    adapter->centralStateCallback(adapter, device);
+                }
             }
         }
     }
@@ -913,9 +917,9 @@ void binc_adapter_register_application(Adapter *adapter, Application *applicatio
     g_assert(application != NULL);
 
     g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            adapter->path,
-                           "org.bluez.GattManager1",
+                           INTERFACE_GATT_MANAGER,
                            "RegisterApplication",
                            g_variant_new("(oa{sv})", binc_application_get_path(application), NULL),
                            NULL,
@@ -949,9 +953,9 @@ void binc_adapter_unregister_application(Adapter *adapter, Application *applicat
     g_assert(application != NULL);
 
     g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
-                           "org.bluez",
+                           BLUEZ_DBUS,
                            adapter->path,
-                           "org.bluez.GattManager1",
+                           INTERFACE_GATT_MANAGER,
                            "UnregisterApplication",
                            g_variant_new("(o)", binc_application_get_path(application)),
                            NULL,

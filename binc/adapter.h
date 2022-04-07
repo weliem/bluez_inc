@@ -39,6 +39,7 @@ typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter, gboolean sta
 
 typedef void (*RemoteCentralConnectionStateCallback)(Adapter *adapter, Device *device);
 
+
 /**
  * Get the default bluetooth adapter
  *
