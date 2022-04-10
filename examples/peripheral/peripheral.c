@@ -53,7 +53,7 @@ void on_central_state_changed(Adapter *adapter, Device *device) {
     ConnectionState state = binc_device_get_connection_state(device);
     if (state == CONNECTED) {
         binc_adapter_stop_advertising(adapter, advertisement);
-    } else {
+    } else if (state == DISCONNECTED){
         binc_adapter_start_advertising(adapter, advertisement);
     }
 }
