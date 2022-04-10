@@ -369,8 +369,7 @@ static void binc_internal_device_changed(GDBusConnection *conn,
 
         if (binc_device_is_central(device)) {
             ConnectionState newState = binc_device_get_connection_state(device);
-            if ((oldState == CONNECTED && newState == DISCONNECTED) ||
-                (oldState == DISCONNECTED && newState == CONNECTED)) {
+            if (oldState != newState) {
                 if (adapter->centralStateCallback != NULL) {
                     adapter->centralStateCallback(adapter, device);
                 }
