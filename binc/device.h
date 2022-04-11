@@ -24,7 +24,6 @@
 #define BINC_DEVICE_H
 
 #include <glib.h>
-#include <stdint-gcc.h>
 #include "forward_decl.h"
 #include "characteristic.h"
 #include "descriptor.h"

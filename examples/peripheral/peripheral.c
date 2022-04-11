@@ -147,7 +147,7 @@ int main(void) {
         g_ptr_array_add(adv_service_uuids, HTS_SERVICE_UUID);
 
         advertisement = binc_advertisement_create();
-        binc_advertisement_set_local_name(advertisement, "BINC2");
+        binc_advertisement_set_local_name(advertisement, "BINC");
         binc_advertisement_set_services(advertisement, adv_service_uuids);
         g_ptr_array_free(adv_service_uuids, TRUE);
         binc_adapter_start_advertising(default_adapter, advertisement);
