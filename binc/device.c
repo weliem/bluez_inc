@@ -973,7 +973,7 @@ gboolean binc_device_get_paired(const Device *device) {
 void binc_device_set_paired(Device *device, gboolean paired) {
     g_assert(device != NULL);
     device->paired = paired;
-    device->bondingState = paired ? BONDED : BOND_NONE;
+    binc_device_set_bonding_state(device, paired ? BONDED : BOND_NONE);
 }
 
 short binc_device_get_rssi(const Device *device) {
