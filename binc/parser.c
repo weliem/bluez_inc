@@ -40,10 +40,11 @@ struct parser_instance {
     int byteOrder;
 };
 
-static const double reserved_float_values[5] = {MDER_POSITIVE_INFINITY, MDER_NaN, MDER_NaN, MDER_NaN, MDER_NEGATIVE_INFINITY};
+static const double reserved_float_values[5] = {MDER_POSITIVE_INFINITY, MDER_NaN, MDER_NaN, MDER_NaN,
+                                                MDER_NEGATIVE_INFINITY};
 
-Parser* parser_create(const GByteArray *bytes, int byteOrder) {
-    Parser* parser = g_new0(Parser, 1);
+Parser *parser_create(const GByteArray *bytes, int byteOrder) {
+    Parser *parser = g_new0(Parser, 1);
     parser->bytes = bytes;
     parser->offset = 0;
     parser->byteOrder = byteOrder;
@@ -82,11 +83,11 @@ gint8 parser_get_sint8(Parser *parser) {
 
 guint16 parser_get_uint16(Parser *parser) {
     g_assert(parser != NULL);
-    g_assert((parser->offset+1) < parser->bytes->len);
+    g_assert((parser->offset + 1) < parser->bytes->len);
 
     guint8 byte1, byte2;
     byte1 = parser->bytes->data[parser->offset];
-    byte2 = parser->bytes->data[parser->offset+1];
+    byte2 = parser->bytes->data[parser->offset + 1];
     parser->offset = parser->offset + 2;
     if (parser->byteOrder == LITTLE_ENDIAN) {
         return (byte2 << 8) + byte1;
@@ -97,11 +98,11 @@ guint16 parser_get_uint16(Parser *parser) {
 
 gint16 parser_get_sint16(Parser *parser) {
     g_assert(parser != NULL);
-    g_assert((parser->offset+1) < parser->bytes->len);
+    g_assert((parser->offset + 1) < parser->bytes->len);
 
     guint8 byte1, byte2;
     byte1 = parser->bytes->data[parser->offset];
-    byte2 = parser->bytes->data[parser->offset+1];
+    byte2 = parser->bytes->data[parser->offset + 1];
     parser->offset = parser->offset + 2;
     if (parser->byteOrder == LITTLE_ENDIAN) {
         return (byte2 << 8) + byte1;
@@ -116,9 +117,9 @@ guint32 parser_get_uint32(Parser *parser) {
 
     guint8 byte1, byte2, byte3, byte4;
     byte1 = parser->bytes->data[parser->offset];
-    byte2 = parser->bytes->data[parser->offset+1];
-    byte3 = parser->bytes->data[parser->offset+2];
-    byte4 = parser->bytes->data[parser->offset+3];
+    byte2 = parser->bytes->data[parser->offset + 1];
+    byte3 = parser->bytes->data[parser->offset + 2];
+    byte4 = parser->bytes->data[parser->offset + 3];
     parser->offset = parser->offset + 4;
     if (parser->byteOrder == LITTLE_ENDIAN) {
         return (byte4 << 24) + (byte3 << 16) + (byte2 << 8) + byte1;
@@ -145,11 +146,10 @@ float parser_get_sfloat(Parser *parser) {
 }
 
 /* round number n to d decimal points */
-float fround(float n, int d)
-{
+float fround(float n, int d) {
     int rounded = floor(n * pow(10.0f, d) + 0.5f);
     int divider = (int) pow(10.0f, d);
-    return  (float) rounded/ (float) divider;
+    return (float) rounded / (float) divider;
 }
 
 float parser_get_float(Parser *parser) {
@@ -177,11 +177,11 @@ GString *parser_get_string(Parser *parser) {
     g_assert(parser != NULL);
     g_assert(parser->bytes != NULL);
 
-    return g_string_new_len((const char*) parser->bytes->data+parser->offset,
+    return g_string_new_len((const char *) parser->bytes->data + parser->offset,
                             parser->bytes->len - parser->offset);
 }
 
-GDateTime* parser_get_date_time(Parser *parser) {
+GDateTime *parser_get_date_time(Parser *parser) {
     g_assert(parser != NULL);
 
     guint16 year = parser_get_uint16(parser);
@@ -194,10 +194,10 @@ GDateTime* parser_get_date_time(Parser *parser) {
     return g_date_time_new_local(year, month, day, hour, min, sec);
 }
 
-GByteArray* binc_get_current_time() {
+GByteArray *binc_get_current_time() {
     GByteArray *byteArray = g_byte_array_new();
 
-    GDateTime* now = g_date_time_new_now_local();
+    GDateTime *now = g_date_time_new_now_local();
     guint year = g_date_time_get_year(now);
     guint8 yearLsb = year & 0xFF;
     guint8 yearMsb = year >> 8;
@@ -220,14 +220,14 @@ GByteArray* binc_get_current_time() {
     g_byte_array_append(byteArray, &seconds, 1);
     g_byte_array_append(byteArray, &dayOfWeek, 1);
     g_byte_array_append(byteArray, &miliseconds, 1);
-    g_byte_array_append(byteArray, &reason,1);
+    g_byte_array_append(byteArray, &reason, 1);
     return byteArray;
 }
 
-GByteArray* binc_get_date_time() {
+GByteArray *binc_get_date_time() {
     GByteArray *byteArray = g_byte_array_new();
 
-    GDateTime* now = g_date_time_new_now_local();
+    GDateTime *now = g_date_time_new_now_local();
     guint year = g_date_time_get_year(now);
     guint8 yearLsb = year & 0xFF;
     guint8 yearMsb = year >> 8;
