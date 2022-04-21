@@ -177,7 +177,8 @@ GString *parser_get_string(Parser *parser) {
     g_assert(parser != NULL);
     g_assert(parser->bytes != NULL);
 
-    return g_string_new_len((const char*) parser->bytes->data, parser->bytes->len);
+    return g_string_new_len((const char*) parser->bytes->data+parser->offset,
+                            parser->bytes->len - parser->offset);
 }
 
 GDateTime* parser_get_date_time(Parser *parser) {
