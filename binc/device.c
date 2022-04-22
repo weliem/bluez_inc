@@ -305,9 +305,12 @@ static void binc_on_descriptor_write(Descriptor *descriptor, const GByteArray *b
 }
 
 static void binc_device_internal_set_conn_state(Device *device, ConnectionState state, GError *error) {
+    ConnectionState old_state = device->connection_state;
     device->connection_state = state;
     if (device->connection_state_callback != NULL) {
-        device->connection_state_callback(device, state, error);
+        if (device->connection_state != old_state) {
+            device->connection_state_callback(device, state, error);
+        }
     }
 }
 
