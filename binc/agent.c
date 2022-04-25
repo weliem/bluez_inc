@@ -140,7 +140,6 @@ static const GDBusInterfaceVTable agent_method_table = {
 
 static int bluez_register_agent(Agent *agent) {
     GError *error = NULL;
-    guint id = 0;
     GDBusNodeInfo *info = NULL;
 
     static const gchar bluez_agent_introspection_xml[] =
@@ -185,7 +184,7 @@ static int bluez_register_agent(Agent *agent) {
     if (error) {
         g_printerr("Unable to create node: %s\n", error->message);
         g_clear_error(&error);
-        return 0;
+        return EINVAL;
     }
 
     agent->registration_id = g_dbus_connection_register_object(agent->connection,
@@ -194,9 +193,7 @@ static int bluez_register_agent(Agent *agent) {
                                                                &agent_method_table,
                                                                agent, NULL, &error);
     g_dbus_node_info_unref(info);
-    //g_dbus_connection_unregister_object(con, id);
-    /* call register method in AgentManager1 interface */
-    return id;
+    return 0;
 }
 
 static int binc_agentmanager_call_method(GDBusConnection *connection, const gchar *method, GVariant *param) {
