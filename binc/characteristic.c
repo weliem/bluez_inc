@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2021 Martijn van Welie
+ *   Copyright (c) 2022 Martijn van Welie
  *
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
  *   of this software and associated documentation files (the "Software"), to deal
@@ -127,8 +127,6 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
     g_string_free(flags, TRUE);
     return result;
 }
-
-
 
 static void binc_internal_char_read_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
@@ -341,7 +339,7 @@ static void binc_internal_char_start_notify_cb(GObject *source_object, GAsyncRes
     }
 }
 
-void register_for_properties_changed_signal(Characteristic *characteristic) {
+static void register_for_properties_changed_signal(Characteristic *characteristic) {
     if (characteristic->characteristic_prop_changed == 0) {
         characteristic->characteristic_prop_changed = g_dbus_connection_signal_subscribe(characteristic->connection,
                                                                                          BLUEZ_DBUS,
@@ -465,11 +463,6 @@ void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uu
     }
     characteristic->uuid = g_strdup(uuid);
 }
-
-//const char *binc_characteristic_get_service_uuid(const Characteristic *characteristic) {
-//    g_assert(characteristic != NULL);
-//    return characteristic->service_uuid;
-//}
 
 Device *binc_characteristic_get_device(const Characteristic *characteristic) {
     g_assert(characteristic != NULL);
