@@ -600,7 +600,7 @@ Adapter *binc_adapter_get_default(GDBusConnection *dbusConnection) {
     return adapter;
 }
 
-Adapter *binc_adapter_get(GDBusConnection *dbusConnection, const char* name) {
+Adapter *binc_adapter_get(GDBusConnection *dbusConnection, const char *name) {
     g_assert(dbusConnection != NULL);
 
     Adapter *result = NULL;

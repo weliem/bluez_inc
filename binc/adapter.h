@@ -42,7 +42,7 @@ typedef void (*RemoteCentralConnectionStateCallback)(Adapter *adapter, Device *d
 
 Adapter *binc_adapter_get_default(GDBusConnection *dbusConnection);
 
-Adapter *binc_adapter_get(GDBusConnection *dbusConnection, const char* name);
+Adapter *binc_adapter_get(GDBusConnection *dbusConnection, const char *name);
 
 GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection);
 
