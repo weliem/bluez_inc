@@ -1089,7 +1089,7 @@ void binc_internal_device_update_property(Device *device, const char *property_n
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_ALIAS)) {
         binc_device_set_alias(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_CONNECTED)) {
-        device->connection_state = g_variant_get_boolean(property_value) ? CONNECTED : DISCONNECTED;
+        binc_device_internal_set_conn_state(device,g_variant_get_boolean(property_value) ? CONNECTED : DISCONNECTED, NULL);
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_NAME)) {
         binc_device_set_name(device, g_variant_get_string(property_value, NULL));
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
