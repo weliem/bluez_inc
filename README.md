@@ -10,12 +10,12 @@ The library focuses on BLE and supports both **Central** and **Peripheral** role
 ## Discovering devices
 
 In order to discover devices, you first need to get hold of a Bluetooth *adapter*. 
-You do this by calling `binc_get_default_adapter()` with your DBus connection as an argument:
+You do this by calling `binc_adapter_get_default()` with your DBus connection as an argument:
 
 ```c
 int main(void) {
     GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    Adapter *adapter = binc_get_default_adapter(dbusConnection);
+    Adapter *adapter = binc_adapter_get_default(dbusConnection);
     
     //...
 }
@@ -28,9 +28,9 @@ int main(void) {
     
     // ...
     
-    binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
-    binc_adapter_set_discovery_filter(default_adapter, -100, NULL);
-    binc_adapter_start_discovery(default_adapter);
+    binc_adapter_set_discovery_cb(adapter, &on_scan_result);
+    binc_adapter_set_discovery_filter(adapter, -100, NULL);
+    binc_adapter_start_discovery(adapter);
 }
 ```
 
@@ -69,7 +69,7 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
 
     log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device), binc_device_get_connection_state_name(device), state);
     if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
-        binc_adapter_remove_device(default_adapter, device);
+        binc_adapter_remove_device(adapter, device);
     }
 }
 ```
@@ -176,7 +176,7 @@ int main(void) {
 
     // ...
         
-    agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
+    agent = binc_agent_create(adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
     binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
     binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
 }
@@ -226,7 +226,7 @@ binc_advertisement_set_local_name(advertisement, "BINC2");
 binc_advertisement_set_services(advertisement, adv_service_uuids);
         
 // Start advertising
-binc_adapter_start_advertising(default_adapter, advertisement);
+binc_adapter_start_advertising(adapter, advertisement);
 g_ptr_array_free(adv_service_uuids, TRUE);
 ```
 
@@ -243,7 +243,7 @@ Here is how to setup an app with a service and a characteristic:
 
 ```c
 // Create an app with a service
-app = binc_create_application(default_adapter);
+app = binc_create_application(adapter);
 binc_application_add_service(app, HTS_SERVICE_UUID);
 binc_application_add_characteristic(
                 app,
@@ -256,7 +256,7 @@ binc_application_set_char_read_cb(app, &on_local_char_read);
 binc_application_set_char_write_cb(app, &on_local_char_write);
 
 // Register your app
-binc_adapter_register_application(default_adapter, app);
+binc_adapter_register_application(adapter, app);
 ```
 
 There are callbacks to be implemented where you can update the value of a characteristic just before the read/write is done:

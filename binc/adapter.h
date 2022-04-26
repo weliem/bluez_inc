@@ -40,13 +40,11 @@ typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter, gboolean sta
 typedef void (*RemoteCentralConnectionStateCallback)(Adapter *adapter, Device *device);
 
 
-/**
- * Get the default bluetooth adapter
- *
- * @param dbusConnection the dbus connection
- * @return an adapter object or NULL if no adapters were found. Must be freed using binc_adapter_free().
- */
-Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection);
+Adapter *binc_adapter_get_default(GDBusConnection *dbusConnection);
+
+Adapter *binc_adapter_get(GDBusConnection *dbusConnection, const char* name);
+
+GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection);
 
 void binc_adapter_free(Adapter *adapter);
 
@@ -60,13 +58,15 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device);
 
 GList *binc_adapter_get_devices(const Adapter *adapter);
 
-Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path);
+Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path); // make this internal
 
 void binc_adapter_power_on(Adapter *adapter);
 
 void binc_adapter_power_off(Adapter *adapter);
 
 const char *binc_adapter_get_path(const Adapter *adapter);
+
+const char *binc_adapter_get_name(const Adapter *adapter);
 
 DiscoveryState binc_adapter_get_discovery_state(const Adapter *adapter);
 

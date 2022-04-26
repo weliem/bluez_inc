@@ -39,7 +39,7 @@
 #define CUD_CHAR "00002901-0000-1000-8000-00805f9b34fb"
 
 GMainLoop *loop = NULL;
-Adapter *default_adapter = NULL;
+Adapter *adapter = NULL;
 Agent *agent = NULL;
 
 void on_connection_state_changed(Device *device, ConnectionState state, const GError *error) {
@@ -54,7 +54,7 @@ void on_connection_state_changed(Device *device, ConnectionState state, const GE
     if (state == DISCONNECTED) {
         // Remove devices immediately of they are not bonded
         if (binc_device_get_bonding_state(device) != BONDED) {
-            binc_adapter_remove_device(default_adapter, device);
+            binc_adapter_remove_device(adapter, device);
         }
     }
 }
@@ -179,9 +179,9 @@ gboolean callback(gpointer data) {
         agent = NULL;
     }
 
-    if (default_adapter != NULL) {
-        binc_adapter_free(default_adapter);
-        default_adapter = NULL;
+    if (adapter != NULL) {
+        binc_adapter_free(adapter);
+        adapter = NULL;
     }
 
     g_main_loop_quit((GMainLoop *) data);
@@ -206,21 +206,21 @@ int main(void) {
     // Setup mainloop
     loop = g_main_loop_new(NULL, FALSE);
 
-    // Get the default default_adapter
-    default_adapter = binc_get_default_adapter(dbusConnection);
+    // Get the default adapter
+    adapter = binc_adapter_get_default(dbusConnection);
 
-    if (default_adapter != NULL) {
-        log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
+    if (adapter != NULL) {
+        log_debug(TAG, "using adapter '%s'", binc_adapter_get_name(adapter));
 
         // Register an agent and set callbacks
-        agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
+        agent = binc_agent_create(adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
         binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
         binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
 
         // Make sure the adapter is on
-        binc_adapter_set_powered_state_cb(default_adapter, &on_powered_state_changed);
-        if (!binc_adapter_get_powered_state(default_adapter)) {
-            binc_adapter_power_on(default_adapter);
+        binc_adapter_set_powered_state_cb(adapter, &on_powered_state_changed);
+        if (!binc_adapter_get_powered_state(adapter)) {
+            binc_adapter_power_on(adapter);
         }
 
         // Build UUID array so we can use it in the discovery filter
@@ -228,11 +228,11 @@ int main(void) {
         g_ptr_array_add(service_uuids, HTS_SERVICE_UUID);
 
         // Set discovery callbacks and start discovery
-        binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
-        binc_adapter_set_discovery_state_cb(default_adapter, &on_discovery_state_changed);
-        binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids);
+        binc_adapter_set_discovery_cb(adapter, &on_scan_result);
+        binc_adapter_set_discovery_state_cb(adapter, &on_discovery_state_changed);
+        binc_adapter_set_discovery_filter(adapter, -100, service_uuids);
         g_ptr_array_free(service_uuids, TRUE);
-        binc_adapter_start_discovery(default_adapter);
+        binc_adapter_start_discovery(adapter);
     } else {
         log_debug("MAIN", "No default_adapter found");
     }

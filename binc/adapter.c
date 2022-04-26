@@ -429,6 +429,11 @@ static void setup_signal_subscribers(Adapter *adapter) {
                                                                 NULL);
 }
 
+const char *binc_adapter_get_name(const Adapter *adapter) {
+    g_assert(adapter != NULL);
+    g_assert(adapter->path != NULL);
+    return strrchr(adapter->path, '/') + 1;
+}
 
 static Adapter *binc_adapter_create(GDBusConnection *connection, const char *path) {
     g_assert(connection != NULL);
@@ -499,7 +504,7 @@ static Adapter *binc_internal_get_adapter_by_path(GPtrArray *adapters, const cha
     return NULL;
 }
 
-static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
+GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
     g_assert(dbusConnection != NULL);
 
     GPtrArray *binc_adapters = g_ptr_array_new();
@@ -577,11 +582,11 @@ static GPtrArray *binc_find_adapters(GDBusConnection *dbusConnection) {
     return binc_adapters;
 }
 
-Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
+Adapter *binc_adapter_get_default(GDBusConnection *dbusConnection) {
     g_assert(dbusConnection != NULL);
 
     Adapter *adapter = NULL;
-    GPtrArray *adapters = binc_find_adapters(dbusConnection);
+    GPtrArray *adapters = binc_adapter_find_all(dbusConnection);
     if (adapters->len > 0) {
         // Choose the first one in the array, typically the 'hciX' with the highest X
         adapter = g_ptr_array_index(adapters, 0);
@@ -593,6 +598,25 @@ Adapter *binc_get_default_adapter(GDBusConnection *dbusConnection) {
         g_ptr_array_free(adapters, TRUE);
     }
     return adapter;
+}
+
+Adapter *binc_adapter_get(GDBusConnection *dbusConnection, const char* name) {
+    g_assert(dbusConnection != NULL);
+
+    Adapter *result = NULL;
+    GPtrArray *adapters = binc_adapter_find_all(dbusConnection);
+    if (adapters->len > 0) {
+        for (int i = 0; i < adapters->len; i++) {
+            Adapter *adapter = g_ptr_array_index(adapters, i);
+            if (g_str_equal(binc_adapter_get_name(adapter), name)) {
+                result = adapter;
+            } else {
+                binc_adapter_free(g_ptr_array_index(adapters, i));
+            }
+        }
+        g_ptr_array_free(adapters, TRUE);
+    }
+    return result;
 }
 
 static void binc_internal_start_discovery_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
