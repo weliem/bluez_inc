@@ -39,7 +39,7 @@
 #define CUD_CHAR "00002901-0000-1000-8000-00805f9b34fb"
 
 GMainLoop *loop = NULL;
-Adapter *adapter = NULL;
+Adapter *default_adapter = NULL;
 Advertisement *advertisement = NULL;
 Application *app = NULL;
 
@@ -90,19 +90,19 @@ void on_local_char_stop_notify(const Application *application, const char *servi
 
 gboolean callback(gpointer data) {
     if (app != NULL) {
-        binc_adapter_unregister_application(adapter, app);
+        binc_adapter_unregister_application(default_adapter, app);
         binc_application_free(app);
         app = NULL;
     }
 
     if (advertisement != NULL) {
-        binc_adapter_stop_advertising(adapter, advertisement);
+        binc_adapter_stop_advertising(default_adapter, advertisement);
         binc_advertisement_free(advertisement);
     }
 
-    if (adapter != NULL) {
-        binc_adapter_free(adapter);
-        adapter = NULL;
+    if (default_adapter != NULL) {
+        binc_adapter_free(default_adapter);
+        default_adapter = NULL;
     }
 
     g_main_loop_quit((GMainLoop *) data);
@@ -128,19 +128,19 @@ int main(void) {
     loop = g_main_loop_new(NULL, FALSE);
 
     // Get the default default_adapter
-    adapter = binc_adapter_get_default(dbusConnection);
+    default_adapter = binc_adapter_get_default(dbusConnection);
 
-    if (adapter != NULL) {
-        log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(adapter));
+    if (default_adapter != NULL) {
+        log_debug(TAG, "using default_adapter '%s'", binc_adapter_get_path(default_adapter));
 
         // Make sure the adapter is on
-        binc_adapter_set_powered_state_cb(adapter, &on_powered_state_changed);
-        if (!binc_adapter_get_powered_state(adapter)) {
-            binc_adapter_power_on(adapter);
+        binc_adapter_set_powered_state_cb(default_adapter, &on_powered_state_changed);
+        if (!binc_adapter_get_powered_state(default_adapter)) {
+            binc_adapter_power_on(default_adapter);
         }
 
         // Setup remote central connection state callback
-        binc_adapter_set_remote_central_cb(adapter, &on_central_state_changed);
+        binc_adapter_set_remote_central_cb(default_adapter, &on_central_state_changed);
 
         // Setup advertisement
         GPtrArray *adv_service_uuids = g_ptr_array_new();
@@ -150,10 +150,10 @@ int main(void) {
         binc_advertisement_set_local_name(advertisement, "BINC");
         binc_advertisement_set_services(advertisement, adv_service_uuids);
         g_ptr_array_free(adv_service_uuids, TRUE);
-        binc_adapter_start_advertising(adapter, advertisement);
+        binc_adapter_start_advertising(default_adapter, advertisement);
 
         // Start application
-        app = binc_create_application(adapter);
+        app = binc_create_application(default_adapter);
         binc_application_add_service(app, HTS_SERVICE_UUID);
         binc_application_add_characteristic(
                 app,
@@ -176,7 +176,7 @@ int main(void) {
         binc_application_set_char_write_cb(app, &on_local_char_write);
         binc_application_set_char_start_notify_cb(app, &on_local_char_start_notify);
         binc_application_set_char_stop_notify_cb(app, &on_local_char_stop_notify);
-        binc_adapter_register_application(adapter, app);
+        binc_adapter_register_application(default_adapter, app);
     } else {
         log_debug("MAIN", "No default_adapter found");
     }

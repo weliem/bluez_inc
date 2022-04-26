@@ -718,7 +718,7 @@ GList *binc_adapter_get_devices(const Adapter *adapter) {
     return g_hash_table_get_values(adapter->devices_cache);
 }
 
-void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, GPtrArray *service_uuids) {
+void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, const GPtrArray *service_uuids) {
     g_assert(adapter != NULL);
     g_assert(rssi_threshold >= -127);
     g_assert(rssi_threshold <= 20);

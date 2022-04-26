@@ -9,13 +9,13 @@ The library focuses on BLE and supports both **Central** and **Peripheral** role
 
 ## Discovering devices
 
-In order to discover devices, you first need to get hold of a Bluetooth *adapter*. 
+In order to discover devices, you first need to get hold of a Bluetooth *default_adapter*. 
 You do this by calling `binc_adapter_get_default()` with your DBus connection as an argument:
 
 ```c
 int main(void) {
     GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    Adapter *adapter = binc_adapter_get_default(dbusConnection);
+    Adapter *default_adapter = binc_adapter_get_default(dbusConnection);
     
     //...
 }
@@ -28,9 +28,9 @@ int main(void) {
     
     // ...
     
-    binc_adapter_set_discovery_cb(adapter, &on_scan_result);
-    binc_adapter_set_discovery_filter(adapter, -100, NULL);
-    binc_adapter_start_discovery(adapter);
+    binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
+    binc_adapter_set_discovery_filter(default_adapter, -100, NULL);
+    binc_adapter_start_discovery(default_adapter);
 }
 ```
 
@@ -38,10 +38,10 @@ When you pass 'NULL' as the last argument to `binc_adapter_set_discovery_filter`
 The discovery will deliver all found devices on the callback you provided. You typically check if it is the device you are looking for, stop the discovery and then connect to it:
 
 ```c
-void on_scan_result(Adapter *adapter, Device *device) {
+void on_scan_result(Adapter *default_adapter, Device *device) {
     const char* name = binc_device_get_name(device);
     if (name != NULL && g_str_has_prefix(name, "Polar")) {
-        binc_adapter_stop_discovery(adapter);
+        binc_adapter_stop_discovery(default_adapter);
         binc_device_set_connection_state_change_cb(device, &on_connection_state_changed);
         binc_device_set_services_resolved_cb(device, &on_services_resolved);
         binc_device_set_read_char_cb(device, &on_read);
@@ -69,14 +69,14 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
 
     log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device), binc_device_get_connection_state_name(device), state);
     if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
-        binc_adapter_remove_device(adapter, device);
+        binc_adapter_remove_device(default_adapter, device);
     }
 }
 ```
 
 If a connection attempt fails or times out after 25 seconds, the *connection_state* callback is called with an error.
 
-To disconnect a connected device, call `binc_device_disconnect(device)` and the device will be disconnected. Again, the *connection_state* callback will be called. If you want to remove the device from the DBus after disconnecting, you call `binc_adapter_remove_device(adapter, device)`. 
+To disconnect a connected device, call `binc_device_disconnect(device)` and the device will be disconnected. Again, the *connection_state* callback will be called. If you want to remove the device from the DBus after disconnecting, you call `binc_adapter_remove_device(default_adapter, device)`. 
 
 ## Reading and writing characteristics
 
@@ -176,7 +176,7 @@ int main(void) {
 
     // ...
         
-    agent = binc_agent_create(adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
+    agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
     binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
     binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
 }
@@ -212,7 +212,7 @@ It is also possible with BINC to create your own peripheral, i.e. start advertis
 
 ## Advertising
 In Bluez an advertisement is an object on the DBus. By using some basic calls BINC will create this object for you and set the right values.
-After that, you need to tell the adapter to start advertising.
+After that, you need to tell the default_adapter to start advertising.
 
 ```c
 // Build array with services to advertise
@@ -226,7 +226,7 @@ binc_advertisement_set_local_name(advertisement, "BINC2");
 binc_advertisement_set_services(advertisement, adv_service_uuids);
         
 // Start advertising
-binc_adapter_start_advertising(adapter, advertisement);
+binc_adapter_start_advertising(default_adapter, advertisement);
 g_ptr_array_free(adv_service_uuids, TRUE);
 ```
 
@@ -243,7 +243,7 @@ Here is how to setup an app with a service and a characteristic:
 
 ```c
 // Create an app with a service
-app = binc_create_application(adapter);
+app = binc_create_application(default_adapter);
 binc_application_add_service(app, HTS_SERVICE_UUID);
 binc_application_add_characteristic(
                 app,
@@ -256,7 +256,7 @@ binc_application_set_char_read_cb(app, &on_local_char_read);
 binc_application_set_char_write_cb(app, &on_local_char_write);
 
 // Register your app
-binc_adapter_register_application(adapter, app);
+binc_adapter_register_application(default_adapter, app);
 ```
 
 There are callbacks to be implemented where you can update the value of a characteristic just before the read/write is done:
@@ -295,7 +295,7 @@ The repository includes an example for both the **Central** and **Peripheral** r
 ## Bluez documentation
 
 The official Bluez documentation is a bit sparse but can be found here: 
-* [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/adapter-api.txt) (for adapter)
+* [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/default_adapter-api.txt) (for default_adapter)
 * [GATT documentation](https://github.com/bluez/bluez/blob/master/doc/gatt-api.txt) (for service, characteristics and descriptors)
 * [Device documentation](https://github.com/bluez/bluez/blob/master/doc/device-api.txt) (for device)
 * [Agent documentation](https://github.com/bluez/bluez/blob/master/doc/agent-api.txt) (for agent)
