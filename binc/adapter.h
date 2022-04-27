@@ -82,6 +82,8 @@ void binc_adapter_set_powered_state_cb(Adapter *adapter, AdapterPoweredStateChan
 
 GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter);
 
+gboolean binc_adapter_is_discoverable(const Adapter *adapter);
+
 void binc_adapter_start_advertising(Adapter *adapter, Advertisement *advertisement);
 
 void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisement);

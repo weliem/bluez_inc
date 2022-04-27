@@ -26,7 +26,7 @@
 
 #include "device.h"
 
-Device *binc_create_device(const char *path, Adapter *adapter);
+Device *binc_device_create(const char *path, Adapter *adapter);
 
 void binc_device_free(Device *device);
 

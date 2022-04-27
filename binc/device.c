@@ -115,7 +115,7 @@ static void binc_init_device(Device *device) {
     device->txpower = -255;
 }
 
-Device *binc_create_device(const char *path, Adapter *adapter) {
+Device *binc_device_create(const char *path, Adapter *adapter) {
     Device *device = g_new0(Device, 1);
     binc_init_device(device);
     device->path = g_strdup(path);
