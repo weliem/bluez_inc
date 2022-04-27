@@ -156,9 +156,10 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
             if (adapter->poweredStateCallback != NULL) {
                 adapter->poweredStateCallback(adapter, adapter->powered);
             }
-        }
-        if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
+        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
             adapter->discovering = g_variant_get_boolean(property_value);
+        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERABLE)) {
+            adapter->discoverable = g_variant_get_boolean(property_value);
         }
     }
 

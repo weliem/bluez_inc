@@ -544,7 +544,7 @@ static void binc_device_changed(GDBusConnection *conn,
                 binc_collect_gatt_tree(device);
             }
 
-            if (device->services_resolved == FALSE) {
+            if (device->services_resolved == FALSE && device->connection_state == CONNECTED) {
                 binc_device_internal_set_conn_state(device, DISCONNECTING, NULL);
             }
         } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
