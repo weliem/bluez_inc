@@ -42,4 +42,6 @@ char *path_to_address(const char *path);
 
 GByteArray *g_variant_get_byte_array(GVariant *variant);
 
+char* replace_char(char* str, char find, char replace);
+
 #endif //BINC_UTILITY_H

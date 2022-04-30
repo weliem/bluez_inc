@@ -9,7 +9,7 @@ The library focuses on BLE and supports both **Central** and **Peripheral** role
 
 ## Discovering devices
 
-In order to discover devices, you first need to get hold of a Bluetooth *default_adapter*. 
+In order to discover devices, you first need to get hold of a Bluetooth *adapter*. 
 You do this by calling `binc_adapter_get_default()` with your DBus connection as an argument:
 
 ```c
@@ -295,7 +295,7 @@ The repository includes an example for both the **Central** and **Peripheral** r
 ## Bluez documentation
 
 The official Bluez documentation is a bit sparse but can be found here: 
-* [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/default_adapter-api.txt) (for default_adapter)
+* [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/adapter-api.txt) (for default_adapter)
 * [GATT documentation](https://github.com/bluez/bluez/blob/master/doc/gatt-api.txt) (for service, characteristics and descriptors)
 * [Device documentation](https://github.com/bluez/bluez/blob/master/doc/device-api.txt) (for device)
 * [Agent documentation](https://github.com/bluez/bluez/blob/master/doc/agent-api.txt) (for agent)

@@ -54,6 +54,8 @@ static const char *const DEVICE_PROPERTY_SERVICE_DATA = "ServiceData";
 
 static const char *const SIGNAL_PROPERTIES_CHANGED = "PropertiesChanged";
 
+static const int MAC_ADDRESS_LENGTH = 17;
+
 static const char *discovery_state_names[] = {
         [STOPPED] = "stopped",
         [STARTED] = "started",
@@ -835,6 +837,18 @@ gboolean binc_adapter_is_discoverable(const Adapter *adapter) {
 Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path) {
     g_assert(adapter != NULL);
     return g_hash_table_lookup(adapter->devices_cache, path);
+}
+
+Device *binc_adapter_get_device_by_address(const Adapter *adapter, const char *address) {
+    g_assert(adapter != NULL);
+    g_assert(address != NULL);
+    g_assert(strlen(address) == MAC_ADDRESS_LENGTH);
+
+    char *path = g_strdup_printf("%s/dev_%s", adapter->path, address);
+    path = replace_char(path, ':', '_');
+    Device *device = g_hash_table_lookup(adapter->devices_cache, path);
+    g_free(path);
+    return device;
 }
 
 GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter) {

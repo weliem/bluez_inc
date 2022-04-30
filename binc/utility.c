@@ -111,7 +111,7 @@ gboolean is_valid_uuid(const char *uuid) {
     return TRUE;
 }
 
-static char* replace_char(char* str, char find, char replace){
+char* replace_char(char* str, char find, char replace){
     char *current_pos = strchr(str,find);
     while (current_pos) {
         *current_pos = replace;

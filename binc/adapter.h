@@ -60,6 +60,8 @@ GList *binc_adapter_get_devices(const Adapter *adapter);
 
 Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path); // make this internal
 
+Device *binc_adapter_get_device_by_address(const Adapter *adapter, const char *address);
+
 void binc_adapter_power_on(Adapter *adapter);
 
 void binc_adapter_power_off(Adapter *adapter);
