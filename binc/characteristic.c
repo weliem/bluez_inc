@@ -53,6 +53,7 @@ struct binc_characteristic {
     GList *flags;
     guint properties;
     GList *descriptors;
+    guint mtu;
 
     guint characteristic_prop_changed;
     OnNotifyingStateChangedCallback notify_state_callback;
@@ -118,11 +119,12 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
     g_string_append(flags, "]");
 
     char *result = g_strdup_printf(
-            "Characteristic{uuid='%s', flags='%s', properties=%d, service_uuid='%s'}",
+            "Characteristic{uuid='%s', flags='%s', properties=%d, service_uuid='%s, mtu=%d'}",
             characteristic->uuid,
             flags->str,
             characteristic->properties,
-            binc_service_get_uuid(characteristic->service));
+            binc_service_get_uuid(characteristic->service),
+            characteristic->mtu);
 
     g_string_free(flags, TRUE);
     return result;
@@ -462,6 +464,11 @@ void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uu
         g_free((char *) characteristic->uuid);
     }
     characteristic->uuid = g_strdup(uuid);
+}
+
+void binc_characteristic_set_mtu(Characteristic *characteristic, guint mtu) {
+    g_assert(characteristic != NULL);
+    characteristic->mtu = mtu;
 }
 
 Device *binc_characteristic_get_device(const Characteristic *characteristic) {

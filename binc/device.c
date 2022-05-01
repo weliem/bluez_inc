@@ -89,6 +89,7 @@ struct binc_device {
     GHashTable *manufacturer_data;
     GHashTable *service_data;
     GList *uuids;
+    guint mtu;
 
     guint device_prop_changed;
     ConnectionStateChangedCallback connection_state_callback;
@@ -400,6 +401,9 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
                             } else if (g_str_equal(property_name, "Notifying")) {
                                 binc_characteristic_set_notifying(characteristic,
                                                                   g_variant_get_boolean(property_value));
+                            } else if (g_str_equal(property_name, "MTU")) {
+                                device->mtu = g_variant_get_uint16(property_value);
+                                binc_characteristic_set_mtu(characteristic, g_variant_get_uint16(property_value));
                             }
                         }
 
@@ -1068,6 +1072,11 @@ BondingState binc_device_get_bonding_state(const Device *device) {
 Adapter *binc_device_get_adapter(const Device *device) {
     g_assert(device != NULL);
     return device->adapter;
+}
+
+guint binc_device_get_mtu(const Device *device) {
+    g_assert(device != NULL);
+    return device->mtu;
 }
 
 gboolean binc_device_has_service(const Device *device, const char *service_uuid) {
