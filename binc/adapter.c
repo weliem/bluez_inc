@@ -66,6 +66,7 @@ static const char *discovery_state_names[] = {
 typedef struct binc_discovery_filter {
     short rssi;
     GPtrArray *services;
+    const char *pattern;
 } DiscoveryFilter;
 
 struct binc_adapter {
@@ -174,6 +175,13 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
 
 static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
     if (binc_device_get_rssi(device) < adapter->discovery_filter.rssi) return FALSE;
+
+    const char *pattern = adapter->discovery_filter.pattern;
+    if (pattern != NULL) {
+        if (!(g_str_has_prefix(binc_device_get_name(device), pattern) ||
+              g_str_has_prefix(binc_device_get_address(device), pattern)))
+            return FALSE;
+    }
 
     GPtrArray *services_filter = adapter->discovery_filter.services;
     if (services_filter != NULL) {
@@ -470,6 +478,7 @@ static void free_discovery_filter(Adapter *adapter) {
         g_free(uuid_filter);
     }
     g_ptr_array_free(adapter->discovery_filter.services, TRUE);
+    g_free((char*) adapter->discovery_filter.pattern);
     adapter->discovery_filter.services = NULL;
 }
 
@@ -720,7 +729,8 @@ GList *binc_adapter_get_devices(const Adapter *adapter) {
     return g_hash_table_get_values(adapter->devices_cache);
 }
 
-void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, const GPtrArray *service_uuids) {
+void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, const GPtrArray *service_uuids,
+                                       const char *pattern) {
     g_assert(adapter != NULL);
     g_assert(rssi_threshold >= -127);
     g_assert(rssi_threshold <= 20);
@@ -731,11 +741,16 @@ void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, c
     }
     adapter->discovery_filter.services = g_ptr_array_new();
     adapter->discovery_filter.rssi = rssi_threshold;
+    adapter->discovery_filter.pattern = g_strdup(pattern);
 
     GVariantBuilder *arguments = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
     g_variant_builder_add(arguments, "{sv}", "Transport", g_variant_new_string("le"));
     g_variant_builder_add(arguments, "{sv}", DEVICE_PROPERTY_RSSI, g_variant_new_int16(rssi_threshold));
     g_variant_builder_add(arguments, "{sv}", "DuplicateData", g_variant_new_boolean(TRUE));
+
+    if (pattern != NULL) {
+        g_variant_builder_add(arguments, "{sv}", "Pattern", g_variant_new_string(pattern));
+    }
 
     if (service_uuids != NULL && service_uuids->len > 0) {
         GVariantBuilder *uuids = g_variant_builder_new(G_VARIANT_TYPE_STRING_ARRAY);
