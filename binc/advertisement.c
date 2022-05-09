@@ -24,6 +24,7 @@
 #include "advertisement.h"
 #include "adapter.h"
 #include "logger.h"
+#include "utility.h"
 
 static const char *const TAG = "Advertisement";
 
@@ -39,15 +40,15 @@ struct binc_advertisement {
 static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdata) {
     GByteArray *byteArray = (GByteArray *) value;
     GVariant *byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data,
-                                                           byteArray->len,sizeof(guint8));
-    guint16 manufacturer_id = *(int*)key;
+                                                           byteArray->len, sizeof(guint8));
+    guint16 manufacturer_id = *(int *) key;
     g_variant_builder_add((GVariantBuilder *) userdata, "{qv}", manufacturer_id, byteArrayVariant);
 }
 
 static void add_service_data(gpointer key, gpointer value, gpointer userdata) {
     GByteArray *byteArray = (GByteArray *) value;
     GVariant *byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data,
-                                                           byteArray->len,sizeof(guint8));
+                                                           byteArray->len, sizeof(guint8));
     g_variant_builder_add((GVariantBuilder *) userdata, "{sv}", (char *) key, byteArrayVariant);
 }
 
@@ -80,14 +81,14 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
     } else if (g_str_equal(property_name, "ManufacturerData")) {
         GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{qv}"));
         if (advertisement->manufacturer_data != NULL && g_hash_table_size(advertisement->manufacturer_data) > 0) {
-            g_hash_table_foreach(advertisement->manufacturer_data,add_manufacturer_data,builder);
+            g_hash_table_foreach(advertisement->manufacturer_data, add_manufacturer_data, builder);
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
     } else if (g_str_equal(property_name, "ServiceData")) {
         GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
         if (advertisement->service_data != NULL && g_hash_table_size(advertisement->service_data) > 0) {
-            g_hash_table_foreach(advertisement->service_data,add_service_data,builder);
+            g_hash_table_foreach(advertisement->service_data, add_service_data, builder);
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
@@ -147,7 +148,7 @@ void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *
     g_assert(adapter != NULL);
 
     gboolean result = g_dbus_connection_unregister_object(binc_adapter_get_dbus_connection(adapter),
-                                                                         advertisement->registration_id);
+                                                          advertisement->registration_id);
     if (!result) {
         log_debug(TAG, "failed to unregister advertisement");
     }
@@ -158,22 +159,22 @@ static void byte_array_free(GByteArray *byteArray) { g_byte_array_free(byteArray
 Advertisement *binc_advertisement_create() {
     Advertisement *advertisement = g_new0(Advertisement, 1);
     advertisement->path = g_strdup("/org/bluez/bincadvertisement");
-    advertisement->manufacturer_data = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, (GDestroyNotify) byte_array_free);
-    advertisement->service_data = g_hash_table_new_full(g_str_hash, g_str_equal,g_free, (GDestroyNotify) byte_array_free);
+    advertisement->manufacturer_data = g_hash_table_new_full(g_int_hash, g_int_equal, g_free,
+                                                             (GDestroyNotify) byte_array_free);
+    advertisement->service_data = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+                                                        (GDestroyNotify) byte_array_free);
     return advertisement;
 }
 
 void binc_advertisement_free(Advertisement *advertisement) {
     g_assert(advertisement != NULL);
 
-    if (advertisement->path != NULL) {
-        g_free(advertisement->path);
-        advertisement->path = NULL;
-    }
-    if (advertisement->local_name != NULL) {
-        g_free(advertisement->local_name);
-        advertisement->local_name = NULL;
-    }
+    g_free(advertisement->path);
+    advertisement->path = NULL;
+
+    g_free(advertisement->local_name);
+    advertisement->local_name = NULL;
+
     if (advertisement->services != NULL) {
         g_ptr_array_free(advertisement->services, TRUE);
         advertisement->services = NULL;
@@ -192,14 +193,8 @@ void binc_advertisement_free(Advertisement *advertisement) {
 void binc_advertisement_set_local_name(Advertisement *advertisement, const char *local_name) {
     g_assert(advertisement != NULL);
 
-    if (advertisement->local_name != NULL) {
-        g_free(advertisement->local_name);
-    }
-    if (local_name == NULL) {
-        advertisement->local_name = NULL;
-    } else {
-        advertisement->local_name = g_strdup(local_name);
-    }
+    g_free(advertisement->local_name);
+    advertisement->local_name = g_strdup(local_name);
 }
 
 const char *binc_advertisement_get_path(const Advertisement *advertisement) {
@@ -221,34 +216,34 @@ void binc_advertisement_set_services(Advertisement *advertisement, const GPtrArr
     }
 }
 
-void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guint16 manufacturer_id, const GByteArray *byteArray) {
+void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guint16 manufacturer_id,
+                                              const GByteArray *byteArray) {
     g_assert(advertisement != NULL);
     g_assert(advertisement->manufacturer_data != NULL);
 
     int man_id = manufacturer_id;
-    if (g_hash_table_lookup(advertisement->manufacturer_data, &man_id) != NULL) {
-        g_hash_table_remove(advertisement->manufacturer_data, &man_id);
-    }
+    g_hash_table_remove(advertisement->manufacturer_data, &man_id);
 
     int *key = g_new0 (int, 1);
     *key = manufacturer_id;
 
     GByteArray *value = g_byte_array_sized_new(byteArray->len);
-    g_byte_array_append(value,byteArray->data, byteArray->len);
+    g_byte_array_append(value, byteArray->data, byteArray->len);
 
     g_hash_table_insert(advertisement->manufacturer_data, key, value);
 }
 
-void binc_advertisement_set_service_data(Advertisement *advertisement, const char* service_uuid, const GByteArray *byteArray) {
+void binc_advertisement_set_service_data(Advertisement *advertisement, const char *service_uuid,
+                                         const GByteArray *byteArray) {
     g_assert(advertisement != NULL);
     g_assert(advertisement->service_data != NULL);
+    g_assert(service_uuid != NULL);
+    g_assert(is_valid_uuid(service_uuid));
 
-    if (g_hash_table_lookup(advertisement->service_data, service_uuid) != NULL) {
-        g_hash_table_remove(advertisement->service_data, service_uuid);
-    }
+    g_hash_table_remove(advertisement->service_data, service_uuid);
 
     GByteArray *value = g_byte_array_sized_new(byteArray->len);
-    g_byte_array_append(value,byteArray->data, byteArray->len);
+    g_byte_array_append(value, byteArray->data, byteArray->len);
 
     g_hash_table_insert(advertisement->service_data, g_strdup(service_uuid), value);
 }
