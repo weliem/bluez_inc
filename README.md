@@ -29,12 +29,12 @@ int main(void) {
     // ...
     
     binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
-    binc_adapter_set_discovery_filter(default_adapter, -100, NULL);
+    binc_adapter_set_discovery_filter(default_adapter, -100, NULL, NULL);
     binc_adapter_start_discovery(default_adapter);
 }
 ```
 
-When you pass 'NULL' as the last argument to `binc_adapter_set_discovery_filter`, you indicate that you don't want to filter on service UUIDs. Otherwise you can pass a GPtrArray with a number of service UUIDs that you want to filter on.
+When you pass 'NULL' as the 3rd argument to `binc_adapter_set_discovery_filter`, you indicate that you don't want to filter on service UUIDs. Otherwise you can pass a GPtrArray with a number of service UUIDs that you want to filter on. The 4th argument allows you to filter on a 'pattern' which is defined in Bluez as the 'prefix of an address or name'. 
 The discovery will deliver all found devices on the callback you provided. You typically check if it is the device you are looking for, stop the discovery and then connect to it:
 
 ```c
