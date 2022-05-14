@@ -444,6 +444,11 @@ const char *binc_adapter_get_name(const Adapter *adapter) {
     return strrchr(adapter->path, '/') + 1;
 }
 
+const char *binc_adapter_get_address(const Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->address;
+}
+
 static Adapter *binc_adapter_create(GDBusConnection *connection, const char *path) {
     g_assert(connection != NULL);
     g_assert(path != NULL);
