@@ -39,6 +39,8 @@ void log_log_at_level(LogLevel level, const char* tag, const char *format, ...);
 
 void log_set_level(LogLevel level);
 
+void log_set_filename(const char* filename);
+
 void log_enabled(gboolean enabled);
 
 #endif //BINC_LOGGER_H
