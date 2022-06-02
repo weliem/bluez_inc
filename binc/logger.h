@@ -24,9 +24,21 @@
 #ifndef BINC_LOGGER_H
 #define BINC_LOGGER_H
 
-void log_debug(const char *tag, const char *format, ...);
+#include <glib.h>
 
-void log_info(const char *tag, const char *format, ...);
+typedef enum LogLevel {
+    LOG_DEBUG = 0, LOG_INFO = 1, LOG_WARN = 2, LOG_ERROR = 3
+} LogLevel;
 
+#define log_debug(tag, format, ...) log_log_at_level(LOG_DEBUG, tag, format, ##__VA_ARGS__)
+#define log_info(tag, format, ...)  log_log_at_level(LOG_INFO, tag, format, ##__VA_ARGS__)
+#define log_warn(tag, format, ...)  log_log_at_level(LOG_WARN, tag, format,  ##__VA_ARGS__)
+#define log_error(tag, format, ...) log_log_at_level(LOG_ERROR, tag, format, ##__VA_ARGS__)
+
+void log_log_at_level(LogLevel level, const char* tag, const char *format, ...);
+
+void log_set_level(LogLevel level);
+
+void log_enabled(gboolean enabled);
 
 #endif //BINC_LOGGER_H

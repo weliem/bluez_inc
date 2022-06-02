@@ -27,6 +27,26 @@
 
 #define BUFFER_SIZE 1024
 
+static struct {
+    gboolean enabled;
+    LogLevel level;
+} LogSettings;
+
+static const char *log_level_names[] = {
+        [LOG_DEBUG] = "DEBUG",
+        [LOG_INFO] = "INFO",
+        [LOG_WARN]  = "WARN",
+        [LOG_ERROR]  = "ERROR"
+};
+
+void log_set_level(LogLevel level) {
+    LogSettings.level = level;
+}
+
+void log_enabled(gboolean enabled) {
+    LogSettings.enabled = enabled;
+}
+
 /**
  * Get the current UTC time in milliseconds since epoch
  * @return
@@ -55,20 +75,14 @@ void log_log(const char *tag, const char *level, const char *message) {
     g_free(timestamp);
 }
 
-void log_debug(const char *tag, const char *format, ...) {
-    char buf[BUFFER_SIZE];
-    va_list arg;
-    va_start(arg, format);
-    g_vsnprintf(buf, BUFFER_SIZE, format, arg);
-    log_log(tag, "DEBUG", buf);
-    va_end(arg);
+void log_log_at_level(LogLevel level, const char* tag, const char *format, ...) {
+    if (LogSettings.level <= level && LogSettings.enabled) {
+        char buf[BUFFER_SIZE];
+        va_list arg;
+        va_start(arg, format);
+        g_vsnprintf(buf, BUFFER_SIZE, format, arg);
+        log_log(tag, log_level_names[level], buf);
+        va_end(arg);
+    }
 }
 
-void log_info(const char *tag, const char *format, ...) {
-    char buf[BUFFER_SIZE];
-    va_list arg;
-    va_start(arg, format);
-    g_vsnprintf(buf, BUFFER_SIZE, format, arg);
-    log_log(tag, "INFO", buf);
-    va_end(arg);
-}

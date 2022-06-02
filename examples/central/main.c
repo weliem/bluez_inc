@@ -196,6 +196,9 @@ static void cleanup_handler(int signo) {
 }
 
 int main(void) {
+    log_enabled(TRUE);
+    log_set_level(LOG_DEBUG);
+
     // Get a DBus connection
     GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
 
@@ -210,7 +213,7 @@ int main(void) {
     default_adapter = binc_adapter_get_default(dbusConnection);
 
     if (default_adapter != NULL) {
-        log_debug(TAG, "using adapter '%s'", binc_adapter_get_name(default_adapter));
+        log_info(TAG, "using adapter '%s'", binc_adapter_get_name(default_adapter));
 
         // Register an agent and set callbacks
         agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
@@ -234,7 +237,7 @@ int main(void) {
         g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);
     } else {
-        log_debug("MAIN", "No default_adapter found");
+        log_error("MAIN", "No default_adapter found");
     }
 
     // Bail out after some time
