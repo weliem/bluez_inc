@@ -25,18 +25,21 @@
 #include <glib.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #define TAG "Logger"
 #define BUFFER_SIZE 1024
-#define MAX_FILE_SIZE 1000000
+#define MAX_FILE_SIZE 10000
+#define MAX_LOGS 5
 
 static struct {
     gboolean enabled;
     LogLevel level;
-    FILE* fout;
+    FILE *fout;
     char filename[256];
     long maxFileSize;
-} LogSettings = { TRUE, LOG_DEBUG, NULL, "", MAX_FILE_SIZE };
+    size_t currentSize;
+} LogSettings = {TRUE, LOG_DEBUG, NULL, "", MAX_FILE_SIZE, 0};
 
 static const char *log_level_names[] = {
         [LOG_DEBUG] = "DEBUG",
@@ -53,14 +56,24 @@ void log_enabled(gboolean enabled) {
     LogSettings.enabled = enabled;
 }
 
-void log_set_filename(const char* filename) {
-    g_assert(filename != NULL);
-    strncpy(LogSettings.filename, filename, sizeof(LogSettings.filename) - 1);
+static void open_log_file() {
     LogSettings.fout = fopen(LogSettings.filename, "a");
     if (LogSettings.fout == NULL) {
         LogSettings.fout = stdout;
-        log_log_at_level(LOG_ERROR, TAG, "could not open '%s'", filename);
+        return;
     }
+
+    struct stat finfo;
+    fstat(fileno(LogSettings.fout), &finfo);
+    LogSettings.currentSize = finfo.st_size;
+}
+
+void log_set_filename(const char *filename) {
+    g_assert(filename != NULL);
+    g_assert(strlen(filename) > 0);
+
+    strncpy(LogSettings.filename, filename, sizeof(LogSettings.filename) - 1);
+    open_log_file();
 }
 
 /**
@@ -70,7 +83,7 @@ void log_set_filename(const char* filename) {
 long long current_timestamp_in_millis() {
     struct timeval te;
     gettimeofday(&te, NULL); // get current time
-    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+    long long milliseconds = te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
     return milliseconds;
 }
 
@@ -78,26 +91,83 @@ long long current_timestamp_in_millis() {
  * Returns a string representation of the current time year-month-day hours:minutes:seconds
  * @return newly allocated string, must be freed using g_free()
  */
-char* current_time_string() {
+char *current_time_string() {
     GDateTime *now = g_date_time_new_now_local();
-    char* time_string = g_date_time_format(now, "%F %R:%S");
+    char *time_string = g_date_time_format(now, "%F %R:%S");
     g_date_time_unref(now);
-    return time_string;
+
+    char *result = g_strdup_printf("%s:%03lld", time_string, current_timestamp_in_millis() % 1000);
+    g_free(time_string);
+    return result;
 }
 
 void log_log(const char *tag, const char *level, const char *message) {
+    char *timestamp = current_time_string();
+    int bytes_written;
+    if ((bytes_written = fprintf(LogSettings.fout, "%s %s [%s] %s\n", timestamp, level, tag, message)) > 0) {
+        LogSettings.currentSize += bytes_written;
+    }
+
+    g_free(timestamp);
+}
+
+static char *get_log_name(int index) {
+    if (index > 0) {
+        return g_strdup_printf("%s.%d", LogSettings.filename, index);
+    } else {
+        return g_strdup(LogSettings.filename);
+    }
+}
+
+static gboolean fileExists(const char *filename) {
+    FILE *fp;
+
+    if ((fp = fopen(filename, "r")) == NULL) {
+        return FALSE;
+    } else {
+        fclose(fp);
+        return TRUE;
+    }
+}
+
+static void rotate_log_files() {
+    g_print("ROTATING LOG");
+
+    for (int i = MAX_LOGS; i > 0; i--) {
+        char *src = get_log_name(i - 1);
+        char *dst = get_log_name(i);
+        if (fileExists(dst)) {
+            remove(dst);
+        }
+
+        if (fileExists(src)) {
+            rename(src, dst);
+        }
+
+        g_free(src);
+        g_free(dst);
+    }
+}
+
+static void rotate_log_file_if_needed() {
+    if ((LogSettings.currentSize < LogSettings.maxFileSize) ||
+        LogSettings.fout == stdout)
+        return;
+
+    g_assert(LogSettings.fout != NULL);
+    fclose(LogSettings.fout);
+    rotate_log_files();
+    open_log_file();
+}
+
+void log_log_at_level(LogLevel level, const char *tag, const char *format, ...) {
     // Init fout to stdout if needed
     if (LogSettings.fout == NULL) {
         LogSettings.fout = stdout;
     }
 
-    // Print log message to fout
-    char* timestamp = current_time_string();
-    fprintf(LogSettings.fout, "%s:%03lld %s [%s] %s\n", timestamp, current_timestamp_in_millis() % 1000, level, tag, message);
-    g_free(timestamp);
-}
+    rotate_log_file_if_needed();
 
-void log_log_at_level(LogLevel level, const char* tag, const char *format, ...) {
     if (LogSettings.level <= level && LogSettings.enabled) {
         char buf[BUFFER_SIZE];
         va_list arg;
