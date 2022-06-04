@@ -29,7 +29,7 @@
 
 #define TAG "Logger"
 #define BUFFER_SIZE 1024
-#define MAX_FILE_SIZE 10000
+#define MAX_FILE_SIZE 1024 * 64
 #define MAX_LOGS 5
 
 static struct {
@@ -38,8 +38,9 @@ static struct {
     FILE *fout;
     char filename[256];
     long maxFileSize;
+    int maxFiles;
     size_t currentSize;
-} LogSettings = {TRUE, LOG_DEBUG, NULL, "", MAX_FILE_SIZE, 0};
+} LogSettings = {TRUE, LOG_DEBUG, NULL, "", MAX_FILE_SIZE, MAX_LOGS, 0};
 
 static const char *log_level_names[] = {
         [LOG_DEBUG] = "DEBUG",
@@ -68,10 +69,12 @@ static void open_log_file() {
     LogSettings.currentSize = finfo.st_size;
 }
 
-void log_set_filename(const char *filename) {
+void log_set_filename(const char *filename, long max_size, int max_files) {
     g_assert(filename != NULL);
     g_assert(strlen(filename) > 0);
 
+    LogSettings.maxFileSize = max_size ? max_size : MAX_FILE_SIZE;
+    LogSettings.maxFiles = max_files ? max_files : MAX_LOGS;
     strncpy(LogSettings.filename, filename, sizeof(LogSettings.filename) - 1);
     open_log_file();
 }
@@ -106,6 +109,7 @@ void log_log(const char *tag, const char *level, const char *message) {
     int bytes_written;
     if ((bytes_written = fprintf(LogSettings.fout, "%s %s [%s] %s\n", timestamp, level, tag, message)) > 0) {
         LogSettings.currentSize += bytes_written;
+        fflush(LogSettings.fout);
     }
 
     g_free(timestamp);
@@ -131,9 +135,7 @@ static gboolean fileExists(const char *filename) {
 }
 
 static void rotate_log_files() {
-    g_print("ROTATING LOG");
-
-    for (int i = MAX_LOGS; i > 0; i--) {
+    for (int i = LogSettings.maxFiles; i > 0; i--) {
         char *src = get_log_name(i - 1);
         char *dst = get_log_name(i);
         if (fileExists(dst)) {

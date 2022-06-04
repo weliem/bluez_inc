@@ -198,7 +198,6 @@ static void cleanup_handler(int signo) {
 int main(void) {
     log_enabled(TRUE);
     log_set_level(LOG_DEBUG);
-    log_set_filename("test.log");
 
     // Get a DBus connection
     GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
