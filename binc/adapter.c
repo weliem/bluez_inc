@@ -729,9 +729,28 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device) {
                                       g_variant_new("(o)", binc_device_get_path(device)));
 }
 
-
 GList *binc_adapter_get_devices(const Adapter *adapter) {
+    g_assert (adapter != NULL);
     return g_hash_table_get_values(adapter->devices_cache);
+}
+
+GList *binc_adapter_get_connected_devices(const Adapter *adapter) {
+    g_assert (adapter != NULL);
+
+    GList *all_devices = binc_adapter_get_devices(adapter);
+    if (g_list_length(all_devices) <= 0)
+        return all_devices;
+
+    GList *result = NULL;
+    for (GList *iterator = all_devices; iterator; iterator = iterator->next) {
+        Device *device = (Device *) iterator->data;
+        if (binc_device_get_connection_state(device) == CONNECTED) {
+            result = g_list_append(result, device);
+        }
+    }
+
+    g_list_free(all_devices);
+    return result;
 }
 
 void binc_adapter_set_discovery_filter(Adapter *adapter, short rssi_threshold, const GPtrArray *service_uuids,

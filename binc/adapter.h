@@ -58,6 +58,8 @@ void binc_adapter_remove_device(Adapter *adapter, Device *device);
 
 GList *binc_adapter_get_devices(const Adapter *adapter);
 
+GList *binc_adapter_get_connected_devices(const Adapter *adapter);
+
 Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path); // make this internal
 
 Device *binc_adapter_get_device_by_address(const Adapter *adapter, const char *address);
