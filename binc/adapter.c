@@ -70,15 +70,15 @@ typedef struct binc_discovery_filter {
 } DiscoveryFilter;
 
 struct binc_adapter {
-    const char *path; // owned
-    const char *address; // owned
+    const char *path; // Owned
+    const char *address; // Owned
     gboolean powered;
     gboolean discoverable;
     gboolean discovering;
     DiscoveryState discovery_state;
     DiscoveryFilter discovery_filter;
 
-    GDBusConnection *connection;  // borrowed
+    GDBusConnection *connection;  // Borrowed
     guint device_prop_changed;
     guint adapter_prop_changed;
     guint iface_added;
@@ -88,9 +88,9 @@ struct binc_adapter {
     AdapterDiscoveryStateChangeCallback discoveryStateCallback;
     AdapterPoweredStateChangeCallback poweredStateCallback;
     RemoteCentralConnectionStateCallback centralStateCallback;
-    GHashTable *devices_cache;
+    GHashTable *devices_cache; // Owned
 
-    Advertisement *advertisement;
+    Advertisement *advertisement; // Borrowed
 };
 
 static void binc_internal_adapter_call_method_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -168,12 +168,16 @@ static void binc_internal_adapter_changed(GDBusConnection *conn,
 
     if (properties_changed != NULL)
         g_variant_iter_free(properties_changed);
+
     if (properties_invalidated != NULL)
         g_variant_iter_free(properties_invalidated);
 }
 
 
 static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
+    g_assert(adapter != NULL);
+    g_assert(device != NULL);
+
     if (binc_device_get_rssi(device) < adapter->discovery_filter.rssi) return FALSE;
 
     const char *pattern = adapter->discovery_filter.pattern;
@@ -200,6 +204,9 @@ static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
 }
 
 static void deliver_discovery_result(Adapter *adapter, Device *device) {
+    g_assert(adapter != NULL);
+    g_assert(device != NULL);
+
     if (binc_device_get_connection_state(device) == DISCONNECTED) {
         // Double check if the device matches the discovery filter
         if (!matches_discovery_filter(adapter, device)) return;
@@ -220,7 +227,7 @@ static void binc_internal_device_disappeared(GDBusConnection *sig,
 
     GVariantIter *interfaces = NULL;
     const char *object = NULL;
-    const gchar *interface_name = NULL;
+    const char *interface_name = NULL;
 
     Adapter *adapter = (Adapter *) user_data;
     g_assert(adapter != NULL);
@@ -251,7 +258,7 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
 
     GVariantIter *interfaces = NULL;
     const char *object = NULL;
-    const gchar *interface_name = NULL;
+    const char *interface_name = NULL;
     GVariant *properties = NULL;
 
     Adapter *adapter = (Adapter *) user_data;
@@ -263,7 +270,7 @@ static void binc_internal_device_appeared(GDBusConnection *sig,
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
             Device *device = binc_device_create(object, adapter);
 
-            gchar *property_name = NULL;
+            char *property_name = NULL;
             GVariantIter iter;
             GVariant *property_value = NULL;
             g_variant_iter_init(&iter, properties);
@@ -305,7 +312,7 @@ static void binc_internal_device_getall_properties_cb(GObject *source_object, GA
 
     if (result != NULL) {
         GVariantIter *iter = NULL;
-        const gchar *property_name = NULL;
+        const char *property_name = NULL;
         GVariant *property_value = NULL;
 
         g_assert(g_str_equal(g_variant_get_type_string(result), "(a{sv})"));
@@ -388,6 +395,7 @@ static void binc_internal_device_changed(GDBusConnection *conn,
 
     if (properties_changed != NULL)
         g_variant_iter_free(properties_changed);
+
     if (properties_invalidated != NULL)
         g_variant_iter_free(properties_invalidated);
 }
@@ -456,7 +464,6 @@ static Adapter *binc_adapter_create(GDBusConnection *connection, const char *pat
     Adapter *adapter = g_new0(Adapter, 1);
     adapter->connection = connection;
     adapter->path = g_strdup(path);
-    adapter->discovery_filter.services = NULL;
     adapter->discovery_filter.rssi = -255;
     adapter->devices_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                    g_free, (GDestroyNotify) binc_device_free);
@@ -478,13 +485,17 @@ static void remove_signal_subscribers(Adapter *adapter) {
 }
 
 static void free_discovery_filter(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
     for (int i = 0; i < adapter->discovery_filter.services->len; i++) {
         char *uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
         g_free(uuid_filter);
     }
     g_ptr_array_free(adapter->discovery_filter.services, TRUE);
-    g_free((char*) adapter->discovery_filter.pattern);
     adapter->discovery_filter.services = NULL;
+
+    g_free((char*) adapter->discovery_filter.pattern);
+    adapter->discovery_filter.pattern = NULL;
 }
 
 void binc_adapter_free(Adapter *adapter) {
@@ -510,6 +521,9 @@ void binc_adapter_free(Adapter *adapter) {
 }
 
 static Adapter *binc_internal_get_adapter_by_path(GPtrArray *adapters, const char *path) {
+    g_assert(adapters != NULL);
+    g_assert(path != NULL);
+
     for (int i = 0; i < adapters->len; i++) {
         Adapter *adapter = g_ptr_array_index(adapters, i);
         const char *adapter_path = binc_adapter_get_path(adapter);
@@ -540,13 +554,13 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
 
     if (result) {
         GVariantIter *iter;
-        const gchar *object_path;
+        const char *object_path;
         GVariant *ifaces_and_properties;
 
         g_assert(g_str_equal(g_variant_get_type_string(result), "(a{oa{sa{sv}}})"));
         g_variant_get(result, "(a{oa{sa{sv}}})", &iter);
         while (g_variant_iter_loop(iter, "{&o@a{sa{sv}}}", &object_path, &ifaces_and_properties)) {
-            const gchar *interface_name;
+            const char *interface_name;
             GVariant *properties;
             GVariantIter iter2;
 
@@ -554,7 +568,7 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
             while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
                 if (g_str_equal(interface_name, INTERFACE_ADAPTER)) {
                     Adapter *adapter = binc_adapter_create(dbusConnection, object_path);
-                    gchar *property_name;
+                    char *property_name;
                     GVariantIter iter3;
                     GVariant *property_value;
                     g_variant_iter_init(&iter3, properties);
@@ -575,7 +589,7 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
                     Device *device = binc_device_create(object_path, adapter);
                     g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
 
-                    gchar *property_name;
+                    char *property_name;
                     GVariantIter iter4;
                     GVariant *property_value;
                     g_variant_iter_init(&iter4, properties);
@@ -618,6 +632,7 @@ Adapter *binc_adapter_get_default(GDBusConnection *dbusConnection) {
 
 Adapter *binc_adapter_get(GDBusConnection *dbusConnection, const char *name) {
     g_assert(dbusConnection != NULL);
+    g_assert(name != NULL && strlen(name) > 0);
 
     Adapter *result = NULL;
     GPtrArray *adapters = binc_adapter_find_all(dbusConnection);
@@ -695,9 +710,8 @@ static void binc_internal_stop_discovery_cb(GObject *source_object, GAsyncResult
         binc_internal_set_discovery_state(adapter, STOPPED);
     }
 
-    if (value != NULL) {
+    if (value != NULL)
         g_variant_unref(value);
-    }
 }
 
 void binc_adapter_stop_discovery(Adapter *adapter) {
