@@ -10,6 +10,10 @@ The library focuses on BLE and supports both **Central** and **Peripheral** role
 * Simplified programming interface for easy coding
 * Configurable logging with extensive debugging possibilities
 
+## Dependencies
+
+This library uses GLib 2.0. If needed, you can install it using `sudo apt install -y libglib2.0-dev`.
+
 ## Discovering devices
 
 In order to discover devices, you first need to get hold of a Bluetooth *adapter*. 
