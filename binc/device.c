@@ -323,7 +323,7 @@ static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncRes
     GVariant *result = g_dbus_connection_call_finish(device->connection, res, &error);
 
     if (result == NULL) {
-        g_print("Unable to get result for GetManagedObjects\n");
+        log_error(TAG, "Unable to get result for GetManagedObjects");
         if (error != NULL) {
             log_debug(TAG, "call failed (error %d: %s)", error->code, error->message);
             g_clear_error(&error);

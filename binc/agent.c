@@ -131,7 +131,7 @@ static void bluez_agent_method_call(GDBusConnection *conn,
         log_debug(TAG, "agent released");
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else
-        g_print("We should not come here, unknown method\n");
+        log_error(TAG, "We should not come here, unknown method");
 }
 
 static const GDBusInterfaceVTable agent_method_table = {
@@ -182,7 +182,7 @@ static int bluez_register_agent(Agent *agent) {
 
     info = g_dbus_node_info_new_for_xml(bluez_agent_introspection_xml, &error);
     if (error) {
-        g_printerr("Unable to create node: %s\n", error->message);
+        log_error(TAG, "Unable to create node: %s\n", error->message);
         g_clear_error(&error);
         return EINVAL;
     }
@@ -215,7 +215,7 @@ static int binc_agentmanager_call_method(GDBusConnection *connection, const gcha
                                          NULL,
                                          &error);
     if (error != NULL) {
-        g_print("AgentManager call failed '%s': %s\n", method, error->message);
+        log_error(TAG, "AgentManager call failed '%s': %s\n", method, error->message);
         return 1;
     }
 

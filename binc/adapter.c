@@ -591,7 +591,7 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
         }
         g_variant_unref(result);
     } else {
-        g_print("Unable to get result for GetManagedObjects\n");
+        log_error(TAG, "Unable to get result for GetManagedObjects");
     }
 
     log_debug(TAG, "found %d adapter%s", binc_adapters->len, binc_adapters->len > 1 ? "s" : "");

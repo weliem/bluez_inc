@@ -190,7 +190,7 @@ gboolean callback(gpointer data) {
 
 static void cleanup_handler(int signo) {
     if (signo == SIGINT) {
-        g_print("received SIGINT\n");
+        log_error(TAG, "received SIGINT");
         callback(loop);
     }
 }
@@ -204,7 +204,7 @@ int main(void) {
 
     // Setup signal handler
     if (signal(SIGINT, cleanup_handler) == SIG_ERR)
-        g_print("can't catch SIGINT\n");
+        log_error(TAG, "can't catch SIGINT");
 
     // Setup mainloop
     loop = g_main_loop_new(NULL, FALSE);
