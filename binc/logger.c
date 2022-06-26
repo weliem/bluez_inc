@@ -37,8 +37,8 @@ static struct {
     LogLevel level;
     FILE *fout;
     char filename[256];
-    long maxFileSize;
-    int maxFiles;
+    unsigned long maxFileSize;
+    unsigned int maxFiles;
     size_t currentSize;
 } LogSettings = {TRUE, LOG_DEBUG, NULL, "", MAX_FILE_SIZE, MAX_LOGS, 0};
 

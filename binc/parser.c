@@ -59,7 +59,6 @@ void parser_free(Parser *parser) {
 
 void parser_set_offset(Parser *parser, guint offset) {
     g_assert(parser != NULL);
-    g_assert(offset >= 0);
     parser->offset = offset;
 }
 

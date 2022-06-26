@@ -71,7 +71,7 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
     } else if (g_str_equal(property_name, "ServiceUUIDs")) {
         GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
         if (advertisement->services != NULL) {
-            for (int i = 0; i < advertisement->services->len; i++) {
+            for (guint i = 0; i < advertisement->services->len; i++) {
                 char *service_uuid = g_ptr_array_index(advertisement->services, i);
                 g_variant_builder_add(builder, "s", service_uuid);
             }
@@ -211,7 +211,7 @@ void binc_advertisement_set_services(Advertisement *advertisement, const GPtrArr
     }
     advertisement->services = g_ptr_array_new_with_free_func(g_free);
 
-    for (int i = 0; i < service_uuids->len; i++) {
+    for (guint i = 0; i < service_uuids->len; i++) {
         g_ptr_array_add(advertisement->services, g_strdup(g_ptr_array_index(service_uuids, i)));
     }
 }
@@ -247,5 +247,6 @@ void binc_advertisement_set_service_data(Advertisement *advertisement, const cha
 
     g_hash_table_insert(advertisement->service_data, g_strdup(service_uuid), value);
 }
+
 
 
