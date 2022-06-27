@@ -26,10 +26,10 @@
 #include "utility.h"
 
 struct binc_service {
-    Device *device;
-    const char *path;
-    const char* uuid;
-    GList *characteristics;
+    Device *device; // Borrowed
+    const char *path; // Owned
+    const char* uuid; // Owned
+    GList *characteristics; // Owned
 };
 
 Service* binc_service_create(Device *device, const char* path, const char* uuid) {
@@ -54,6 +54,8 @@ void binc_service_free(Service *service) {
     service->uuid = NULL;
     service->device = NULL;
     g_list_free(service->characteristics);
+    service->characteristics = NULL;
+
     g_free(service);
 }
 
@@ -81,6 +83,7 @@ GList *binc_service_get_characteristics(const Service *service) {
 
 Characteristic *binc_service_get_characteristic(const Service *service, const char* char_uuid) {
     g_assert(service != NULL);
+    g_assert(char_uuid != NULL);
     g_assert(is_valid_uuid(char_uuid));
 
     if (service->characteristics != NULL) {

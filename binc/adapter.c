@@ -836,13 +836,17 @@ static void binc_internal_set_property_cb(__attribute__((unused)) GObject *sourc
     }
 }
 
-static void adapter_set_property(Adapter *adapter, const char *prop, GVariant *value) {
+static void adapter_set_property(Adapter *adapter, const char *property, GVariant *value) {
+    g_assert(adapter != NULL);
+    g_assert(property != NULL);
+    g_assert(value != NULL);
+
     g_dbus_connection_call(adapter->connection,
                            BLUEZ_DBUS,
                            adapter->path,
                            INTERFACE_PROPERTIES,
                            "Set",
-                           g_variant_new("(ssv)", INTERFACE_ADAPTER, prop, value),
+                           g_variant_new("(ssv)", INTERFACE_ADAPTER, property, value),
                            NULL,
                            G_DBUS_CALL_FLAGS_NONE,
                            -1,
@@ -852,10 +856,14 @@ static void adapter_set_property(Adapter *adapter, const char *prop, GVariant *v
 }
 
 void binc_adapter_power_on(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
     adapter_set_property(adapter, ADAPTER_PROPERTY_POWERED, g_variant_new("b", TRUE));
 }
 
 void binc_adapter_power_off(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
     adapter_set_property(adapter, ADAPTER_PROPERTY_POWERED, g_variant_new("b", FALSE));
 }
 

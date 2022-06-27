@@ -40,13 +40,13 @@ static const char *const DESCRIPTOR_METHOD_READ_VALUE = "ReadValue";
 static const char *const DESCRIPTOR_METHOD_WRITE_VALUE = "WriteValue";
 
 struct binc_descriptor {
-    Device *device;
-    Characteristic *characteristic;
-    GDBusConnection *connection;
-    const char *path;
-    const char *char_path;
-    const char *uuid;
-    GList *flags;
+    Device *device; // Borrowed
+    Characteristic *characteristic; // Borrowed
+    GDBusConnection *connection; // Borrowed
+    const char *path; // Owned
+    const char *char_path; // Owned
+    const char *uuid; // Owned
+    GList *flags; // Owned
 
     OnDescReadCallback on_read_cb;
     OnDescWriteCallback on_write_cb;
@@ -76,6 +76,8 @@ void binc_descriptor_free(Descriptor *descriptor) {
     descriptor->char_path = NULL;
 
     descriptor->characteristic = NULL;
+    descriptor->device = NULL;
+    descriptor->connection = NULL;
     g_free(descriptor);
 }
 
@@ -106,9 +108,7 @@ void binc_descriptor_set_uuid(Descriptor *descriptor, const char *uuid) {
     g_assert(descriptor != NULL);
     g_assert(is_valid_uuid(uuid));
 
-    if (descriptor->uuid != NULL) {
-        g_free((char *) descriptor->uuid);
-    }
+    g_free((char *) descriptor->uuid);
     descriptor->uuid = g_strdup(uuid);
 }
 
@@ -116,9 +116,7 @@ void binc_descriptor_set_char_path(Descriptor *descriptor, const char *path) {
     g_assert(descriptor != NULL);
     g_assert(path != NULL);
 
-    if (descriptor->char_path != NULL) {
-        g_free((char *) descriptor->char_path);
-    }
+    g_free((char *) descriptor->char_path);
     descriptor->char_path = g_strdup(path);
 }
 
@@ -252,6 +250,8 @@ static void binc_internal_descriptor_write_cb(GObject *source_object, GAsyncResu
 
 void binc_descriptor_write(Descriptor *descriptor, const GByteArray *byteArray) {
     g_assert(descriptor != NULL);
+    g_assert(byteArray != NULL);
+    g_assert(byteArray->len > 0);
 
     GString *byteArrayStr = g_byte_array_as_hex(byteArray);
     log_debug(TAG, "writing <%s> to <%s>", byteArrayStr->str, descriptor->uuid);

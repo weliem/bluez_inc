@@ -32,10 +32,10 @@
 #define TAG "Agent"
 
 struct binc_agent {
-    char *path;
+    char *path; // Owned
     IoCapability io_capability;
-    GDBusConnection *connection;
-    Adapter *adapter;
+    GDBusConnection *connection; // Borrowed
+    Adapter *adapter; // Borrowed
     guint registration_id;
     AgentRequestAuthorizationCallback request_authorization_callback;
     AgentRequestPasskeyCallback request_passkey_callback;
@@ -214,6 +214,7 @@ static int binc_agentmanager_call_method(GDBusConnection *connection, const gcha
                                          -1,
                                          NULL,
                                          &error);
+
     if (error != NULL) {
         log_error(TAG, "AgentManager call failed '%s': %s\n", method, error->message);
         return 1;

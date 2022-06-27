@@ -43,16 +43,16 @@ typedef struct binc_write_data {
 } WriteData;
 
 struct binc_characteristic {
-    Device *device;
-    Service *service;
-    GDBusConnection *connection;
-    const char *path;
-    const char *uuid;
-    const char *service_path;
+    Device *device; // Borrowed
+    Service *service; // Borrowed
+    GDBusConnection *connection; // Borrowed
+    const char *path; // Owned
+    const char *uuid; // Owned
+    const char *service_path; // Owned
     gboolean notifying;
-    GList *flags;
+    GList *flags; // Owned
     guint properties;
-    GList *descriptors;
+    GList *descriptors; // Owned
     guint mtu;
 
     guint characteristic_prop_changed;
@@ -67,6 +67,7 @@ Characteristic *binc_characteristic_create(Device *device, const char *path) {
     characteristic->device = device;
     characteristic->connection = binc_device_get_dbus_connection(device);
     characteristic->path = g_strdup(path);
+    characteristic->mtu = 23;
     return characteristic;
 }
 
@@ -88,20 +89,14 @@ void binc_characteristic_free(Characteristic *characteristic) {
         characteristic->descriptors = NULL;
     }
 
-    if (characteristic->uuid != NULL) {
-        g_free((char *) characteristic->uuid);
-        characteristic->uuid = NULL;
-    }
+    g_free((char *) characteristic->uuid);
+    characteristic->uuid = NULL;
 
-    if (characteristic->path != NULL) {
-        g_free((char *) characteristic->path);
-        characteristic->path = NULL;
-    }
+    g_free((char *) characteristic->path);
+    characteristic->path = NULL;
 
-    if (characteristic->service_path != NULL) {
-        g_free((char *) characteristic->service_path);
-        characteristic->service_path = NULL;
-    }
+    g_free((char *) characteristic->service_path);
+    characteristic->service_path = NULL;
 
     g_free(characteristic);
 }
@@ -130,7 +125,9 @@ char *binc_characteristic_to_string(const Characteristic *characteristic) {
     return result;
 }
 
-static void binc_internal_char_read_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_char_read_cb(__attribute__((unused)) GObject *source_object,
+                                       GAsyncResult *res,
+                                       gpointer user_data) {
     GError *error = NULL;
     GByteArray *byteArray = NULL;
     GVariant *innerArray = NULL;
@@ -193,7 +190,9 @@ void binc_characteristic_read(Characteristic *characteristic) {
                            characteristic);
 }
 
-static void binc_internal_char_write_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_char_write_cb(__attribute__((unused)) GObject *source_object,
+                                        GAsyncResult *res,
+                                        gpointer user_data) {
     WriteData *writeData = (WriteData*) user_data;
     Characteristic *characteristic = writeData->characteristic;
     g_assert(characteristic != NULL);
@@ -265,11 +264,11 @@ void binc_characteristic_write(Characteristic *characteristic, const GByteArray 
                            writeData);
 }
 
-static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
-                                                        const gchar *sender,
-                                                        const gchar *path,
-                                                        const gchar *interface,
-                                                        const gchar *signal,
+static void binc_internal_signal_characteristic_changed(__attribute__((unused)) GDBusConnection *conn,
+                                                        __attribute__((unused)) const gchar *sender,
+                                                        __attribute__((unused)) const gchar *path,
+                                                        __attribute__((unused)) const gchar *interface,
+                                                        __attribute__((unused)) const gchar *signal,
                                                         GVariant *parameters,
                                                         void *user_data) {
 
@@ -321,7 +320,10 @@ static void binc_internal_signal_characteristic_changed(GDBusConnection *conn,
     }
 }
 
-static void binc_internal_char_start_notify_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_char_start_notify_cb(__attribute__((unused)) GObject *source_object,
+                                               GAsyncResult *res,
+                                               gpointer user_data) {
+
     Characteristic *characteristic = (Characteristic *) user_data;
     g_assert(characteristic != NULL);
 
@@ -460,9 +462,7 @@ void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uu
     g_assert(characteristic != NULL);
     g_assert(uuid != NULL);
 
-    if (characteristic->uuid != NULL) {
-        g_free((char *) characteristic->uuid);
-    }
+    g_free((char *) characteristic->uuid);
     characteristic->uuid = g_strdup(uuid);
 }
 

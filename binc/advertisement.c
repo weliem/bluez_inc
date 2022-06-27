@@ -29,11 +29,11 @@
 static const char *const TAG = "Advertisement";
 
 struct binc_advertisement {
-    char *path;
-    char *local_name;
-    GPtrArray *services;
-    GHashTable *manufacturer_data;
-    GHashTable *service_data;
+    char *path; // Owned
+    char *local_name; // Owned
+    GPtrArray *services; // Owned
+    GHashTable *manufacturer_data; // Owned
+    GHashTable *service_data; // Owned
     guint registration_id;
 };
 
@@ -96,13 +96,13 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
     return ret;
 }
 
-static void advertisement_method_call(GDBusConnection *conn,
-                                      const gchar *sender,
-                                      const gchar *path,
-                                      const gchar *interface,
-                                      const gchar *method,
-                                      GVariant *params,
-                                      GDBusMethodInvocation *invocation,
+static void advertisement_method_call(__attribute__((unused)) GDBusConnection *conn,
+                                      __attribute__((unused)) const gchar *sender,
+                                      __attribute__((unused)) const gchar *path,
+                                      __attribute__((unused)) const gchar *interface,
+                                      __attribute__((unused)) const gchar *method,
+                                      __attribute__((unused)) GVariant *params,
+                                      __attribute__((unused)) GDBusMethodInvocation *invocation,
                                       void *userdata) {
     log_debug(TAG, "advertisement method called");
 }
@@ -116,7 +116,7 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
     g_assert(advertisement != NULL);
     g_assert(adapter != NULL);
 
-    static const gchar advertisement_xml[] =
+    static const char advertisement_xml[] =
             "<node name='/'>"
             "   <interface name='org.bluez.LEAdvertisement1'>"
             "       <method name='Release' />"
@@ -220,6 +220,7 @@ void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guin
                                               const GByteArray *byteArray) {
     g_assert(advertisement != NULL);
     g_assert(advertisement->manufacturer_data != NULL);
+    g_assert(byteArray != NULL);
 
     int man_id = manufacturer_id;
     g_hash_table_remove(advertisement->manufacturer_data, &man_id);
@@ -239,6 +240,7 @@ void binc_advertisement_set_service_data(Advertisement *advertisement, const cha
     g_assert(advertisement->service_data != NULL);
     g_assert(service_uuid != NULL);
     g_assert(is_valid_uuid(service_uuid));
+    g_assert(byteArray != NULL);
 
     g_hash_table_remove(advertisement->service_data, service_uuid);
 
