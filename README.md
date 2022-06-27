@@ -299,6 +299,15 @@ The repository includes an example for both the **Central** and **Peripheral** r
 * The *central* example scans for thermometers and reads the thermometer value once it connects.
 * The *peripheral* example acts as a thermometer and can be used in combination with the central example.
 
+## Logging
+
+The library contains its own logger that you can also use in your application. 
+
+* Turn logging on/off: `log_enabled(TRUE)`
+* Set logging level: `log_set_level(LOG_DEBUG)`
+* Log to a file using log rotation: `log_set_filename("mylog.log", 65536, 10)`
+* Log something: `log_debug("MyTag", "Hello %s", "world")
+`
 ## Bluez documentation
 
 The official Bluez documentation is a bit sparse but can be found here: 
@@ -313,4 +322,4 @@ You will notice that most original methods and properties are available in this 
 ## Installing on Raspberry Pi
 Assuming you have a default installation, you will need to install CMake and GLib:
 * sudo apt install -y cmake
-* sudo apt-get install -y libglib2.0-dev
+* sudo apt install -y libglib2.0-dev
