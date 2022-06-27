@@ -556,8 +556,8 @@ static void binc_device_changed(__attribute__((unused)) GDBusConnection *conn,
                                 GVariant *params,
                                 void *userdata) {
 
-    GVariantIter *properties = NULL;
-    GVariantIter *unknown = NULL;
+    GVariantIter *properties_changed = NULL;
+    GVariantIter *properties_invalidated = NULL;
     const char *iface = NULL;
     const char *property_name = NULL;
     GVariant *property_value = NULL;
@@ -566,8 +566,8 @@ static void binc_device_changed(__attribute__((unused)) GDBusConnection *conn,
     g_assert(device != NULL);
 
     g_assert(g_str_equal(g_variant_get_type_string(params), "(sa{sv}as)"));
-    g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
+    g_variant_get(params, "(&sa{sv}as)", &iface, &properties_changed, &properties_invalidated);
+    while (g_variant_iter_loop(properties_changed, "{&sv}", &property_name, &property_value)) {
         if (g_str_equal(property_name, DEVICE_PROPERTY_CONNECTED)) {
             binc_device_internal_set_conn_state(device, g_variant_get_boolean(property_value), NULL);
             if (device->connection_state == DISCONNECTED) {
@@ -596,11 +596,11 @@ static void binc_device_changed(__attribute__((unused)) GDBusConnection *conn,
         }
     }
 
-    if (properties != NULL)
-        g_variant_iter_free(properties);
+    if (properties_changed != NULL)
+        g_variant_iter_free(properties_changed);
 
-    if (unknown != NULL)
-        g_variant_iter_free(unknown);
+    if (properties_invalidated != NULL)
+        g_variant_iter_free(properties_invalidated);
 }
 
 static void binc_internal_device_connect_cb(__attribute__((unused)) GObject *source_object,
