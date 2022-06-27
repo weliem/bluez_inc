@@ -808,10 +808,7 @@ binc_device_get_characteristic(const Device *device, const char *service_uuid, c
 
     Service *service = binc_device_get_service(device, service_uuid);
     if (service != NULL) {
-        Characteristic *characteristic = binc_service_get_characteristic(service, characteristic_uuid);
-        if (characteristic != NULL) {
-            return characteristic;
-        }
+        return binc_service_get_characteristic(service, characteristic_uuid);
     }
 
     return NULL;
