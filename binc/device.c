@@ -116,6 +116,7 @@ Device *binc_device_create(const char *path, Adapter *adapter) {
     device->connection_state = DISCONNECTED;
     device->rssi = -255;
     device->txpower = -255;
+    device->mtu = 23;
     return device;
 }
 
@@ -129,6 +130,8 @@ static void binc_device_free_uuids(Device *device) {
 static void byte_array_free(GByteArray *byteArray) { g_byte_array_free(byteArray, TRUE); }
 
 static void binc_device_free_manufacturer_data(Device *device) {
+    g_assert(device != NULL);
+
     if (device->manufacturer_data != NULL) {
         g_hash_table_destroy(device->manufacturer_data);
         device->manufacturer_data = NULL;
@@ -136,6 +139,8 @@ static void binc_device_free_manufacturer_data(Device *device) {
 }
 
 static void binc_device_free_service_data(Device *device) {
+    g_assert(device != NULL);
+
     if (device->service_data != NULL) {
         g_hash_table_destroy(device->service_data);
         device->service_data = NULL;
@@ -191,6 +196,8 @@ void binc_device_free(Device *device) {
 }
 
 char *binc_device_to_string(const Device *device) {
+    g_assert(device != NULL);
+
     // First build up uuids string
     GString *uuids = g_string_new("[");
     if (g_list_length(device->uuids) > 0) {
@@ -310,6 +317,10 @@ static void binc_device_internal_set_conn_state(Device *device, ConnectionState 
 }
 
 static void binc_internal_extract_service(Device *device, const char *object_path, GVariant *properties) {
+    g_assert(device != NULL);
+    g_assert(object_path != NULL);
+    g_assert(properties != NULL);
+
     char *uuid = NULL;
     const char *property_name;
     GVariantIter iter;
@@ -328,6 +339,10 @@ static void binc_internal_extract_service(Device *device, const char *object_pat
 }
 
 static void binc_internal_extract_characteristic(Device *device, const char *object_path, GVariant *properties) {
+    g_assert(device != NULL);
+    g_assert(object_path != NULL);
+    g_assert(properties != NULL);
+
     Characteristic *characteristic = binc_characteristic_create(device, object_path);
     binc_characteristic_set_read_cb(characteristic, &binc_on_characteristic_read);
     binc_characteristic_set_write_cb(characteristic, &binc_on_characteristic_write);
@@ -377,6 +392,10 @@ static void binc_internal_extract_characteristic(Device *device, const char *obj
 }
 
 static void binc_internal_extract_descriptor(Device *device, const char *object_path, GVariant *properties) {
+    g_assert(device != NULL);
+    g_assert(object_path != NULL);
+    g_assert(properties != NULL);
+
     Descriptor *descriptor = binc_descriptor_create(device, object_path);
     binc_descriptor_set_read_cb(descriptor, &binc_on_descriptor_read);
     binc_descriptor_set_write_cb(descriptor, &binc_on_descriptor_write);
@@ -413,7 +432,10 @@ static void binc_internal_extract_descriptor(Device *device, const char *object_
     }
 }
 
-static void binc_internal_collect_gatt_tree_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_collect_gatt_tree_cb(__attribute__((unused)) GObject *source_object,
+                                               GAsyncResult *res,
+                                               gpointer user_data) {
+
     GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
@@ -526,11 +548,11 @@ void binc_device_set_bonding_state(Device *device, BondingState bonding_state) {
     }
 }
 
-static void binc_device_changed(GDBusConnection *conn,
-                                const gchar *sender,
-                                const gchar *path,
-                                const gchar *interface,
-                                const gchar *signal,
+static void binc_device_changed(__attribute__((unused)) GDBusConnection *conn,
+                                __attribute__((unused)) const gchar *sender,
+                                __attribute__((unused)) const gchar *path,
+                                __attribute__((unused)) const gchar *interface,
+                                __attribute__((unused)) const gchar *signal,
                                 GVariant *params,
                                 void *userdata) {
 
@@ -581,7 +603,10 @@ static void binc_device_changed(GDBusConnection *conn,
         g_variant_iter_free(unknown);
 }
 
-static void binc_internal_device_connect_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_device_connect_cb(__attribute__((unused)) GObject *source_object,
+                                            GAsyncResult *res,
+                                            gpointer user_data) {
+
     GError *error = NULL;
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
@@ -643,7 +668,10 @@ void binc_device_connect(Device *device) {
                            device);
 }
 
-static void binc_internal_device_pair_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_device_pair_cb(__attribute__((unused)) GObject *source_object,
+                                         GAsyncResult *res,
+                                         gpointer user_data) {
+
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
 
@@ -662,7 +690,9 @@ static void binc_internal_device_pair_cb(GObject *source_object, GAsyncResult *r
 
 void binc_device_pair(Device *device) {
     g_assert(device != NULL);
-    log_debug(TAG, "pairing device");
+    g_assert(device->path != NULL);
+
+    log_debug(TAG, "pairing device '%s'", device->address);
 
     if (device->connection_state == DISCONNECTING) {
         return;
@@ -687,7 +717,10 @@ void binc_device_pair(Device *device) {
                            device);
 }
 
-static void binc_internal_device_disconnect_cb(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void binc_internal_device_disconnect_cb(__attribute__((unused)) GObject *source_object,
+                                               GAsyncResult *res,
+                                               gpointer user_data) {
+
     Device *device = (Device *) user_data;
     g_assert(device != NULL);
 
@@ -918,9 +951,7 @@ void binc_device_set_address(Device *device, const char *address) {
     g_assert(device != NULL);
     g_assert(address != NULL);
 
-    if (device->address != NULL) {
-        g_free((char *) device->address);
-    }
+    g_free((char *) device->address);
     device->address = g_strdup(address);
 }
 
@@ -933,9 +964,7 @@ void binc_device_set_address_type(Device *device, const char *address_type) {
     g_assert(device != NULL);
     g_assert(address_type != NULL);
 
-    if (device->address_type != NULL) {
-        g_free((char *) device->address_type);
-    }
+    g_free((char *) device->address_type);
     device->address_type = g_strdup(address_type);
 }
 
@@ -948,9 +977,7 @@ void binc_device_set_alias(Device *device, const char *alias) {
     g_assert(device != NULL);
     g_assert(alias != NULL);
 
-    if (device->alias != NULL) {
-        g_free((char *) device->alias);
-    }
+    g_free((char *) device->alias);
     device->alias = g_strdup(alias);
 }
 
@@ -964,9 +991,7 @@ void binc_device_set_name(Device *device, const char *name) {
     g_assert(name != NULL);
     g_assert(strlen(name) > 0);
 
-    if (device->name != NULL) {
-        g_free((char *) device->name);
-    }
+    g_free((char *) device->name);
     device->name = g_strdup(name);
 }
 
@@ -979,9 +1004,7 @@ void binc_device_set_path(Device *device, const char *path) {
     g_assert(device != NULL);
     g_assert(path != NULL);
 
-    if (device->path != NULL) {
-        g_free((char *) device->path);
-    }
+    g_free((char *) device->path);
     device->path = g_strdup(path);
 }
 
