@@ -54,9 +54,9 @@ guint32 parser_get_uint24(Parser *parser);
 
 guint32 parser_get_uint32(Parser *parser);
 
-float parser_get_sfloat(Parser *parser);
+double parser_get_sfloat(Parser *parser);
 
-float parser_get_float(Parser *parser);
+double parser_get_float(Parser *parser);
 
 GDateTime* parser_get_date_time(Parser *parser);
 

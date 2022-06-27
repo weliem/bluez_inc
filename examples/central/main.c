@@ -79,7 +79,7 @@ void on_notify(Characteristic *characteristic, const GByteArray *byteArray) {
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser_set_offset(parser, 1);
     if (g_str_equal(uuid, TEMPERATURE_CHAR_UUID)) {
-        float temperature = parser_get_float(parser);
+        double temperature = parser_get_float(parser);
         log_debug(TAG, "temperature %.1f", temperature);
     }
     parser_free(parser);

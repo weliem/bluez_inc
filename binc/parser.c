@@ -143,7 +143,7 @@ guint32 parser_get_uint32(Parser *parser) {
     }
 }
 
-float parser_get_sfloat(Parser *parser) {
+double parser_get_sfloat(Parser *parser) {
     g_assert(parser != NULL);
     g_assert(parser->offset < parser->bytes->len);
 
@@ -157,7 +157,7 @@ float parser_get_sfloat(Parser *parser) {
     if (exponent >= 0x8) {
         exponent = exponent - 0x10;
     }
-    return (float) (mantissa * pow(10.0, exponent));
+    return (mantissa * pow(10.0, exponent));
 }
 
 /* round number n to d decimal points */
@@ -167,7 +167,7 @@ float fround(float n, int d) {
     return (float) rounded / (float) divider;
 }
 
-float parser_get_float(Parser *parser) {
+double parser_get_float(Parser *parser) {
     g_assert(parser != NULL);
     guint32 int_data = parser_get_uint32(parser);
 
@@ -185,7 +185,7 @@ float parser_get_float(Parser *parser) {
         output = (mantissa * pow(10.0f, exponent));
     }
 
-    return (float) output;
+    return output;
 }
 
 GString *parser_get_string(Parser *parser) {
