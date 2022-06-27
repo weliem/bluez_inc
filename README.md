@@ -4,8 +4,15 @@
 The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood. 
 As a result, it looks like a 'normal' C library for Bluetooth!
 
-The library focuses on BLE and supports both **Central** and **Peripheral** roles.
+The library focuses on BLE and supports both **Central** and **Peripheral** roles. Some interesting facts include:
+* Manage/Connect multiple peripherals at the same time
+* Support for bonding
+* Simplified programming interface for easy coding
+* Configurable logging with extensive debugging possibilities
 
+## Dependencies
+
+This library uses GLib 2.0. If needed, you can install it using `sudo apt install -y libglib2.0-dev`.
 
 ## Discovering devices
 
@@ -57,7 +64,7 @@ As you can see, just before connecting, you must set up some callbacks for recei
 
 You connect by calling `binc_device_connect(device)`. Then the following sequence will happen:
 * first, the *connection_state* will change to 'connecting'.
-* when the device is connected, the *connection_state* changes and your registered callback will be called. However, you cannot use the device yet because the service discovery has not yet been done.
+* when the device is connected, the *connection_state* changes to 'connected' and your registered callback will be called. However, you cannot use the device yet because the service discovery has not yet been done.
 * Bluez will then start the service discovery automatically and when it finishes, the *services_resolved* callback is called. So the *service_resolved* callback is the right place to start reading and writing characteristics or starting notifications. 
 
 ```c
