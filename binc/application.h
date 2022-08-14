@@ -38,7 +38,8 @@
 
 // This callback is called just before the characteristic's value is returned.
 // Use it to update the characteristic before it is read
-typedef void (*onLocalCharacteristicRead)(const Application *application, const char *address,
+// For accepting the read, return NULL, otherwise return an error (BLUEZ_ERROR_*)
+typedef char *(*onLocalCharacteristicRead)(const Application *application, const char *address,
                                           const char *service_uuid, const char *char_uuid);
 
 // This callback is called just before the characteristic's value is set.
@@ -61,7 +62,7 @@ typedef void (*onLocalCharacteristicStopNotify)(const Application *application, 
 
 // This callback is called just before the descriptor's value is returned.
 // Use it to update the descriptor before it is read
-typedef void (*onLocalDescriptorRead)(const Application *application, const char *address,
+typedef char *(*onLocalDescriptorRead)(const Application *application, const char *address,
                                           const char *service_uuid, const char *char_uuid, const char *desc_uuid);
 
 // This callback is called just before the descriptor's value is set.

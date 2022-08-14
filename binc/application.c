@@ -808,20 +808,27 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
 
         log_debug(TAG, "read descriptor <%s> by ", localDescriptor->uuid, options->device);
 
+        char *result = NULL;
         if (application->on_desc_read != NULL) {
-            application->on_desc_read(localDescriptor->application, options->device, localDescriptor->service_uuid,
+            result = application->on_desc_read(localDescriptor->application, options->device, localDescriptor->service_uuid,
                                       localDescriptor->char_uuid, localDescriptor->uuid);
         }
         read_options_free(options);
 
+        if (result) {
+            g_dbus_method_invocation_return_dbus_error(invocation, result, "read descriptor error");
+            log_debug(TAG, "read descriptor error");
+            return;
+        }
+
         if (localDescriptor->value != NULL) {
-            GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+            GVariant *resultVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
                                                          localDescriptor->value->data,
                                                          localDescriptor->value->len,
                                                          sizeof(guint8));
-            g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
+            g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&resultVariant, 1));
         } else {
-            g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
+            g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value for descriptor");
         }
     } else if (g_str_equal(method, DESCRIPTOR_METHOD_WRITE_VALUE)) {
         g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
@@ -991,21 +998,29 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
 
     if (g_str_equal(method, CHARACTERISTIC_METHOD_READ_VALUE)) {
         log_debug(TAG, "read <%s>", characteristic->uuid);
-
         ReadOptions *options = parse_read_options(params);
+
+        // Allow application to accept/reject the characteristic value before setting it
+        char *result = NULL;
         if (application->on_char_read != NULL) {
-            application->on_char_read(characteristic->application, options->device, characteristic->service_uuid,
+            result = application->on_char_read(characteristic->application, options->device, characteristic->service_uuid,
                                       characteristic->uuid);
         }
         read_options_free(options);
 
+        if (result) {
+            g_dbus_method_invocation_return_dbus_error(invocation, result, "read characteristic error");
+            log_debug(TAG, "read characteristic error '%s'", result);
+            return;
+        }
+
         // TODO deal with the offset & mtu parameter
         if (characteristic->value != NULL) {
-            GVariant *result = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+            GVariant *resultVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
                                                          characteristic->value->data,
                                                          characteristic->value->len,
                                                          sizeof(guint8));
-            g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&result, 1));
+            g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&resultVariant, 1));
         } else {
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
         }
