@@ -35,7 +35,7 @@ struct binc_service {
 Service* binc_service_create(Device *device, const char* path, const char* uuid) {
     g_assert(device != NULL);
     g_assert(path != NULL);
-    g_assert(uuid != NULL);
+    g_assert(is_valid_uuid(uuid));
 
     Service *service = g_new0(Service, 1);
     service->device = device;
@@ -50,12 +50,14 @@ void binc_service_free(Service *service) {
 
     g_free((char*) service->path);
     service->path = NULL;
+
     g_free((char*) service->uuid);
     service->uuid = NULL;
-    service->device = NULL;
+
     g_list_free(service->characteristics);
     service->characteristics = NULL;
 
+    service->device = NULL;
     g_free(service);
 }
 
