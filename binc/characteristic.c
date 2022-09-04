@@ -63,6 +63,10 @@ struct binc_characteristic {
 };
 
 Characteristic *binc_characteristic_create(Device *device, const char *path) {
+    g_assert(device != NULL);
+    g_assert(path != NULL);
+    g_assert(strlen(path) > 0);
+
     Characteristic *characteristic = g_new0(Characteristic, 1);
     characteristic->device = device;
     characteristic->connection = binc_device_get_dbus_connection(device);
@@ -98,6 +102,9 @@ void binc_characteristic_free(Characteristic *characteristic) {
     g_free((char *) characteristic->service_path);
     characteristic->service_path = NULL;
 
+    characteristic->device = NULL;
+    characteristic->connection = NULL;
+    characteristic->service = NULL;
     g_free(characteristic);
 }
 
