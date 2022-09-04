@@ -93,6 +93,58 @@ struct binc_adapter {
     Advertisement *advertisement; // Borrowed
 };
 
+static void remove_signal_subscribers(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->device_prop_changed);
+    adapter->device_prop_changed = 0;
+    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->adapter_prop_changed);
+    adapter->device_prop_changed = 0;
+    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_added);
+    adapter->iface_added = 0;
+    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_removed);
+    adapter->iface_removed = 0;
+}
+
+static void free_discovery_filter(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    for (guint i = 0; i < adapter->discovery_filter.services->len; i++) {
+        char *uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
+        g_free(uuid_filter);
+    }
+    g_ptr_array_free(adapter->discovery_filter.services, TRUE);
+    adapter->discovery_filter.services = NULL;
+
+    g_free((char *) adapter->discovery_filter.pattern);
+    adapter->discovery_filter.pattern = NULL;
+}
+
+void binc_adapter_free(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    remove_signal_subscribers(adapter);
+
+    if (adapter->discovery_filter.services != NULL) {
+        free_discovery_filter(adapter);
+        adapter->discovery_filter.services = NULL;
+    }
+
+    if (adapter->devices_cache != NULL) {
+        g_hash_table_destroy(adapter->devices_cache);
+        adapter->devices_cache = NULL;
+    }
+
+    g_free((char *) adapter->path);
+    adapter->path = NULL;
+
+    g_free((char *) adapter->address);
+    adapter->address = NULL;
+
+    adapter->connection = NULL;
+    g_free(adapter);
+}
+
 static void binc_internal_adapter_call_method_cb(__attribute__((unused)) GObject *source_object,
                                                  GAsyncResult *res,
                                                  gpointer user_data) {
@@ -466,6 +518,7 @@ const char *binc_adapter_get_address(const Adapter *adapter) {
 static Adapter *binc_adapter_create(GDBusConnection *connection, const char *path) {
     g_assert(connection != NULL);
     g_assert(path != NULL);
+    g_assert(strlen(path) > 0);
 
     Adapter *adapter = g_new0(Adapter, 1);
     adapter->connection = connection;
@@ -477,58 +530,10 @@ static Adapter *binc_adapter_create(GDBusConnection *connection, const char *pat
     return adapter;
 }
 
-static void remove_signal_subscribers(Adapter *adapter) {
-    g_assert(adapter != NULL);
-
-    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->device_prop_changed);
-    adapter->device_prop_changed = 0;
-    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->adapter_prop_changed);
-    adapter->device_prop_changed = 0;
-    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_added);
-    adapter->iface_added = 0;
-    g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_removed);
-    adapter->iface_removed = 0;
-}
-
-static void free_discovery_filter(Adapter *adapter) {
-    g_assert(adapter != NULL);
-
-    for (guint i = 0; i < adapter->discovery_filter.services->len; i++) {
-        char *uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
-        g_free(uuid_filter);
-    }
-    g_ptr_array_free(adapter->discovery_filter.services, TRUE);
-    adapter->discovery_filter.services = NULL;
-
-    g_free((char *) adapter->discovery_filter.pattern);
-    adapter->discovery_filter.pattern = NULL;
-}
-
-void binc_adapter_free(Adapter *adapter) {
-    g_assert(adapter != NULL);
-
-    remove_signal_subscribers(adapter);
-
-    if (adapter->discovery_filter.services != NULL) {
-        free_discovery_filter(adapter);
-        adapter->discovery_filter.services = NULL;
-    }
-
-    if (adapter->devices_cache != NULL) {
-        g_hash_table_destroy(adapter->devices_cache);
-        adapter->devices_cache = NULL;
-    }
-
-    g_free((char *) adapter->path);
-    adapter->path = NULL;
-    g_free((char *) adapter->address);
-    adapter->address = NULL;
-    g_free(adapter);
-}
-
 static Adapter *binc_internal_get_adapter_by_path(GPtrArray *adapters, const char *path) {
     g_assert(adapters != NULL);
     g_assert(path != NULL);
+    g_assert(strlen(path) > 0);
 
     for (guint i = 0; i < adapters->len; i++) {
         Adapter *adapter = g_ptr_array_index(adapters, i);

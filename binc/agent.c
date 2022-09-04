@@ -41,6 +41,22 @@ struct binc_agent {
     AgentRequestPasskeyCallback request_passkey_callback;
 };
 
+void binc_agent_free(Agent *agent) {
+    g_assert (agent != NULL);
+    gboolean result = g_dbus_connection_unregister_object(agent->connection, agent->registration_id);
+    if (!result) {
+        log_debug(TAG, "could not unregister agent");
+    }
+
+    g_free((char *) agent->path);
+    agent->path = NULL;
+
+    agent->connection = NULL;
+    agent->adapter = NULL;
+
+    g_free(agent);
+}
+
 static void bluez_agent_method_call(GDBusConnection *conn,
                                     const gchar *sender,
                                     const gchar *path,
@@ -256,17 +272,6 @@ int binc_agentmanager_register_agent(Agent *agent) {
         log_debug(TAG, "failed to register agent as default agent");
     }
     return result;
-}
-
-void binc_agent_free(Agent *agent) {
-    g_assert (agent != NULL);
-    gboolean result = g_dbus_connection_unregister_object(agent->connection, agent->registration_id);
-    if (!result) {
-        log_debug(TAG, "could not unregister agent");
-    }
-
-    g_free((char *) agent->path);
-    g_free(agent);
 }
 
 Agent *binc_agent_create(Adapter *adapter, const char *path, IoCapability io_capability) {

@@ -187,6 +187,7 @@ void binc_advertisement_free(Advertisement *advertisement) {
         g_hash_table_destroy(advertisement->service_data);
         advertisement->service_data = NULL;
     }
+
     g_free(advertisement);
 }
 

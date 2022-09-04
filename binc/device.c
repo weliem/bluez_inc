@@ -192,6 +192,8 @@ void binc_device_free(Device *device) {
         device->services_list = NULL;
     }
 
+    device->connection = NULL;
+    device->adapter = NULL;
     g_free(device);
 }
 

@@ -174,30 +174,20 @@ static void binc_local_desc_free(LocalDescriptor *localDescriptor) {
         localDescriptor->value = NULL;
     }
 
-    if (localDescriptor->path != NULL) {
-        g_free(localDescriptor->path);
-        localDescriptor->path = NULL;
-    }
+    g_free(localDescriptor->path);
+    localDescriptor->path = NULL;
 
-    if (localDescriptor->char_path != NULL) {
-        g_free(localDescriptor->char_path);
-        localDescriptor->char_path = NULL;
-    }
+    g_free(localDescriptor->char_path);
+    localDescriptor->char_path = NULL;
 
-    if (localDescriptor->uuid != NULL) {
-        g_free(localDescriptor->uuid);
-        localDescriptor->uuid = NULL;
-    }
+    g_free(localDescriptor->uuid);
+    localDescriptor->uuid = NULL;
 
-    if (localDescriptor->char_uuid != NULL) {
-        g_free(localDescriptor->char_uuid);
-        localDescriptor->char_uuid = NULL;
-    }
+    g_free(localDescriptor->char_uuid);
+    localDescriptor->char_uuid = NULL;
 
-    if (localDescriptor->service_uuid != NULL) {
-        g_free(localDescriptor->service_uuid);
-        localDescriptor->service_uuid = NULL;
-    }
+    g_free(localDescriptor->service_uuid);
+    localDescriptor->service_uuid = NULL;
 
     if (localDescriptor->flags != NULL) {
         g_list_free_full(localDescriptor->flags, g_free);
@@ -231,25 +221,17 @@ static void binc_local_char_free(LocalCharacteristic *localCharacteristic) {
         localCharacteristic->value = NULL;
     }
 
-    if (localCharacteristic->path != NULL) {
-        g_free(localCharacteristic->path);
-        localCharacteristic->path = NULL;
-    }
+    g_free(localCharacteristic->path);
+    localCharacteristic->path = NULL;
 
-    if (localCharacteristic->uuid != NULL) {
-        g_free(localCharacteristic->uuid);
-        localCharacteristic->uuid = NULL;
-    }
+    g_free(localCharacteristic->uuid);
+    localCharacteristic->uuid = NULL;
 
-    if (localCharacteristic->service_uuid != NULL) {
-        g_free(localCharacteristic->service_uuid);
-        localCharacteristic->service_uuid = NULL;
-    }
+    g_free(localCharacteristic->service_uuid);
+    localCharacteristic->service_uuid = NULL;
 
-    if (localCharacteristic->service_path != NULL) {
-        g_free(localCharacteristic->service_path);
-        localCharacteristic->service_path = NULL;
-    }
+    g_free(localCharacteristic->service_path);
+    localCharacteristic->service_path = NULL;
 
     if (localCharacteristic->flags != NULL) {
         g_list_free_full(localCharacteristic->flags, g_free);
@@ -278,15 +260,11 @@ void binc_local_service_free(LocalService *localService) {
         localService->registration_id = 0;
     }
 
-    if (localService->path != NULL) {
-        g_free(localService->path);
-        localService->path = NULL;
-    }
+    g_free(localService->path);
+    localService->path = NULL;
 
-    if (localService->uuid != NULL) {
-        g_free(localService->uuid);
-        localService->uuid = NULL;
-    }
+    g_free(localService->uuid);
+    localService->uuid = NULL;
 
     g_free(localService);
 }
@@ -810,8 +788,9 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
 
         char *result = NULL;
         if (application->on_desc_read != NULL) {
-            result = application->on_desc_read(localDescriptor->application, options->device, localDescriptor->service_uuid,
-                                      localDescriptor->char_uuid, localDescriptor->uuid);
+            result = application->on_desc_read(localDescriptor->application, options->device,
+                                               localDescriptor->service_uuid,
+                                               localDescriptor->char_uuid, localDescriptor->uuid);
         }
         read_options_free(options);
 
@@ -823,9 +802,9 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
 
         if (localDescriptor->value != NULL) {
             GVariant *resultVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
-                                                         localDescriptor->value->data,
-                                                         localDescriptor->value->len,
-                                                         sizeof(guint8));
+                                                                localDescriptor->value->data,
+                                                                localDescriptor->value->len,
+                                                                sizeof(guint8));
             g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&resultVariant, 1));
         } else {
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value for descriptor");
@@ -1003,8 +982,9 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         // Allow application to accept/reject the characteristic value before setting it
         char *result = NULL;
         if (application->on_char_read != NULL) {
-            result = application->on_char_read(characteristic->application, options->device, characteristic->service_uuid,
-                                      characteristic->uuid);
+            result = application->on_char_read(characteristic->application, options->device,
+                                               characteristic->service_uuid,
+                                               characteristic->uuid);
         }
         read_options_free(options);
 
@@ -1017,9 +997,9 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         // TODO deal with the offset & mtu parameter
         if (characteristic->value != NULL) {
             GVariant *resultVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
-                                                         characteristic->value->data,
-                                                         characteristic->value->len,
-                                                         sizeof(guint8));
+                                                                characteristic->value->data,
+                                                                characteristic->value->len,
+                                                                sizeof(guint8));
             g_dbus_method_invocation_return_value(invocation, g_variant_new_tuple(&resultVariant, 1));
         } else {
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
