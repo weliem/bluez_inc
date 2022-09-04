@@ -53,6 +53,10 @@ struct binc_descriptor {
 };
 
 Descriptor *binc_descriptor_create(Device *device, const char *path) {
+    g_assert(device != NULL);
+    g_assert(path != NULL);
+    g_assert(strlen(path) > 0);
+
     Descriptor *descriptor = g_new0(Descriptor, 1);
     descriptor->device = device;
     descriptor->connection = binc_device_get_dbus_connection(device);
