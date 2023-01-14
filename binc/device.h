@@ -28,6 +28,10 @@
 #include "characteristic.h"
 #include "descriptor.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum ConnectionState {
     DISCONNECTED = 0, CONNECTED = 1, CONNECTING = 2, DISCONNECTING = 3
 } ConnectionState;
@@ -134,5 +138,9 @@ guint binc_device_get_mtu(const Device *device);
 gboolean binc_device_is_central(const Device *device);
 
 char *binc_device_to_string(const Device *device);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_DEVICE_H

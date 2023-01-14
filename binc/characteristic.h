@@ -28,6 +28,10 @@
 #include "service.h"
 #include "forward_decl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * GATT Characteristic Property bit field
  * Reference: Core SPEC 4.1 page 2183 (Table 3.5: Characteristic Properties
@@ -95,5 +99,9 @@ GList *binc_characteristic_get_descriptors(const Characteristic *characteristic)
  * @return string representation of characteristic, caller must free
  */
 char *binc_characteristic_to_string(const Characteristic *characteristic);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_CHARACTERISTIC_H

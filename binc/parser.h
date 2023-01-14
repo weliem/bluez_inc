@@ -27,6 +27,10 @@
 #include <glib.h>
 #include <endian.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct parser_instance Parser;
 
 /**
@@ -65,5 +69,9 @@ GByteArray* binc_get_date_time();
 GByteArray *binc_get_current_time();
 
 GString *parser_get_string(Parser *parser);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_PARSER_H

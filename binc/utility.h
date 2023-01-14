@@ -26,6 +26,10 @@
 
 #include <glib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 GString *g_byte_array_as_hex(const GByteArray *byteArray);
 
 GList *g_variant_string_array_to_list(GVariant *value);
@@ -43,5 +47,9 @@ char *path_to_address(const char *path);
 GByteArray *g_variant_get_byte_array(GVariant *variant);
 
 char* replace_char(char* str, char find, char replace);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_UTILITY_H

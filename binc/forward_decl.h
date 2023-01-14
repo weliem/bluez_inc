@@ -24,6 +24,10 @@
 #ifndef BINC_FORWARD_DECL_H
 #define BINC_FORWARD_DECL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct binc_adapter Adapter;
 typedef struct binc_device Device;
 typedef struct binc_service Service;
@@ -32,5 +36,9 @@ typedef struct binc_descriptor Descriptor;
 typedef struct binc_service_handler_manager ServiceHandlerManager;
 typedef struct binc_advertisement Advertisement;
 typedef struct binc_application Application;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_FORWARD_DECL_H

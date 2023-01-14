@@ -27,6 +27,10 @@
 #include <gio/gio.h>
 #include "forward_decl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum DiscoveryState {
     STOPPED = 0, STARTED = 1, STARTING = 2, STOPPING = 3
 } DiscoveryState;
@@ -99,5 +103,9 @@ void binc_adapter_register_application(Adapter *adapter, Application *applicatio
 void binc_adapter_unregister_application(Adapter *adapter, Application *application);
 
 void binc_adapter_set_remote_central_cb(Adapter *adapter, RemoteCentralConnectionStateCallback callback);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_ADAPTER_H

@@ -27,6 +27,10 @@
 #include <gio/gio.h>
 #include "adapter.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef gboolean (*AgentRequestAuthorizationCallback)(Device *device);
 
 typedef guint32 (*AgentRequestPasskeyCallback)(Device *device);
@@ -44,5 +48,9 @@ void binc_agent_set_request_authorization_cb(Agent *agent, AgentRequestAuthoriza
 void binc_agent_set_request_passkey_cb(Agent *agent, AgentRequestPasskeyCallback callback);
 
 void binc_agent_free(Agent *agent);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_AGENT_H
