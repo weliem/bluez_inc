@@ -26,6 +26,10 @@
 
 #include <glib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum LogLevel {
     LOG_DEBUG = 0, LOG_INFO = 1, LOG_WARN = 2, LOG_ERROR = 3
 } LogLevel;
@@ -42,5 +46,9 @@ void log_set_level(LogLevel level);
 void log_set_filename(const char* filename, long max_size, int max_files);
 
 void log_enabled(gboolean enabled);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_LOGGER_H

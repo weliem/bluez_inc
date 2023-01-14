@@ -26,6 +26,10 @@
 
 #include "characteristic.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 Characteristic *binc_characteristic_create(Device *device, const char *path);
 
 void binc_characteristic_free(Characteristic *characteristic);
@@ -54,5 +58,9 @@ void binc_characteristic_set_notifying(Characteristic *characteristic, gboolean 
 const char *binc_characteristic_get_service_path(const Characteristic *characteristic);
 
 void binc_characteristic_add_descriptor(Characteristic *characteristic, Descriptor *descriptor);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_CHARACTERISTIC_INTERNAL_H

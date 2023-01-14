@@ -27,6 +27,10 @@
 #include <gio/gio.h>
 #include "forward_decl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void (*OnDescReadCallback)(Descriptor *descriptor, const GByteArray *byteArray, const GError *error);
 
 typedef void (*OnDescWriteCallback)(Descriptor *descriptor, const GByteArray *byteArray, const GError *error);
@@ -42,5 +46,9 @@ const char *binc_descriptor_to_string(const Descriptor *descriptor);
 Characteristic *binc_descriptor_get_char(const Descriptor *descriptor);
 
 Device *binc_descriptor_get_device(const Descriptor *descriptor);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_DESCRIPTOR_H

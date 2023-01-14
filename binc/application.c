@@ -786,7 +786,7 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
 
         log_debug(TAG, "read descriptor <%s> by ", localDescriptor->uuid, options->device);
 
-        char *result = NULL;
+        const char *result = NULL;
         if (application->on_desc_read != NULL) {
             result = application->on_desc_read(localDescriptor->application, options->device,
                                                localDescriptor->service_uuid,
@@ -825,7 +825,7 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
         g_variant_unref(valueVariant);
 
         // Allow application to accept/reject the characteristic value before setting it
-        char *result = NULL;
+        const char *result = NULL;
         if (application->on_desc_write != NULL) {
             result = application->on_desc_write(localDescriptor->application,
                                                 options->device,
@@ -980,7 +980,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         ReadOptions *options = parse_read_options(params);
 
         // Allow application to accept/reject the characteristic value before setting it
-        char *result = NULL;
+        const char *result = NULL;
         if (application->on_char_read != NULL) {
             result = application->on_char_read(characteristic->application, options->device,
                                                characteristic->service_uuid,
@@ -1020,7 +1020,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         g_variant_unref(valueVariant);
 
         // Allow application to accept/reject the characteristic value before setting it
-        char *result = NULL;
+        const char *result = NULL;
         if (application->on_char_write != NULL) {
             result = application->on_char_write(characteristic->application, options->device,
                                                 characteristic->service_uuid,

@@ -27,6 +27,10 @@
 #include <gio/gio.h>
 #include "forward_decl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 Advertisement *binc_advertisement_create();
 
 void binc_advertisement_free(Advertisement *advertisement);
@@ -44,5 +48,9 @@ const char *binc_advertisement_get_path(const Advertisement *advertisement);
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter);
 
 void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_ADVERTISEMENT_H

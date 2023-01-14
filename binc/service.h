@@ -27,6 +27,9 @@
 #include <gio/gio.h>
 #include "forward_decl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 const char *binc_service_get_uuid(const Service *service);
 
@@ -35,5 +38,9 @@ Device *binc_service_get_device(const Service *service);
 GList *binc_service_get_characteristics(const Service *service);
 
 Characteristic *binc_service_get_characteristic(const Service *service, const char *char_uuid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_SERVICE_H

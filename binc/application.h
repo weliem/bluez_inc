@@ -27,6 +27,10 @@
 #include <gio/gio.h>
 #include "forward_decl.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Errors
 #define BLUEZ_ERROR_REJECTED "org.bluez.Error.Rejected"
 #define BLUEZ_ERROR_FAILED "org.bluez.Error.Failed"
@@ -39,12 +43,12 @@
 // This callback is called just before the characteristic's value is returned.
 // Use it to update the characteristic before it is read
 // For accepting the read, return NULL, otherwise return an error (BLUEZ_ERROR_*)
-typedef char *(*onLocalCharacteristicRead)(const Application *application, const char *address,
+typedef const char *(*onLocalCharacteristicRead)(const Application *application, const char *address,
                                           const char *service_uuid, const char *char_uuid);
 
 // This callback is called just before the characteristic's value is set.
 // Use it to accept (return NULL), or reject (return BLUEZ_ERROR_*) the byte array
-typedef char *(*onLocalCharacteristicWrite)(const Application *application, const char *address,
+typedef const char *(*onLocalCharacteristicWrite)(const Application *application, const char *address,
                                             const char *service_uuid, const char *char_uuid, GByteArray *byteArray);
 
 // This callback is called after a characteristic's value is set, e.g. because of a 'write' or 'notify'
@@ -62,12 +66,12 @@ typedef void (*onLocalCharacteristicStopNotify)(const Application *application, 
 
 // This callback is called just before the descriptor's value is returned.
 // Use it to update the descriptor before it is read
-typedef char *(*onLocalDescriptorRead)(const Application *application, const char *address,
+typedef const char *(*onLocalDescriptorRead)(const Application *application, const char *address,
                                           const char *service_uuid, const char *char_uuid, const char *desc_uuid);
 
 // This callback is called just before the descriptor's value is set.
 // Use it to accept (return NULL), or reject (return BLUEZ_ERROR_*) the byte array
-typedef char *(*onLocalDescriptorWrite)(const Application *application, const char *address,
+typedef const char *(*onLocalDescriptorWrite)(const Application *application, const char *address,
                                             const char *service_uuid, const char *char_uuid,
                                             const char *desc_uuid, const GByteArray *byteArray);
 
@@ -112,5 +116,9 @@ int binc_application_notify(const Application *application, const char *service_
 
 gboolean binc_application_char_is_notifying(const Application *application, const char *service_uuid,
                                             const char *char_uuid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //BINC_APPLICATION_H
