@@ -58,7 +58,7 @@ void on_central_state_changed(Adapter *adapter, Device *device) {
     }
 }
 
-char *on_local_char_read(const Application *application, const char *address, const char *service_uuid,
+const char *on_local_char_read(const Application *application, const char *address, const char *service_uuid,
                         const char *char_uuid) {
     if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
         const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
@@ -70,7 +70,7 @@ char *on_local_char_read(const Application *application, const char *address, co
     return BLUEZ_ERROR_REJECTED;
 }
 
-char *on_local_char_write(const Application *application, const char *address, const char *service_uuid,
+const char *on_local_char_write(const Application *application, const char *address, const char *service_uuid,
                           const char *char_uuid, GByteArray *byteArray) {
     return NULL;
 }
