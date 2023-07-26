@@ -72,6 +72,10 @@ void binc_adapter_power_on(Adapter *adapter);
 
 void binc_adapter_power_off(Adapter *adapter);
 
+void binc_adapter_discoverable_on(Adapter *adapter);
+
+void binc_adapter_discoverable_off(Adapter *adapter);
+
 const char *binc_adapter_get_path(const Adapter *adapter);
 
 const char *binc_adapter_get_name(const Adapter *adapter);
