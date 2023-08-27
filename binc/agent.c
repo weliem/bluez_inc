@@ -230,13 +230,14 @@ static int binc_agentmanager_call_method(GDBusConnection *connection, const gcha
                                          -1,
                                          NULL,
                                          &error);
+    g_variant_unref(result);
 
     if (error != NULL) {
         log_error(TAG, "AgentManager call failed '%s': %s\n", method, error->message);
+        g_clear_error(&error);
         return 1;
     }
 
-    g_variant_unref(result);
     return 0;
 }
 
