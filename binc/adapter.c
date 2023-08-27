@@ -551,6 +551,7 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
     GPtrArray *binc_adapters = g_ptr_array_new();
     log_debug(TAG, "finding adapters");
 
+    GError *error = NULL;
     GVariant *result = g_dbus_connection_call_sync(dbusConnection,
                                                    BLUEZ_DBUS,
                                                    "/",
@@ -561,7 +562,7 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
                                                    G_DBUS_CALL_FLAGS_NONE,
                                                    -1,
                                                    NULL,
-                                                   NULL);
+                                                   &error);
 
     if (result) {
         GVariantIter *iter;
@@ -611,12 +612,16 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
                 }
             }
         }
+
         if (iter != NULL) {
             g_variant_iter_free(iter);
         }
         g_variant_unref(result);
-    } else {
-        log_error(TAG, "Unable to get result for GetManagedObjects");
+    }
+
+    if (error != NULL) {
+        log_error(TAG, "Error GetManagedObjects: %s", error->message);
+        g_clear_error(&error);
     }
 
     log_debug(TAG, "found %d adapter%s", binc_adapters->len, binc_adapters->len > 1 ? "s" : "");
