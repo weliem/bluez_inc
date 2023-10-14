@@ -85,7 +85,7 @@ const char *binc_application_get_path(const Application *application);
 int binc_application_add_service(Application *application, const char *service_uuid);
 
 int binc_application_add_characteristic(Application *application, const char *service_uuid,
-                                        const char *char_uuid, guint8 permissions);
+                                        const char *char_uuid, guint permissions);
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
                                     const char *char_uuid, const char *desc_uuid, guint8 permissions);

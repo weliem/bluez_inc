@@ -161,7 +161,7 @@ int main(void) {
                 app,
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
-                GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
+                GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_ENCRYPT_INDICATE);
         binc_application_add_descriptor(
                 app,
                 HTS_SERVICE_UUID,

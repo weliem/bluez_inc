@@ -533,6 +533,14 @@ static guint binc_characteristic_flags_to_int(GList *flags) {
                 result += GATT_CHR_PROP_INDICATE;
             } else if (g_str_equal(property, "authenticated-signed-writes")) {
                 result += GATT_CHR_PROP_AUTH;
+            } else if (g_str_equal(property, "encrypt-read")) {
+                result += GATT_CHR_PROP_ENCRYPT_READ;
+            } else if (g_str_equal(property, "encrypt-write")) {
+                result += GATT_CHR_PROP_ENCRYPT_WRITE;
+            } else if (g_str_equal(property, "encrypt-notify")) {
+                result += GATT_CHR_PROP_ENCRYPT_NOTIFY;
+            } else if (g_str_equal(property, "encrypt-indicate")) {
+                result += GATT_CHR_PROP_ENCRYPT_INDICATE;
             }
         }
     }

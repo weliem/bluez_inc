@@ -688,6 +688,18 @@ static GList *permissions2Flags(const guint8 permissions) {
     if (permissions & GATT_CHR_PROP_INDICATE) {
         list = g_list_append(list, g_strdup("indicate"));
     }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_READ) {
+        list = g_list_append(list, g_strdup("encrypt-read"));
+    }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_WRITE) {
+        list = g_list_append(list, g_strdup("encrypt-write"));
+    }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_NOTIFY) {
+        list = g_list_append(list, g_strdup("encrypt-notify"));
+    }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_INDICATE) {
+        list = g_list_append(list, g_strdup("encrypt-indicate"));
+    }
     return list;
 }
 
@@ -1101,7 +1113,7 @@ static const GDBusInterfaceVTable characteristic_table = {
 };
 
 int binc_application_add_characteristic(Application *application, const char *service_uuid,
-                                        const char *char_uuid, guint8 permissions) {
+                                        const char *char_uuid, guint permissions) {
 
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);

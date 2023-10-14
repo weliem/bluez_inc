@@ -48,6 +48,11 @@ extern "C" {
 #define GATT_CHR_PROP_INDICATE                0x20
 #define GATT_CHR_PROP_AUTH                    0x40
 #define GATT_CHR_PROP_EXT_PROP                0x80
+#define GATT_CHR_PROP_ENCRYPT_READ            0x0100
+#define GATT_CHR_PROP_ENCRYPT_WRITE           0x0200
+#define GATT_CHR_PROP_ENCRYPT_NOTIFY          0x0400
+#define GATT_CHR_PROP_ENCRYPT_INDICATE        0x0800
+
 
 
 typedef enum WriteType {
