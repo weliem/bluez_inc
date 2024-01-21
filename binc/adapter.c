@@ -441,6 +441,10 @@ static void binc_internal_device_changed(__attribute__((unused)) GDBusConnection
             deliver_discovery_result(adapter, device);
         }
 
+        if (binc_device_get_bonding_state(device) ==  BONDED && binc_device_get_rssi(device) == -255) {
+            binc_device_set_is_central(device, TRUE);
+        }
+
         if (binc_device_is_central(device)) {
             ConnectionState newState = binc_device_get_connection_state(device);
             if (oldState != newState) {
