@@ -135,7 +135,7 @@ typedef struct local_characteristic {
     char *path;
     guint registration_id;
     GByteArray *value;
-    guint8 permissions;
+    guint permissions;
     GList *flags;
     gboolean notifying;
     GHashTable *descriptors;
@@ -150,7 +150,7 @@ typedef struct local_descriptor {
     char *service_uuid;
     guint registration_id;
     GByteArray *value;
-    guint8 permissions;
+    guint permissions;
     GList *flags;
     Application *application;
 } LocalDescriptor;
@@ -670,7 +670,7 @@ static LocalService *binc_application_get_service(const Application *application
     return g_hash_table_lookup(application->services, service_uuid);
 }
 
-static GList *permissions2Flags(const guint8 permissions) {
+static GList *permissions2Flags(const guint permissions) {
     GList *list = NULL;
 
     if (permissions & GATT_CHR_PROP_READ) {
@@ -865,7 +865,7 @@ static const GDBusInterfaceVTable descriptor_table = {
 };
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
-                                    const char *char_uuid, const char *desc_uuid, guint8 permissions) {
+                                    const char *char_uuid, const char *desc_uuid, guint permissions) {
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
 
