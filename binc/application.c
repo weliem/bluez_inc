@@ -135,7 +135,7 @@ typedef struct local_characteristic {
     char *path;
     guint registration_id;
     GByteArray *value;
-    guint8 permissions;
+    guint permissions;
     GList *flags;
     gboolean notifying;
     GHashTable *descriptors;
@@ -150,7 +150,7 @@ typedef struct local_descriptor {
     char *service_uuid;
     guint registration_id;
     GByteArray *value;
-    guint8 permissions;
+    guint permissions;
     GList *flags;
     Application *application;
 } LocalDescriptor;
