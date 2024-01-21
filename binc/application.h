@@ -88,7 +88,7 @@ int binc_application_add_characteristic(Application *application, const char *se
                                         const char *char_uuid, guint permissions);
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
-                                    const char *char_uuid, const char *desc_uuid, guint8 permissions);
+                                    const char *char_uuid, const char *desc_uuid, guint permissions);
 
 void binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback);
 

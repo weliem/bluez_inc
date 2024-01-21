@@ -670,7 +670,7 @@ static LocalService *binc_application_get_service(const Application *application
     return g_hash_table_lookup(application->services, service_uuid);
 }
 
-static GList *permissions2Flags(const guint8 permissions) {
+static GList *permissions2Flags(const guint permissions) {
     GList *list = NULL;
 
     if (permissions & GATT_CHR_PROP_READ) {
@@ -700,6 +700,31 @@ static GList *permissions2Flags(const guint8 permissions) {
     if (permissions & GATT_CHR_PROP_ENCRYPT_INDICATE) {
         list = g_list_append(list, g_strdup("encrypt-indicate"));
     }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_AUTH_READ) {
+        list = g_list_append(list, g_strdup("encrypt-authenticated-read"));
+    }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_AUTH_WRITE) {
+        list = g_list_append(list, g_strdup("encrypt-authenticated-write"));
+    }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_AUTH_NOTIFY) {
+        list = g_list_append(list, g_strdup("encrypt-authenticated-notify"));
+    }
+    if (permissions & GATT_CHR_PROP_ENCRYPT_AUTH_INDICATE) {
+        list = g_list_append(list, g_strdup("encrypt-authenticated-indicate"));
+    }
+    if (permissions & GATT_CHR_PROP_SECURE_READ) {
+        list = g_list_append(list, g_strdup("secure-read"));
+    }
+    if (permissions & GATT_CHR_PROP_SECURE_WRITE) {
+        list = g_list_append(list, g_strdup("secure-write"));
+    }
+    if (permissions & GATT_CHR_PROP_SECURE_NOTIFY) {
+        list = g_list_append(list, g_strdup("secure-notify"));
+    }
+    if (permissions & GATT_CHR_PROP_SECURE_INDICATE) {
+        list = g_list_append(list, g_strdup("secure-indicate"));
+    }
+
     return list;
 }
 
@@ -865,7 +890,7 @@ static const GDBusInterfaceVTable descriptor_table = {
 };
 
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
-                                    const char *char_uuid, const char *desc_uuid, guint8 permissions) {
+                                    const char *char_uuid, const char *desc_uuid, guint permissions) {
     g_return_val_if_fail (application != NULL, EINVAL);
     g_return_val_if_fail (is_valid_uuid(service_uuid), EINVAL);
 
