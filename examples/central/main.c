@@ -233,7 +233,7 @@ int main(void) {
         // Set discovery callbacks and start discovery
         binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
         binc_adapter_set_discovery_state_cb(default_adapter, &on_discovery_state_changed);
-        binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids, "TAIDOC");
+        binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids, NULL);
         g_ptr_array_free(service_uuids, TRUE);
         binc_adapter_start_discovery(default_adapter);
     } else {
