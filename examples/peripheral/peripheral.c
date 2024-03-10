@@ -49,6 +49,10 @@ void on_powered_state_changed(Adapter *adapter, gboolean state) {
 }
 
 void on_central_state_changed(Adapter *adapter, Device *device) {
+    char *deviceToString = binc_device_to_string(device);
+    log_debug(TAG, deviceToString);
+    g_free(deviceToString);
+
     log_debug(TAG, "remote central %s is %s", binc_device_get_address(device), binc_device_get_connection_state_name(device));
     ConnectionState state = binc_device_get_connection_state(device);
     if (state == CONNECTED) {
