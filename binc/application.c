@@ -26,6 +26,7 @@
 #include "logger.h"
 #include "characteristic.h"
 #include "utility.h"
+#include <errno.h>
 
 #define GATT_SERV_INTERFACE "org.bluez.GattService1"
 #define GATT_CHAR_INTERFACE "org.bluez.GattCharacteristic1"

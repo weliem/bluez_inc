@@ -26,6 +26,7 @@
 #include "device.h"
 #include "device_internal.h"
 #include "logger.h"
+#include <errno.h>
 #include <glib.h>
 #include <stdio.h>
 
