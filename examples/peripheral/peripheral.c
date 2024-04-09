@@ -55,9 +55,9 @@ void on_central_state_changed(Adapter *adapter, Device *device) {
 
     log_debug(TAG, "remote central %s is %s", binc_device_get_address(device), binc_device_get_connection_state_name(device));
     ConnectionState state = binc_device_get_connection_state(device);
-    if (state == CONNECTED) {
+    if (state == BINC_CONNECTED) {
         binc_adapter_stop_advertising(adapter, advertisement);
-    } else if (state == DISCONNECTED){
+    } else if (state == BINC_DISCONNECTED){
         binc_adapter_start_advertising(adapter, advertisement);
     }
 }
