@@ -113,7 +113,7 @@ Device *binc_device_create(const char *path, Adapter *adapter) {
     device->path = g_strdup(path);
     device->adapter = adapter;
     device->connection = binc_adapter_get_dbus_connection(adapter);
-    device->bondingState = BOND_NONE;
+    device->bondingState = BINC_BOND_NONE;
     device->connection_state = BINC_DISCONNECTED;
     device->rssi = -255;
     device->txpower = -255;
@@ -581,7 +581,7 @@ static void binc_device_changed(__attribute__((unused)) GDBusConnection *conn,
         } else if (g_str_equal(property_name, DEVICE_PROPERTY_SERVICES_RESOLVED)) {
             device->services_resolved = g_variant_get_boolean(property_value);
             log_debug(TAG, "ServicesResolved %s", device->services_resolved ? "true" : "false");
-            if (device->services_resolved == TRUE && device->bondingState != BONDING) {
+            if (device->services_resolved == TRUE && device->bondingState != BINC_BONDING) {
                 binc_collect_gatt_tree(device);
             }
 
@@ -591,7 +591,7 @@ static void binc_device_changed(__attribute__((unused)) GDBusConnection *conn,
         } else if (g_str_equal(property_name, DEVICE_PROPERTY_PAIRED)) {
             device->paired = g_variant_get_boolean(property_value);
             log_debug(TAG, "Paired %s", device->paired ? "true" : "false");
-            binc_device_set_bonding_state(device, device->paired ? BONDED : BOND_NONE);
+            binc_device_set_bonding_state(device, device->paired ? BINC_BONDED : BINC_BOND_NONE);
 
             // If gatt-tree has not been built yet, start building it
             if (device->services == NULL && device->services_resolved && !device->service_discovery_started) {
@@ -654,7 +654,7 @@ void binc_device_connect(Device *device) {
     if (device->connection_state != BINC_DISCONNECTED) return;
 
     log_debug(TAG, "Connecting to '%s' (%s) (%s)", device->name, device->address,
-              device->paired ? "BONDED" : "BOND_NONE");
+              device->paired ? "BINC_BONDED" : "BINC_BOND_NONE");
 
     binc_device_internal_set_conn_state(device, BINC_CONNECTING, NULL);
     subscribe_prop_changed(device);
@@ -1017,7 +1017,7 @@ gboolean binc_device_get_paired(const Device *device) {
 void binc_device_set_paired(Device *device, gboolean paired) {
     g_assert(device != NULL);
     device->paired = paired;
-    binc_device_set_bonding_state(device, paired ? BONDED : BOND_NONE);
+    binc_device_set_bonding_state(device, paired ? BINC_BONDED : BINC_BOND_NONE);
 }
 
 short binc_device_get_rssi(const Device *device) {
