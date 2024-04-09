@@ -88,6 +88,7 @@ struct binc_adapter {
     AdapterDiscoveryStateChangeCallback discoveryStateCallback;
     AdapterPoweredStateChangeCallback poweredStateCallback;
     RemoteCentralConnectionStateCallback centralStateCallback;
+    void *user_data; // Borrowed
     GHashTable *devices_cache; // Owned
 
     Advertisement *advertisement; // Borrowed
@@ -530,6 +531,7 @@ static Adapter *binc_adapter_create(GDBusConnection *connection, const char *pat
     adapter->discovery_filter.rssi = -255;
     adapter->devices_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                    g_free, (GDestroyNotify) binc_device_free);
+    adapter->user_data = NULL;
     setup_signal_subscribers(adapter);
     return adapter;
 }
@@ -1122,4 +1124,14 @@ void binc_adapter_unregister_application(Adapter *adapter, Application *applicat
 void binc_adapter_set_remote_central_cb(Adapter *adapter, RemoteCentralConnectionStateCallback callback) {
     g_assert(adapter != NULL);
     adapter->centralStateCallback = callback;
+}
+
+void binc_adapter_set_user_data(Adapter *adapter, void *user_data) {
+    g_assert(adapter != NULL);
+    adapter->user_data = user_data;
+}
+
+void *binc_adapter_get_user_data(const Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->user_data;
 }

@@ -108,6 +108,10 @@ void binc_adapter_unregister_application(Adapter *adapter, Application *applicat
 
 void binc_adapter_set_remote_central_cb(Adapter *adapter, RemoteCentralConnectionStateCallback callback);
 
+void binc_adapter_set_user_data(Adapter *adapter, void *user_data);
+
+void *binc_adapter_get_user_data(const Adapter *adapter);
+
 #ifdef __cplusplus
 }
 #endif
