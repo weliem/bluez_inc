@@ -100,6 +100,7 @@ struct binc_device {
     OnNotifyingStateChangedCallback on_notify_state_callback;
     OnDescReadCallback on_read_desc_cb;
     OnDescWriteCallback on_write_desc_cb;
+    void  *user_data; // Borrowed
 };
 
 
@@ -117,6 +118,7 @@ Device *binc_device_create(const char *path, Adapter *adapter) {
     device->rssi = -255;
     device->txpower = -255;
     device->mtu = 23;
+    device->user_data = NULL;
     return device;
 }
 
@@ -1194,3 +1196,14 @@ void binc_internal_device_update_property(Device *device, const char *property_n
         g_variant_iter_free(iter);
     }
 }
+
+void binc_device_set_user_data(Device *device, void *user_data) {
+    g_assert(device != NULL);
+    device->user_data = user_data;
+}
+
+void *binc_device_get_user_data(const Device *device) {
+    g_assert(device != NULL);
+    return device->user_data;
+}
+
