@@ -100,7 +100,7 @@ struct binc_device {
     OnNotifyingStateChangedCallback on_notify_state_callback;
     OnDescReadCallback on_read_desc_cb;
     OnDescWriteCallback on_write_desc_cb;
-    void  *user_data; // Borrowed
+    void *user_data; // Borrowed
 };
 
 
