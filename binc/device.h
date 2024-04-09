@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 typedef enum ConnectionState {
-    DISCONNECTED = 0, CONNECTED = 1, CONNECTING = 2, DISCONNECTING = 3
+    BINC_DISCONNECTED = 0, BINC_CONNECTED = 1, BINC_CONNECTING = 2, BINC_DISCONNECTING = 3
 } ConnectionState;
 
 typedef enum BondingState {

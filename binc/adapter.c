@@ -261,7 +261,7 @@ static void deliver_discovery_result(Adapter *adapter, Device *device) {
     g_assert(adapter != NULL);
     g_assert(device != NULL);
 
-    if (binc_device_get_connection_state(device) == DISCONNECTED) {
+    if (binc_device_get_connection_state(device) == BINC_DISCONNECTED) {
         // Double check if the device matches the discovery filter
         if (!matches_discovery_filter(adapter, device)) return;
 
@@ -335,11 +335,11 @@ static void binc_internal_device_appeared(__attribute__((unused)) GDBusConnectio
                                 g_strdup(binc_device_get_path(device)),
                                 device);
 
-            if (adapter->discovery_state == BINC_DISCOVERY_STARTED && binc_device_get_connection_state(device) == DISCONNECTED) {
+            if (adapter->discovery_state == BINC_DISCOVERY_STARTED && binc_device_get_connection_state(device) == BINC_DISCONNECTED) {
                 deliver_discovery_result(adapter, device);
             }
 
-            if (binc_device_get_connection_state(device) == CONNECTED &&
+            if (binc_device_get_connection_state(device) == BINC_CONNECTED &&
                 binc_device_get_rssi(device) == -255 &&
                 binc_device_get_uuids(device) == NULL) {
                 binc_device_set_is_central(device, TRUE);
@@ -785,7 +785,7 @@ GList *binc_adapter_get_connected_devices(const Adapter *adapter) {
     GList *result = NULL;
     for (GList *iterator = all_devices; iterator; iterator = iterator->next) {
         Device *device = (Device *) iterator->data;
-        if (binc_device_get_connection_state(device) == CONNECTED) {
+        if (binc_device_get_connection_state(device) == BINC_CONNECTED) {
             result = g_list_append(result, device);
         }
     }
