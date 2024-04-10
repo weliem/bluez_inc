@@ -921,6 +921,20 @@ gboolean binc_device_start_notify(const Device *device, const char *service_uuid
     return FALSE;
 }
 
+gboolean binc_device_stop_notify(const Device *device, const char *service_uuid, const char *characteristic_uuid) {
+    g_assert(device != NULL);
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(is_valid_uuid(characteristic_uuid));
+
+    Characteristic *characteristic = binc_device_get_characteristic(device, service_uuid, characteristic_uuid);
+    if (characteristic != NULL && binc_characteristic_supports_notify(characteristic) && binc_characteristic_is_notifying(characteristic)) {
+        binc_characteristic_stop_notify(characteristic);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+
 void binc_device_set_read_desc_cb(Device *device, OnDescReadCallback callback) {
     g_assert(device != NULL);
     g_assert(callback != NULL);
