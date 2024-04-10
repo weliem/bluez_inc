@@ -33,11 +33,11 @@ extern "C" {
 #endif
 
 typedef enum ConnectionState {
-    DISCONNECTED = 0, CONNECTED = 1, CONNECTING = 2, DISCONNECTING = 3
+    BINC_DISCONNECTED = 0, BINC_CONNECTED = 1, BINC_CONNECTING = 2, BINC_DISCONNECTING = 3
 } ConnectionState;
 
 typedef enum BondingState {
-    BOND_NONE = 0, BONDING = 1, BONDED = 2
+    BINC_BOND_NONE = 0, BINC_BONDING = 1, BINC_BONDED = 2
 } BondingState;
 
 typedef void (*ConnectionStateChangedCallback)(Device *device, ConnectionState state, const GError *error);

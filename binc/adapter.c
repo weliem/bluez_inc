@@ -57,10 +57,10 @@ static const char *const SIGNAL_PROPERTIES_CHANGED = "PropertiesChanged";
 static const guint MAC_ADDRESS_LENGTH = 17;
 
 static const char *discovery_state_names[] = {
-        [STOPPED] = "stopped",
-        [STARTED] = "started",
-        [STARTING]  = "starting",
-        [STOPPING]  = "stopping"
+        [BINC_DISCOVERY_STOPPED] = "stopped",
+        [BINC_DISCOVERY_STARTED] = "started",
+        [BINC_DISCOVERY_STARTING]  = "starting",
+        [BINC_DISCOVERY_STOPPING]  = "stopping"
 };
 
 typedef struct binc_discovery_filter {
@@ -261,7 +261,7 @@ static void deliver_discovery_result(Adapter *adapter, Device *device) {
     g_assert(adapter != NULL);
     g_assert(device != NULL);
 
-    if (binc_device_get_connection_state(device) == DISCONNECTED) {
+    if (binc_device_get_connection_state(device) == BINC_DISCONNECTED) {
         // Double check if the device matches the discovery filter
         if (!matches_discovery_filter(adapter, device)) return;
 
@@ -335,11 +335,11 @@ static void binc_internal_device_appeared(__attribute__((unused)) GDBusConnectio
                                 g_strdup(binc_device_get_path(device)),
                                 device);
 
-            if (adapter->discovery_state == STARTED && binc_device_get_connection_state(device) == DISCONNECTED) {
+            if (adapter->discovery_state == BINC_DISCOVERY_STARTED && binc_device_get_connection_state(device) == BINC_DISCONNECTED) {
                 deliver_discovery_result(adapter, device);
             }
 
-            if (binc_device_get_connection_state(device) == CONNECTED &&
+            if (binc_device_get_connection_state(device) == BINC_CONNECTED &&
                 binc_device_get_rssi(device) == -255 &&
                 binc_device_get_uuids(device) == NULL) {
                 binc_device_set_is_central(device, TRUE);
@@ -438,11 +438,11 @@ static void binc_internal_device_changed(__attribute__((unused)) GDBusConnection
                 isDiscoveryResult = TRUE;
             }
         }
-        if (adapter->discovery_state == STARTED && isDiscoveryResult) {
+        if (adapter->discovery_state == BINC_DISCOVERY_STARTED && isDiscoveryResult) {
             deliver_discovery_result(adapter, device);
         }
 
-        if (binc_device_get_bonding_state(device) ==  BONDED && binc_device_get_rssi(device) == -255) {
+        if (binc_device_get_bonding_state(device) == BINC_BONDED && binc_device_get_rssi(device) == -255) {
             binc_device_set_is_central(device, TRUE);
         }
 
@@ -684,13 +684,13 @@ static void binc_internal_start_discovery_cb(__attribute__((unused)) GObject *so
 
     if (error != NULL) {
         log_debug(TAG, "failed to call '%s' (error %d: %s)", METHOD_START_DISCOVERY, error->code, error->message);
-        adapter->discovery_state = STOPPED;
+        adapter->discovery_state = BINC_DISCOVERY_STOPPED;
         if (adapter->discoveryStateCallback != NULL) {
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
         g_clear_error(&error);
     } else {
-        binc_internal_set_discovery_state(adapter, STARTED);
+        binc_internal_set_discovery_state(adapter, BINC_DISCOVERY_STARTED);
     }
 
     if (value != NULL) {
@@ -701,8 +701,8 @@ static void binc_internal_start_discovery_cb(__attribute__((unused)) GObject *so
 void binc_adapter_start_discovery(Adapter *adapter) {
     g_assert (adapter != NULL);
 
-    if (adapter->discovery_state == STOPPED) {
-        binc_internal_set_discovery_state(adapter, STARTING);
+    if (adapter->discovery_state == BINC_DISCOVERY_STOPPED) {
+        binc_internal_set_discovery_state(adapter, BINC_DISCOVERY_STARTING);
         g_dbus_connection_call(adapter->connection,
                                BLUEZ_DBUS,
                                adapter->path,
@@ -734,7 +734,7 @@ static void binc_internal_stop_discovery_cb(__attribute__((unused)) GObject *sou
         }
         g_clear_error(&error);
     } else {
-        binc_internal_set_discovery_state(adapter, STOPPED);
+        binc_internal_set_discovery_state(adapter, BINC_DISCOVERY_STOPPED);
     }
 
     if (value != NULL)
@@ -744,8 +744,8 @@ static void binc_internal_stop_discovery_cb(__attribute__((unused)) GObject *sou
 void binc_adapter_stop_discovery(Adapter *adapter) {
     g_assert (adapter != NULL);
 
-    if (adapter->discovery_state == STARTED) {
-        binc_internal_set_discovery_state(adapter, STOPPING);
+    if (adapter->discovery_state == BINC_DISCOVERY_STARTED) {
+        binc_internal_set_discovery_state(adapter, BINC_DISCOVERY_STOPPING);
         g_dbus_connection_call(adapter->connection,
                                BLUEZ_DBUS,
                                adapter->path,
@@ -785,7 +785,7 @@ GList *binc_adapter_get_connected_devices(const Adapter *adapter) {
     GList *result = NULL;
     for (GList *iterator = all_devices; iterator; iterator = iterator->next) {
         Device *device = (Device *) iterator->data;
-        if (binc_device_get_connection_state(device) == CONNECTED) {
+        if (binc_device_get_connection_state(device) == BINC_CONNECTED) {
             result = g_list_append(result, device);
         }
     }

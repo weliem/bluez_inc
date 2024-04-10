@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 typedef enum DiscoveryState {
-    STOPPED = 0, STARTED = 1, STARTING = 2, STOPPING = 3
+    BINC_DISCOVERY_STOPPED = 0, BINC_DISCOVERY_STARTED = 1, BINC_DISCOVERY_STARTING = 2, BINC_DISCOVERY_STOPPING = 3
 } DiscoveryState;
 
 typedef void (*AdapterDiscoveryResultCallback)(Adapter *adapter, Device *device);
