@@ -76,6 +76,8 @@ void binc_device_set_notify_state_cb(Device *device, OnNotifyingStateChangedCall
 
 gboolean binc_device_start_notify(const Device *device, const char *service_uuid, const char *characteristic_uuid);
 
+gboolean binc_device_stop_notify(const Device *device, const char *service_uuid, const char *characteristic_uuid);
+
 gboolean binc_device_read_desc(const Device *device, const char *service_uuid,
                                const char *characteristic_uuid, const char *desc_uuid);
 
