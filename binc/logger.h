@@ -45,6 +45,10 @@ void log_set_level(LogLevel level);
 
 void log_set_filename(const char* filename, long max_size, int max_files);
 
+typedef void (*LogEventCallback)(LogLevel level, const char *tag, const char *message);
+
+void log_set_handler(LogEventCallback callback);
+
 void log_enabled(gboolean enabled);
 
 #ifdef __cplusplus
