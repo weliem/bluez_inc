@@ -82,7 +82,7 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
     }
 
     log_debug(TAG, "'%s' (%s) state: %s (%d)", binc_device_get_name(device), binc_device_get_address(device), binc_device_get_connection_state_name(device), state);
-    if (state == DISCONNECTED && binc_device_get_bonding_state(device) != BONDED) {
+    if (state == BINC_DISCONNECTED && binc_device_get_bonding_state(device) != BINC_BONDED) {
         binc_adapter_remove_device(default_adapter, device);
     }
 }
