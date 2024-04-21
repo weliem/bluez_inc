@@ -321,10 +321,10 @@ The library contains its own logger that you can also use in your application.
 ## Bluez documentation
 
 The official Bluez documentation is a bit sparse but can be found here: 
-* [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/adapter-api.txt) (for default_adapter)
-* [GATT documentation](https://github.com/bluez/bluez/blob/master/doc/gatt-api.txt) (for service, characteristics and descriptors)
-* [Device documentation](https://github.com/bluez/bluez/blob/master/doc/device-api.txt) (for device)
-* [Agent documentation](https://github.com/bluez/bluez/blob/master/doc/agent-api.txt) (for agent)
+* [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/org.bluez.Adapter.rst) (for default_adapter)
+* [Characteristic documentation](https://github.com/bluez/bluez/blob/master/doc/org.bluez.GattCharacteristic.rst) (for characteristics)
+* [Device documentation](https://github.com/bluez/bluez/blob/master/doc/org.bluez.Device.rst) (for device)
+* [Agent documentation](https://github.com/bluez/bluez/blob/master/doc/org.bluez.Agent.rst) (for agent)
 
 You will notice that most original methods and properties are available in this library. In some cases, some adaptations have been done for convenience.
 
