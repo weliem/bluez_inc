@@ -113,7 +113,7 @@ As you can see, there is also a convenience method `binc_device_read_char` that 
 Like all BLE operations, reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_cb(device, &on_read)`. 
 
 ```c
-void on_read(Characteristic *characteristic, GByteArray *byteArray, GError *error) {
+void on_read(Device *device, Characteristic *characteristic, GByteArray *byteArray, GError *error) {
     const char* uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
