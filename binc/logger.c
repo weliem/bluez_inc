@@ -40,7 +40,8 @@ static struct {
     unsigned long maxFileSize;
     unsigned int maxFiles;
     size_t currentSize;
-} LogSettings = {TRUE, LOG_DEBUG, NULL, "", MAX_FILE_SIZE, MAX_LOGS, 0};
+    LogEventCallback logCallback;
+} LogSettings = {TRUE, LOG_DEBUG, NULL, "", MAX_FILE_SIZE, MAX_LOGS, 0, NULL};
 
 static const char *log_level_names[] = {
         [LOG_DEBUG] = "DEBUG",
@@ -51,6 +52,10 @@ static const char *log_level_names[] = {
 
 void log_set_level(LogLevel level) {
     LogSettings.level = level;
+}
+
+void log_set_handler(LogEventCallback callback) {
+    LogSettings.logCallback = callback;
 }
 
 void log_enabled(gboolean enabled) {
@@ -83,7 +88,7 @@ void log_set_filename(const char *filename, long max_size, int max_files) {
  * Get the current UTC time in milliseconds since epoch
  * @return
  */
-long long current_timestamp_in_millis() {
+static long long current_timestamp_in_millis() {
     struct timeval te;
     gettimeofday(&te, NULL); // get current time
     long long milliseconds = te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
@@ -94,7 +99,7 @@ long long current_timestamp_in_millis() {
  * Returns a string representation of the current time year-month-day hours:minutes:seconds
  * @return newly allocated string, must be freed using g_free()
  */
-char *current_time_string() {
+static char *current_time_string() {
     GDateTime *now = g_date_time_new_now_local();
     char *time_string = g_date_time_format(now, "%F %R:%S");
     g_date_time_unref(now);
@@ -104,7 +109,7 @@ char *current_time_string() {
     return result;
 }
 
-void log_log(const char *tag, const char *level, const char *message) {
+static void log_log(const char *tag, const char *level, const char *message) {
     char *timestamp = current_time_string();
     int bytes_written;
     if ((bytes_written = fprintf(LogSettings.fout, "%s %s [%s] %s\n", timestamp, level, tag, message)) > 0) {
@@ -153,7 +158,7 @@ static void rotate_log_files() {
 
 static void rotate_log_file_if_needed() {
     if ((LogSettings.currentSize < LogSettings.maxFileSize) ||
-        LogSettings.fout == stdout)
+        LogSettings.fout == stdout || LogSettings.logCallback != NULL)
         return;
 
     g_assert(LogSettings.fout != NULL);
@@ -164,7 +169,7 @@ static void rotate_log_file_if_needed() {
 
 void log_log_at_level(LogLevel level, const char *tag, const char *format, ...) {
     // Init fout to stdout if needed
-    if (LogSettings.fout == NULL) {
+    if (LogSettings.fout == NULL && LogSettings.logCallback == NULL) {
         LogSettings.fout = stdout;
     }
 
@@ -175,7 +180,11 @@ void log_log_at_level(LogLevel level, const char *tag, const char *format, ...) 
         va_list arg;
         va_start(arg, format);
         g_vsnprintf(buf, BUFFER_SIZE, format, arg);
-        log_log(tag, log_level_names[level], buf);
+        if (LogSettings.logCallback) {
+            LogSettings.logCallback(level, tag, buf);
+        } else {
+            log_log(tag, log_level_names[level], buf);
+        }
         va_end(arg);
     }
 }
