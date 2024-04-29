@@ -167,7 +167,7 @@ void on_services_resolved(Device *device) {
 And then receiving your notifications:
 
 ```c
-void on_notify(Characteristic *characteristic, GByteArray *byteArray) {
+void on_notify(Device *device, Characteristic *characteristic, GByteArray *byteArray) {
     const char* uuid = binc_characteristic_get_uuid(characteristic);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser_set_offset(parser, 1);
