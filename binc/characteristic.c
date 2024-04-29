@@ -149,7 +149,7 @@ static void binc_internal_char_read_cb(__attribute__((unused)) GObject *source_o
     }
 
     if (characteristic->on_read_callback != NULL) {
-        characteristic->on_read_callback(characteristic, byteArray, error);
+        characteristic->on_read_callback(characteristic->device, characteristic, byteArray, error);
     }
 
     if (byteArray != NULL) {
@@ -213,7 +213,7 @@ static void binc_internal_char_write_cb(__attribute__((unused)) GObject *source_
     }
 
     if (characteristic->on_write_callback != NULL) {
-        characteristic->on_write_callback(characteristic, byteArray, error);
+        characteristic->on_write_callback(characteristic->device, characteristic, byteArray, error);
     }
 
     if (byteArray != NULL) {
@@ -296,7 +296,7 @@ static void binc_internal_signal_characteristic_changed(__attribute__((unused)) 
             log_debug(TAG, "notifying %s <%s>", characteristic->notifying ? "true" : "false", characteristic->uuid);
 
             if (characteristic->notify_state_callback != NULL) {
-                characteristic->notify_state_callback(characteristic, NULL);
+                characteristic->notify_state_callback(characteristic->device, characteristic, NULL);
             }
 
             if (characteristic->notifying == FALSE) {
@@ -313,7 +313,7 @@ static void binc_internal_signal_characteristic_changed(__attribute__((unused)) 
             g_string_free(result, TRUE);
 
             if (characteristic->on_notify_callback != NULL) {
-                characteristic->on_notify_callback(characteristic, byteArray);
+                characteristic->on_notify_callback(characteristic->device, characteristic, byteArray);
             }
             g_byte_array_free(byteArray, FALSE);
         }
@@ -344,7 +344,7 @@ static void binc_internal_char_start_notify_cb(__attribute__((unused)) GObject *
         log_debug(TAG, "failed to call '%s' (error %d: %s)", CHARACTERISTIC_METHOD_START_NOTIFY, error->code,
                   error->message);
         if (characteristic->notify_state_callback != NULL) {
-            characteristic->notify_state_callback(characteristic, error);
+            characteristic->notify_state_callback(characteristic->device, characteristic, error);
         }
         g_clear_error(&error);
     }
@@ -400,7 +400,7 @@ static void binc_internal_char_stop_notify_cb(GObject *source_object, GAsyncResu
         log_debug(TAG, "failed to call '%s' (error %d: %s)", CHARACTERISTIC_METHOD_STOP_NOTIFY, error->code,
                   error->message);
         if (characteristic->notify_state_callback != NULL) {
-            characteristic->notify_state_callback(characteristic, error);
+            characteristic->notify_state_callback(characteristic->device, characteristic, error);
         }
         g_clear_error(&error);
     }

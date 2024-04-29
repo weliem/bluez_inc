@@ -63,7 +63,7 @@ void on_bonding_state_changed(Device *device, BondingState new_state, BondingSta
     log_debug(TAG, "bonding state changed from %d to %d", old_state, new_state);
 }
 
-void on_notification_state_changed(Characteristic *characteristic, const GError *error) {
+void on_notification_state_changed(Device *device, Characteristic *characteristic, const GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
 
     if (error != NULL) {
@@ -74,7 +74,7 @@ void on_notification_state_changed(Characteristic *characteristic, const GError 
     log_debug(TAG, "<%s> notifying %s", uuid, binc_characteristic_is_notifying(characteristic) ? "true" : "false");
 }
 
-void on_notify(Characteristic *characteristic, const GByteArray *byteArray) {
+void on_notify(Device *device, Characteristic *characteristic, const GByteArray *byteArray) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     parser_set_offset(parser, 1);
@@ -85,7 +85,7 @@ void on_notify(Characteristic *characteristic, const GByteArray *byteArray) {
     parser_free(parser);
 }
 
-void on_read(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
+void on_read(Device *device, Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     const char *uuid = binc_characteristic_get_uuid(characteristic);
     if (error != NULL) {
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
@@ -107,7 +107,7 @@ void on_read(Characteristic *characteristic, const GByteArray *byteArray, const 
     parser_free(parser);
 }
 
-void on_write(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
+void on_write(Device *device, Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     log_debug(TAG, "on write");
 }
 

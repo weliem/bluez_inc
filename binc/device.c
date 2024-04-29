@@ -267,32 +267,28 @@ char *binc_device_to_string(const Device *device) {
 }
 
 static void
-binc_on_characteristic_read(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
-    Device *device = binc_characteristic_get_device(characteristic);
+binc_on_characteristic_read(Device *device, Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     if (device->on_read_callback != NULL) {
-        device->on_read_callback(characteristic, byteArray, error);
+        device->on_read_callback(device, characteristic, byteArray, error);
     }
 }
 
 static void
-binc_on_characteristic_write(Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
-    Device *device = binc_characteristic_get_device(characteristic);
+binc_on_characteristic_write(Device *device, Characteristic *characteristic, const GByteArray *byteArray, const GError *error) {
     if (device->on_write_callback != NULL) {
-        device->on_write_callback(characteristic, byteArray, error);
+        device->on_write_callback(device, characteristic, byteArray, error);
     }
 }
 
-static void binc_on_characteristic_notify(Characteristic *characteristic, const GByteArray *byteArray) {
-    Device *device = binc_characteristic_get_device(characteristic);
+static void binc_on_characteristic_notify(Device *device, Characteristic *characteristic, const GByteArray *byteArray) {
     if (device->on_notify_callback != NULL) {
-        device->on_notify_callback(characteristic, byteArray);
+        device->on_notify_callback(device, characteristic, byteArray);
     }
 }
 
-static void binc_on_characteristic_notification_state_changed(Characteristic *characteristic, const GError *error) {
-    Device *device = binc_characteristic_get_device(characteristic);
+static void binc_on_characteristic_notification_state_changed(Device *device, Characteristic *characteristic, const GError *error) {
     if (device->on_notify_state_callback != NULL) {
-        device->on_notify_state_callback(characteristic, error);
+        device->on_notify_state_callback(device, characteristic, error);
     }
 }
 
