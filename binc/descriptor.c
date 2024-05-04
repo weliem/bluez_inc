@@ -166,7 +166,7 @@ static void binc_internal_descriptor_read_cb(GObject *source_object, GAsyncResul
     }
 
     if (descriptor->on_read_cb != NULL) {
-        descriptor->on_read_cb(descriptor, byteArray, error);
+        descriptor->on_read_cb(descriptor->device, descriptor, byteArray, error);
     }
 
     if (byteArray != NULL) {
@@ -232,7 +232,7 @@ static void binc_internal_descriptor_write_cb(GObject *source_object, GAsyncResu
     }
 
     if (descriptor->on_write_cb != NULL) {
-        descriptor->on_write_cb(descriptor, byteArray, error);
+        descriptor->on_write_cb(descriptor->device, descriptor, byteArray, error);
     }
 
     if (byteArray != NULL) {

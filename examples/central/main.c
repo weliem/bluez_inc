@@ -111,7 +111,7 @@ void on_write(Device *device, Characteristic *characteristic, const GByteArray *
     log_debug(TAG, "on write");
 }
 
-void on_desc_read(Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
+void on_desc_read(Device *device, Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
     log_debug(TAG, "on descriptor read");
     Parser *parser = parser_create(byteArray, LITTLE_ENDIAN);
     GString *parsed_string = parser_get_string(parser);

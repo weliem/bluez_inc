@@ -31,9 +31,9 @@
 extern "C" {
 #endif
 
-typedef void (*OnDescReadCallback)(Descriptor *descriptor, const GByteArray *byteArray, const GError *error);
+typedef void (*OnDescReadCallback)(Device *device, Descriptor *descriptor, const GByteArray *byteArray, const GError *error);
 
-typedef void (*OnDescWriteCallback)(Descriptor *descriptor, const GByteArray *byteArray, const GError *error);
+typedef void (*OnDescWriteCallback)(Device *device, Descriptor *descriptor, const GByteArray *byteArray, const GError *error);
 
 void binc_descriptor_read(Descriptor *descriptor);
 

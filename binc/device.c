@@ -292,17 +292,15 @@ static void binc_on_characteristic_notification_state_changed(Device *device, Ch
     }
 }
 
-static void binc_on_descriptor_read(Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
-    Device *device = binc_descriptor_get_device(descriptor);
+static void binc_on_descriptor_read(Device *device, Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
     if (device->on_read_desc_cb != NULL) {
-        device->on_read_desc_cb(descriptor, byteArray, error);
+        device->on_read_desc_cb(device, descriptor, byteArray, error);
     }
 }
 
-static void binc_on_descriptor_write(Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
-    Device *device = binc_descriptor_get_device(descriptor);
+static void binc_on_descriptor_write(Device *device, Descriptor *descriptor, const GByteArray *byteArray, const GError *error) {
     if (device->on_write_desc_cb != NULL) {
-        device->on_write_desc_cb(descriptor, byteArray, error);
+        device->on_write_desc_cb(device, descriptor, byteArray, error);
     }
 }
 
