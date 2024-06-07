@@ -62,6 +62,10 @@ double parser_get_sfloat(Parser *parser);
 
 double parser_get_float(Parser *parser);
 
+double parser_get_754half(Parser *parser);
+
+double parser_get_754float(Parser *parser);
+
 GDateTime* parser_get_date_time(Parser *parser);
 
 GByteArray* binc_get_date_time();
