@@ -183,6 +183,9 @@ static void binc_internal_adapter_call_method(Adapter *adapter, const char *meth
 }
 
 static void binc_internal_set_discovery_state(Adapter *adapter, DiscoveryState discovery_state) {
+    g_assert(adapter != NULL);
+    if (adapter->discovery_state == discovery_state) return;
+
     adapter->discovery_state = discovery_state;
     if (adapter->discoveryStateCallback != NULL) {
         adapter->discoveryStateCallback(adapter, adapter->discovery_state, NULL);
@@ -216,6 +219,12 @@ static void binc_internal_adapter_changed(__attribute__((unused)) GDBusConnectio
             }
         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERING)) {
             adapter->discovering = g_variant_get_boolean(property_value);
+
+            // It could be that some other app is causing discovery to be stopped, e.g. power off
+            if (adapter->discovering == FALSE) {
+                // Update discovery state to reflect discovery state
+                binc_internal_set_discovery_state(adapter, BINC_DISCOVERY_STOPPED);
+            }
         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERABLE)) {
             adapter->discoverable = g_variant_get_boolean(property_value);
         }
