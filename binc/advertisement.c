@@ -35,6 +35,8 @@ struct binc_advertisement {
     GHashTable *manufacturer_data; // Owned
     GHashTable *service_data; // Owned
     guint registration_id;
+    guint32 min_interval;
+    guint32 max_interval;
 };
 
 static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdata) {
@@ -92,6 +94,14 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
+    } else if (g_str_equal(property_name, "MinInterval")) {
+        // May require experimental to be enabled
+        // See https://github.com/bluez/bluez/commit/7e028287ae1a94b47093cfb328645ae1c74a2ea7
+        log_debug(TAG, "setting advertising MinInterval to %dms (requires experimental if version < v5.77)", advertisement->min_interval);
+        ret = g_variant_new_uint32(advertisement->min_interval);
+    } else if (g_str_equal(property_name, "MaxInterval")) {
+        log_debug(TAG, "setting advertising MaxInterval to %dms (requires experimental if version < v5.77)", advertisement->max_interval);
+        ret = g_variant_new_uint32(advertisement->max_interval);
     }
     return ret;
 }
@@ -125,6 +135,8 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
             "       <property name='ManufacturerData' type='a{qv}' access='read'/>"
             "       <property name='ServiceData' type='a{sv}' access='read'/>"
             "       <property name='ServiceUUIDs' type='as' access='read'/>"
+            "       <property name='MinInterval' type='u' access='read'/>"
+            "       <property name='MaxInterval' type='u' access='read'/>"
             "   </interface>"
             "</node>";
 
@@ -163,6 +175,8 @@ Advertisement *binc_advertisement_create() {
                                                              (GDestroyNotify) byte_array_free);
     advertisement->service_data = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
                                                         (GDestroyNotify) byte_array_free);
+    advertisement->min_interval = 200;
+    advertisement->max_interval = 500;
     return advertisement;
 }
 
@@ -249,6 +263,14 @@ void binc_advertisement_set_service_data(Advertisement *advertisement, const cha
     g_byte_array_append(value, byteArray->data, byteArray->len);
 
     g_hash_table_insert(advertisement->service_data, g_strdup(service_uuid), value);
+}
+
+void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, guint32 max) {
+    g_assert(advertisement != NULL);
+    g_assert(min <= max);
+
+    advertisement->min_interval = min;
+    advertisement->max_interval = max;
 }
 
 

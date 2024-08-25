@@ -43,6 +43,8 @@ void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guin
 
 void binc_advertisement_set_service_data(Advertisement *advertisement, const char* service_uuid, const GByteArray *byteArray);
 
+void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, guint32 max);
+
 const char *binc_advertisement_get_path(const Advertisement *advertisement);
 
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter);
