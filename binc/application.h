@@ -32,6 +32,7 @@ extern "C" {
 #endif
 
 // Errors
+#define BLUEZ_OK NULL
 #define BLUEZ_ERROR_REJECTED "org.bluez.Error.Rejected"
 #define BLUEZ_ERROR_FAILED "org.bluez.Error.Failed"
 #define BLUEZ_ERROR_INPROGRESS "org.bluez.Error.InProgress"
@@ -39,6 +40,32 @@ extern "C" {
 #define BLUEZ_ERROR_INVALID_VALUE_LENGTH "org.bluez.Error.InvalidValueLength"
 #define BLUEZ_ERROR_NOT_AUTHORIZED "org.bluez.Error.NotAuthorized"
 #define BLUEZ_ERROR_NOT_SUPPORTED "org.bluez.Error.NotSupported"
+
+//taken from .c
+typedef struct read_options {
+    char *device;
+    guint16 mtu;
+    guint16 offset;
+    char *link_type;
+} ReadOptions;
+
+// taken from .c
+typedef struct binc_local_service {
+    char *path;
+    char *uuid;
+    guint registration_id;
+    GHashTable *characteristics;
+    Application *application;
+} LocalService;
+
+// taken from .c
+typedef struct write_options {
+    char *write_type;
+    char *device;
+    guint16 mtu;
+    guint16 offset;
+    char *link_type;
+} WriteOptions;
 
 // This callback is called just before the characteristic's value is returned.
 // Use it to update the characteristic before it is read
@@ -116,6 +143,19 @@ int binc_application_notify(const Application *application, const char *service_
 
 gboolean binc_application_char_is_notifying(const Application *application, const char *service_uuid,
                                             const char *char_uuid);
+
+void binc_local_service_free(LocalService *localService);
+void read_options_free(ReadOptions *options);
+void write_options_free(WriteOptions *options) ;
+void binc_application_publish(Application *application, const Adapter *adapter) ;
+GVariant *characteristic_get_property(GDBusConnection *connection,
+                                      const gchar *sender,
+                                      const gchar *object_path,
+                                      const gchar *interface_name,
+                                      const gchar *property_name,
+                                      GError **error,
+                                      gpointer user_data);
+
 
 #ifdef __cplusplus
 }

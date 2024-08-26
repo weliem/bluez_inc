@@ -39,6 +39,10 @@ GList *binc_service_get_characteristics(const Service *service);
 
 Characteristic *binc_service_get_characteristic(const Service *service, const char *char_uuid);
 
+Service* binc_service_create(Device *device, const char* path, const char* uuid);
+void binc_service_free(Service *service);
+void binc_service_add_characteristic(Service *service, Characteristic *characteristic);
+
 #ifdef __cplusplus
 }
 #endif

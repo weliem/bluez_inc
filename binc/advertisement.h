@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-Advertisement *binc_advertisement_create();
+Advertisement *binc_advertisement_create(void);
 
 void binc_advertisement_free(Advertisement *advertisement);
 
@@ -50,6 +50,15 @@ const char *binc_advertisement_get_path(const Advertisement *advertisement);
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter);
 
 void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter);
+
+GVariant *advertisement_get_property(GDBusConnection *connection,
+                                     const gchar *sender,
+                                     const gchar *object_path,
+                                     const gchar *interface_name,
+                                     const gchar *property_name,
+                                     GError **error,
+                                     gpointer user_data);
+
 
 #ifdef __cplusplus
 }
