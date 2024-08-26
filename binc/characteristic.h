@@ -104,6 +104,23 @@ Descriptor *binc_characteristic_get_descriptor(const Characteristic *characteris
 
 GList *binc_characteristic_get_descriptors(const Characteristic *characteristic);
 
+//jln
+Characteristic *binc_characteristic_create(Device *device, const char *path);
+void binc_characteristic_free(Characteristic *characteristic);
+void binc_characteristic_set_read_cb(Characteristic *characteristic, OnReadCallback callback);
+void binc_characteristic_set_write_cb(Characteristic *characteristic, OnWriteCallback callback);
+void binc_characteristic_set_notify_cb(Characteristic *characteristic, OnNotifyCallback callback);
+void binc_characteristic_set_notifying_state_change_cb(Characteristic *characteristic,
+                                                       OnNotifyingStateChangedCallback callback);
+void binc_characteristic_set_notifying(Characteristic *characteristic, gboolean notifying);
+void binc_characteristic_set_uuid(Characteristic *characteristic, const char *uuid);
+void binc_characteristic_set_mtu(Characteristic *characteristic, guint mtu);
+void binc_characteristic_set_service(Characteristic *characteristic, Service *service);
+const char *binc_characteristic_get_service_path(const Characteristic *characteristic);
+void binc_characteristic_set_service_path(Characteristic *characteristic, const char *service_path);
+void binc_characteristic_set_flags(Characteristic *characteristic, GList *flags);
+void binc_characteristic_add_descriptor(Characteristic *characteristic, Descriptor *descriptor);
+
 /**
  * Get a string representation of the characteristic
  * @param characteristic

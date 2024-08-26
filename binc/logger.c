@@ -62,7 +62,7 @@ void log_enabled(gboolean enabled) {
     LogSettings.enabled = enabled;
 }
 
-static void open_log_file() {
+static void open_log_file(void) {
     LogSettings.fout = fopen(LogSettings.filename, "a");
     if (LogSettings.fout == NULL) {
         LogSettings.fout = stdout;
@@ -88,7 +88,7 @@ void log_set_filename(const char *filename, long max_size, int max_files) {
  * Get the current UTC time in milliseconds since epoch
  * @return
  */
-static long long current_timestamp_in_millis() {
+static long long current_timestamp_in_millis(void) {
     struct timeval te;
     gettimeofday(&te, NULL); // get current time
     long long milliseconds = te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
@@ -99,7 +99,7 @@ static long long current_timestamp_in_millis() {
  * Returns a string representation of the current time year-month-day hours:minutes:seconds
  * @return newly allocated string, must be freed using g_free()
  */
-static char *current_time_string() {
+static char *current_time_string(void) {
     GDateTime *now = g_date_time_new_now_local();
     char *time_string = g_date_time_format(now, "%F %R:%S");
     g_date_time_unref(now);
@@ -139,7 +139,7 @@ static gboolean fileExists(const char *filename) {
     }
 }
 
-static void rotate_log_files() {
+static void rotate_log_files(void) {
     for (int i = LogSettings.maxFiles; i > 0; i--) {
         char *src = get_log_name(i - 1);
         char *dst = get_log_name(i);
@@ -156,7 +156,7 @@ static void rotate_log_files() {
     }
 }
 
-static void rotate_log_file_if_needed() {
+static void rotate_log_file_if_needed(void) {
     if ((LogSettings.currentSize < LogSettings.maxFileSize) ||
         LogSettings.fout == stdout || LogSettings.logCallback != NULL)
         return;

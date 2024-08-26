@@ -68,11 +68,15 @@ double parser_get_754float(Parser *parser);
 
 GDateTime* parser_get_date_time(Parser *parser);
 
-GByteArray* binc_get_date_time();
+GByteArray* binc_get_date_time(void);
 
-GByteArray *binc_get_current_time();
+GByteArray *binc_get_current_time(void);
 
 GString *parser_get_string(Parser *parser);
+
+//jln
+float fround(float n, int d);
+
 
 #ifdef __cplusplus
 }

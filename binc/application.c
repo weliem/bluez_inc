@@ -121,13 +121,14 @@ struct binc_application {
     onLocalDescriptorRead on_desc_read;
 };
 
-typedef struct binc_local_service {
-    char *path;
-    char *uuid;
-    guint registration_id;
-    GHashTable *characteristics;
-    Application *application;
-} LocalService;
+// moved to .h
+//typedef struct binc_local_service {
+//    char *path;
+//    char *uuid;
+//    guint registration_id;
+//    GHashTable *characteristics;
+//    Application *application;
+//} LocalService;
 
 typedef struct local_characteristic {
     char *service_uuid;
@@ -270,12 +271,13 @@ void binc_local_service_free(LocalService *localService) {
     g_free(localService);
 }
 
-typedef struct read_options {
-    char *device;
-    guint16 mtu;
-    guint16 offset;
-    char *link_type;
-} ReadOptions;
+// Moved to .h
+//typedef struct read_options {
+//    char *device;
+//    guint16 mtu;
+//    guint16 offset;
+//    char *link_type;
+//} ReadOptions;
 
 void read_options_free(ReadOptions *options) {
     if (options->link_type != NULL) g_free(options->link_type);
@@ -311,13 +313,14 @@ static ReadOptions *parse_read_options(GVariant *params) {
     return options;
 }
 
-typedef struct write_options {
-    char *write_type;
-    char *device;
-    guint16 mtu;
-    guint16 offset;
-    char *link_type;
-} WriteOptions;
+// jln moved to .h
+//typedef struct write_options {
+//    char *write_type;
+//    char *device;
+//    guint16 mtu;
+//    guint16 offset;
+//    char *link_type;
+//} WriteOptions;
 
 void write_options_free(WriteOptions *options) {
     if (options->link_type != NULL) g_free(options->link_type);
