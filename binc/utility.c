@@ -31,10 +31,10 @@ void bytes_to_hex(char *dest, const guint8 *src, int n) {
 
 GString *g_byte_array_as_hex(const GByteArray *byteArray) {
     int hexLength = (int) byteArray->len * 2;
-    GString *result = g_string_sized_new(hexLength + 1);
+    GString *result = g_string_sized_new((gsize)(hexLength + 1));
     bytes_to_hex(result->str, byteArray->data, hexLength);
     result->str[hexLength] = 0;
-    result->len = hexLength;
+    result->len = (gsize)hexLength;
     return result;
 }
 
@@ -55,7 +55,7 @@ GList *g_variant_string_array_to_list(GVariant *value) {
 
 float binc_round_with_precision(float value, guint8 precision) {
     int multiplier = (int) pow(10.0, precision);
-    return roundf(value * multiplier) / multiplier;
+    return roundf(value * (float)multiplier) / (float)multiplier;
 }
 
 gchar *binc_date_time_format_iso8601(GDateTime *datetime) {

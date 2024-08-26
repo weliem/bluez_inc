@@ -43,7 +43,7 @@ static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdat
     GByteArray *byteArray = (GByteArray *) value;
     GVariant *byteArrayVariant = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, byteArray->data,
                                                            byteArray->len, sizeof(guint8));
-    guint16 manufacturer_id = *(int *) key;
+    guint16 manufacturer_id = (guint16) *(int *) key;
     g_variant_builder_add((GVariantBuilder *) userdata, "{qv}", manufacturer_id, byteArrayVariant);
 }
 

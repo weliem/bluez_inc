@@ -48,6 +48,8 @@ GByteArray *g_variant_get_byte_array(GVariant *variant);
 
 char* replace_char(char* str, char find, char replace);
 
+void bytes_to_hex(char *dest, const guint8 *src, int n);
+
 #ifdef __cplusplus
 }
 #endif

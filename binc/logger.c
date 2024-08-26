@@ -71,15 +71,15 @@ static void open_log_file(void) {
 
     struct stat finfo;
     fstat(fileno(LogSettings.fout), &finfo);
-    LogSettings.currentSize = finfo.st_size;
+    LogSettings.currentSize = (size_t) finfo.st_size;
 }
 
 void log_set_filename(const char *filename, long max_size, int max_files) {
     g_assert(filename != NULL);
     g_assert(strlen(filename) > 0);
 
-    LogSettings.maxFileSize = max_size ? max_size : MAX_FILE_SIZE;
-    LogSettings.maxFiles = max_files ? max_files : MAX_LOGS;
+    LogSettings.maxFileSize = (long unsigned int) (max_size ? max_size : MAX_FILE_SIZE);
+    LogSettings.maxFiles = (unsigned int) (max_files ? max_files : MAX_LOGS);
     strncpy(LogSettings.filename, filename, sizeof(LogSettings.filename) - 1);
     open_log_file();
 }
@@ -113,7 +113,7 @@ static void log_log(const char *tag, const char *level, const char *message) {
     char *timestamp = current_time_string();
     int bytes_written;
     if ((bytes_written = fprintf(LogSettings.fout, "%s %s [%s] %s\n", timestamp, level, tag, message)) > 0) {
-        LogSettings.currentSize += bytes_written;
+        LogSettings.currentSize += (size_t) bytes_written;
         fflush(LogSettings.fout);
     }
 
@@ -140,7 +140,7 @@ static gboolean fileExists(const char *filename) {
 }
 
 static void rotate_log_files(void) {
-    for (int i = LogSettings.maxFiles; i > 0; i--) {
+    for (int i = (int) LogSettings.maxFiles; i > 0; i--) {
         char *src = get_log_name(i - 1);
         char *dst = get_log_name(i);
         if (fileExists(dst)) {
