@@ -1,0 +1,2 @@
+/usr/bin/ar qc libBinc.a CMakeFiles/Binc.dir/adapter.c.o CMakeFiles/Binc.dir/advertisement.c.o CMakeFiles/Binc.dir/agent.c.o CMakeFiles/Binc.dir/application.c.o CMakeFiles/Binc.dir/characteristic.c.o CMakeFiles/Binc.dir/descriptor.c.o CMakeFiles/Binc.dir/device.c.o CMakeFiles/Binc.dir/logger.c.o CMakeFiles/Binc.dir/parser.c.o CMakeFiles/Binc.dir/service.c.o CMakeFiles/Binc.dir/utility.c.o
+/usr/bin/ranlib libBinc.a

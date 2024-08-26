@@ -1,0 +1,1 @@
+/usr/bin/cc  -Wall -Werror -Wextra -Wno-unused-function -Wno-unused-parameter CMakeFiles/peripheral.dir/peripheral.c.o -o peripheral  ../../binc/libBinc.a -lgio-2.0 -lgobject-2.0 -lglib-2.0 -lm 

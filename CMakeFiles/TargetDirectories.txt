@@ -1,0 +1,11 @@
+/mnt/code/bluez_inc/CMakeFiles/edit_cache.dir
+/mnt/code/bluez_inc/CMakeFiles/rebuild_cache.dir
+/mnt/code/bluez_inc/binc/CMakeFiles/Binc.dir
+/mnt/code/bluez_inc/binc/CMakeFiles/edit_cache.dir
+/mnt/code/bluez_inc/binc/CMakeFiles/rebuild_cache.dir
+/mnt/code/bluez_inc/examples/central/CMakeFiles/central.dir
+/mnt/code/bluez_inc/examples/central/CMakeFiles/edit_cache.dir
+/mnt/code/bluez_inc/examples/central/CMakeFiles/rebuild_cache.dir
+/mnt/code/bluez_inc/examples/peripheral/CMakeFiles/peripheral.dir
+/mnt/code/bluez_inc/examples/peripheral/CMakeFiles/edit_cache.dir
+/mnt/code/bluez_inc/examples/peripheral/CMakeFiles/rebuild_cache.dir
