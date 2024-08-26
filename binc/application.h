@@ -41,7 +41,7 @@ extern "C" {
 #define BLUEZ_ERROR_NOT_AUTHORIZED "org.bluez.Error.NotAuthorized"
 #define BLUEZ_ERROR_NOT_SUPPORTED "org.bluez.Error.NotSupported"
 
-//jln from .c
+//taken from .c
 typedef struct read_options {
     char *device;
     guint16 mtu;
@@ -49,7 +49,7 @@ typedef struct read_options {
     char *link_type;
 } ReadOptions;
 
-// jln from .c
+// taken from .c
 typedef struct binc_local_service {
     char *path;
     char *uuid;
@@ -58,7 +58,7 @@ typedef struct binc_local_service {
     Application *application;
 } LocalService;
 
-// jln from .c
+// taken from .c
 typedef struct write_options {
     char *write_type;
     char *device;
@@ -144,7 +144,6 @@ int binc_application_notify(const Application *application, const char *service_
 gboolean binc_application_char_is_notifying(const Application *application, const char *service_uuid,
                                             const char *char_uuid);
 
-//jln
 void binc_local_service_free(LocalService *localService);
 void read_options_free(ReadOptions *options);
 void write_options_free(WriteOptions *options) ;

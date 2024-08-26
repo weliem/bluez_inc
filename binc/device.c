@@ -30,8 +30,7 @@
 #include "adapter.h"
 #include "descriptor_internal.h"
 
-//static const char *const TAG = "Device";
-#define TAG __FUNCTION__
+static const char *const TAG = "Device";
 static const char *const BLUEZ_DBUS = "org.bluez";
 static const char *const INTERFACE_DEVICE = "org.bluez.Device1";
 

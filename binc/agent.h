@@ -49,7 +49,6 @@ void binc_agent_set_request_passkey_cb(Agent *agent, AgentRequestPasskeyCallback
 
 void binc_agent_free(Agent *agent);
 
-//jln
 int binc_agentmanager_register_agent(Agent *agent);
 
 #ifdef __cplusplus

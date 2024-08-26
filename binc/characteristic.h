@@ -104,7 +104,6 @@ Descriptor *binc_characteristic_get_descriptor(const Characteristic *characteris
 
 GList *binc_characteristic_get_descriptors(const Characteristic *characteristic);
 
-//jln
 Characteristic *binc_characteristic_create(Device *device, const char *path);
 void binc_characteristic_free(Characteristic *characteristic);
 void binc_characteristic_set_read_cb(Characteristic *characteristic, OnReadCallback callback);

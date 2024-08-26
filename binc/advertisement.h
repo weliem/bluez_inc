@@ -51,7 +51,6 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
 
 void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter);
 
-// jln
 GVariant *advertisement_get_property(GDBusConnection *connection,
                                      const gchar *sender,
                                      const gchar *object_path,

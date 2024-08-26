@@ -145,7 +145,6 @@ void binc_device_set_user_data(Device *device, void *user_data);
 
 void *binc_device_get_user_data(const Device *device);
 
-// jln
 Device *binc_device_create(const char *path, Adapter *adapter);
 void binc_device_free(Device *device);
 void binc_device_set_bonding_state(Device *device, BondingState bonding_state);

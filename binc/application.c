@@ -313,7 +313,7 @@ static ReadOptions *parse_read_options(GVariant *params) {
     return options;
 }
 
-// jln moved to .h
+// moved to .h
 //typedef struct write_options {
 //    char *write_type;
 //    char *device;

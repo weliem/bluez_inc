@@ -74,7 +74,6 @@ GByteArray *binc_get_current_time(void);
 
 GString *parser_get_string(Parser *parser);
 
-//jln
 float fround(float n, int d);
 
 
