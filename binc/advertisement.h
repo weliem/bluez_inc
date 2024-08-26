@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-Advertisement *binc_advertisement_create();
+Advertisement *binc_advertisement_create(void);
 
 void binc_advertisement_free(Advertisement *advertisement);
 
