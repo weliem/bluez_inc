@@ -82,7 +82,7 @@ gint8 parser_get_sint8(Parser *parser) {
     g_assert(parser != NULL);
     g_assert(parser->offset < parser->bytes->len);
 
-    gint8 result = parser->bytes->data[parser->offset];
+    gint8 result = (gint8) parser->bytes->data[parser->offset];
     parser->offset = parser->offset + 1;
     return result;
 }
@@ -96,9 +96,9 @@ guint16 parser_get_uint16(Parser *parser) {
     byte2 = parser->bytes->data[parser->offset + 1];
     parser->offset = parser->offset + 2;
     if (parser->byteOrder == LITTLE_ENDIAN) {
-        return (byte2 << 8) + byte1;
+        return (guint16)((byte2 << 8) + byte1);
     } else {
-        return (byte1 << 8) + byte2;
+        return (guint16)((byte1 << 8) + byte2);
     }
 }
 
@@ -111,9 +111,9 @@ gint16 parser_get_sint16(Parser *parser) {
     byte2 = parser->bytes->data[parser->offset + 1];
     parser->offset = parser->offset + 2;
     if (parser->byteOrder == LITTLE_ENDIAN) {
-        return (byte2 << 8) + byte1;
+        return (gint16)((byte2 << 8) + byte1);
     } else {
-        return (byte1 << 8) + byte2;
+        return (gint16)((byte1 << 8) + byte2);
     }
 }
 
@@ -127,9 +127,9 @@ guint32 parser_get_uint24(Parser *parser) {
     byte3 = parser->bytes->data[parser->offset+2];
     parser->offset = parser->offset + 3;
     if (parser->byteOrder == LITTLE_ENDIAN) {
-        return (byte3 << 16) + (byte2 << 8) + byte1;
+        return (guint32)((byte3 << 16) + (byte2 << 8) + byte1);
     } else {
-        return (byte1 << 16) + (byte2 << 8) + byte3;
+        return (guint32)((byte1 << 16) + (byte2 << 8) + byte3);
     }
 }
 
@@ -144,9 +144,9 @@ guint32 parser_get_uint32(Parser *parser) {
     byte4 = parser->bytes->data[parser->offset + 3];
     parser->offset = parser->offset + 4;
     if (parser->byteOrder == LITTLE_ENDIAN) {
-        return (byte4 << 24) + (byte3 << 16) + (byte2 << 8) + byte1;
+        return (guint32)((byte4 << 24) + (byte3 << 16) + (byte2 << 8) + byte1);
     } else {
-        return (byte1 << 24) + (byte2 << 16) + (byte3 << 8) + byte4;
+        return (guint32)((byte1 << 24) + (byte2 << 16) + (byte3 << 8) + byte4);
     }
 }
 
@@ -169,7 +169,7 @@ double parser_get_sfloat(Parser *parser) {
 
 /* round number n to d decimal points */
 float fround(float n, int d) {
-    int rounded = floor(n * pow(10.0f, d) + 0.5f);
+    int rounded = (int)floor(n * pow(10.0f, d) + 0.5f);
     int divider = (int) pow(10.0f, d);
     return (float) rounded / (float) divider;
 }
@@ -179,7 +179,7 @@ double parser_get_float(Parser *parser) {
     guint32 int_data = parser_get_uint32(parser);
 
     guint32 mantissa = int_data & 0xFFFFFF;
-    gint8 exponent = int_data >> 24;
+    gint8 exponent = (gint8)(int_data >> 24);
     double output = 0;
 
     if (mantissa >= MDER_POSITIVE_INFINITY &&
@@ -200,29 +200,29 @@ double parser_get_754float(Parser *parser) {
     guint32 int_data = parser_get_uint32(parser);
 
     // Break up into 3 parts
-    gboolean sign = int_data & BINARY32_MASK_SIGN;
+    gboolean sign = (gboolean)(int_data & BINARY32_MASK_SIGN);
     guint32 biased_expo = (int_data & BINARY32_MASK_EXPO) >> BINARY32_SHIFT_EXPO;
     int32_t significand = int_data & BINARY32_MASK_SNCD;
 
     float result;
     if (biased_expo == 0xFF) {
         result = significand ? NAN : INFINITY;   // For simplicity, NaN payload not copied
-    }   
+    }
     else {
         guint32 expo;
 
         if (biased_expo > 0) {
             significand |= BINARY32_IMPLIED_BIT;
             expo = biased_expo - 127;
-        }   
+        }
         else {
             expo = 126;
-        }   
+        }
 
-        result = ldexpf((float)significand, expo - BINARY32_SHIFT_EXPO);
-    }   
+        result = ldexpf((float)significand, (int)expo - BINARY32_SHIFT_EXPO);
+    }
 
-    if (sign) result = -result; 
+    if (sign) result = -result;
 
     return result;
 }
@@ -236,15 +236,15 @@ double parser_get_754half(Parser *parser) {
     gboolean sign = ((value & 0x8000) != 0);
 	guint16 exponent = (value & 0x7c00) >> 10;
 	guint16 fraction = value & 0x300;
-	
-	float result = 0.0;
+
+	double result = 0.0;
 
 	if (exponent == 0) {
 		if (fraction == 0) {
 			return (0.0);
 		}
 		else {
-			result = pow(-1, sign) * pow(2, -14) * ((float) fraction / 1024);
+			result = pow(-1, sign) * pow(2, -14) * ((double) fraction / 1024);
 		}
 	}
 	else if (exponent == 0x1f) {
@@ -252,9 +252,9 @@ double parser_get_754half(Parser *parser) {
 		else return (NAN);
 	}
 	else {
-		result = pow(-1, sign) * pow(2, exponent - 15) * (1.0 + (float) fraction / 1024);
+		result = pow(-1, sign) * pow(2, exponent - 15) * (1.0 + (double) fraction / 1024);
 	}
-	
+
 	return (result);
 }
 
@@ -263,7 +263,7 @@ GString *parser_get_string(Parser *parser) {
     g_assert(parser->bytes != NULL);
 
     return g_string_new_len((const char *) parser->bytes->data + parser->offset,
-                            parser->bytes->len - parser->offset);
+                            (gssize)(parser->bytes->len - parser->offset));
 }
 
 GDateTime *parser_get_date_time(Parser *parser) {
@@ -283,16 +283,16 @@ GByteArray *binc_get_current_time() {
     GByteArray *byteArray = g_byte_array_new();
 
     GDateTime *now = g_date_time_new_now_local();
-    guint year = g_date_time_get_year(now);
-    guint8 yearLsb = year & 0xFF;
-    guint8 yearMsb = year >> 8;
-    guint8 month = g_date_time_get_month(now);
-    guint8 day = g_date_time_get_day_of_month(now);
-    guint8 hours = g_date_time_get_hour(now);
-    guint8 minutes = g_date_time_get_minute(now);
-    guint8 seconds = g_date_time_get_second(now);
-    guint8 dayOfWeek = g_date_time_get_day_of_week(now);
-    guint8 miliseconds = (g_date_time_get_microsecond(now) / 1000) * 256 / 1000;
+    guint year = (guint)g_date_time_get_year(now);
+    guint8 yearLsb = (guint8)(year & 0xFF);
+    guint8 yearMsb = (guint8)(year >> 8);
+    guint8 month = (guint8)g_date_time_get_month(now);
+    guint8 day = (guint8)g_date_time_get_day_of_month(now);
+    guint8 hours = (guint8)g_date_time_get_hour(now);
+    guint8 minutes = (guint8)g_date_time_get_minute(now);
+    guint8 seconds = (guint8)g_date_time_get_second(now);
+    guint8 dayOfWeek = (guint8)g_date_time_get_day_of_week(now);
+    guint8 miliseconds = (guint8)((g_date_time_get_microsecond(now) / 1000) * 256 / 1000);
     guint8 reason = 1;
     g_date_time_unref(now);
 
@@ -313,14 +313,14 @@ GByteArray *binc_get_date_time() {
     GByteArray *byteArray = g_byte_array_new();
 
     GDateTime *now = g_date_time_new_now_local();
-    guint year = g_date_time_get_year(now);
-    guint8 yearLsb = year & 0xFF;
-    guint8 yearMsb = year >> 8;
-    guint8 month = g_date_time_get_month(now);
-    guint8 day = g_date_time_get_day_of_month(now);
-    guint8 hours = g_date_time_get_hour(now);
-    guint8 minutes = g_date_time_get_minute(now);
-    guint8 seconds = g_date_time_get_second(now);
+    guint year = (guint)g_date_time_get_year(now);
+    guint8 yearLsb = (guint8)(year & 0xFF);
+    guint8 yearMsb = (guint8)(year >> 8);
+    guint8 month = (guint8)g_date_time_get_month(now);
+    guint8 day = (guint8)g_date_time_get_day_of_month(now);
+    guint8 hours = (guint8)g_date_time_get_hour(now);
+    guint8 minutes = (guint8)g_date_time_get_minute(now);
+    guint8 seconds = (guint8)g_date_time_get_second(now);
     g_date_time_unref(now);
 
     g_byte_array_append(byteArray, &yearLsb, 1);
