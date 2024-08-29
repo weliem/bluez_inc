@@ -856,10 +856,10 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
 
         log_debug(TAG, "write descriptor <%s> by %s", localDescriptor->uuid, options->device);
 
-        size_t data_length = 0;
+        gsize data_length = 0;
         guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
-        GByteArray *byteArray = g_byte_array_sized_new(data_length);
-        g_byte_array_append(byteArray, data, data_length);
+        GByteArray *byteArray = g_byte_array_sized_new((guint) data_length);
+        g_byte_array_append(byteArray, data, (guint) data_length);
         g_variant_unref(valueVariant);
 
         // Allow application to accept/reject the characteristic value before setting it
@@ -1051,10 +1051,10 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         WriteOptions *options = parse_write_options(optionsVariant);
         g_variant_unref(optionsVariant);
 
-        size_t data_length = 0;
+        gsize data_length = 0;
         guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
-        GByteArray *byteArray = g_byte_array_sized_new(data_length);
-        g_byte_array_append(byteArray, data, data_length);
+        GByteArray *byteArray = g_byte_array_sized_new((guint) data_length);
+        g_byte_array_append(byteArray, data, (guint) data_length);
         g_variant_unref(valueVariant);
 
         // Allow application to accept/reject the characteristic value before setting it
