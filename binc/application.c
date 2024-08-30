@@ -1212,6 +1212,13 @@ void binc_application_set_char_read_cb(Application *application, onLocalCharacte
     application->on_char_read = callback;
 }
 
+void binc_application_set_char_updated_cb(Application *application, onLocalCharacteristicUpdated callback) {
+    g_assert(application != NULL);
+    g_assert(callback != NULL);
+
+    application->on_char_updated = callback;
+}
+
 void binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback) {
     g_assert(application != NULL);
     g_assert(callback != NULL);
