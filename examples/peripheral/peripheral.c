@@ -205,19 +205,8 @@ int main(void) {
         log_debug("MAIN", "No default_adapter found");
     }
 
-    const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
-    GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
-    g_byte_array_append(byteArray, bytes, sizeof(bytes));
-
-    GByteArray *newByteArray = g_byte_array_sized_new(byteArray->len);
-    g_byte_array_append(newByteArray, byteArray->data, byteArray->len);
-
-
-    g_byte_array_free(newByteArray, TRUE);
-    g_byte_array_free(byteArray, TRUE);
-
     // Bail out after some time
-    g_timeout_add_seconds(30, callback, loop);
+    g_timeout_add_seconds(600, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
