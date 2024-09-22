@@ -850,17 +850,17 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
     } else if (g_str_equal(method, DESCRIPTOR_METHOD_WRITE_VALUE)) {
         g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
         GVariant *valueVariant, *optionsVariant;
+
+        // Get the options
         g_variant_get(params, "(@ay@a{sv})", &valueVariant, &optionsVariant);
         WriteOptions *options = parse_write_options(optionsVariant);
         g_variant_unref(optionsVariant);
 
-        log_debug(TAG, "write descriptor <%s> by %s", localDescriptor->uuid, options->device);
-
-        size_t data_length = 0;
-        guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
-        GByteArray *byteArray = g_byte_array_sized_new(data_length);
-        g_byte_array_append(byteArray, data, data_length);
+        // Get the byte array to be written
+        GByteArray *byteArray = g_variant_get_byte_array(valueVariant);
         g_variant_unref(valueVariant);
+
+        log_debug(TAG, "write descriptor <%s> by %s", localDescriptor->uuid, options->device);
 
         // Allow application to accept/reject the characteristic value before setting it
         const char *result = NULL;
@@ -1043,19 +1043,19 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
             g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ_ERROR_FAILED, "no value");
         }
     } else if (g_str_equal(method, CHARACTERISTIC_METHOD_WRITE_VALUE)) {
-        log_debug(TAG, "write <%s>", characteristic->uuid);
-
         g_assert(g_str_equal(g_variant_get_type_string(params), "(aya{sv})"));
         GVariant *valueVariant, *optionsVariant;
+
+        // Get the write options
         g_variant_get(params, "(@ay@a{sv})", &valueVariant, &optionsVariant);
         WriteOptions *options = parse_write_options(optionsVariant);
         g_variant_unref(optionsVariant);
 
-        size_t data_length = 0;
-        guint8 *data = (guint8 *) g_variant_get_fixed_array(valueVariant, &data_length, sizeof(guint8));
-        GByteArray *byteArray = g_byte_array_sized_new(data_length);
-        g_byte_array_append(byteArray, data, data_length);
+        // Get the byte array to be written
+        GByteArray *byteArray = g_variant_get_byte_array(valueVariant);
         g_variant_unref(valueVariant);
+
+        log_debug(TAG, "write <%s>", characteristic->uuid);
 
         // Allow application to accept/reject the characteristic value before setting it
         const char *result = NULL;

@@ -43,7 +43,7 @@ void log_log_at_level(LogLevel level, const char* tag, const char *format, ...);
 
 void log_set_level(LogLevel level);
 
-void log_set_filename(const char* filename, long max_size, int max_files);
+void log_set_filename(const char* filename, unsigned long max_size, unsigned int max_files);
 
 typedef void (*LogEventCallback)(LogLevel level, const char *tag, const char *message);
 

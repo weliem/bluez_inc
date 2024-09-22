@@ -1169,10 +1169,10 @@ void binc_internal_device_update_property(Device *device, const char *property_n
         GHashTable *manufacturer_data = g_hash_table_new_full(g_int_hash, g_int_equal,
                                                               g_free, (GDestroyNotify) byte_array_free);
         while (g_variant_iter_loop(iter, "{qv}", &key, &array)) {
-            size_t data_length = 0;
+            gsize data_length = 0;
             guint8 *data = (guint8 *) g_variant_get_fixed_array(array, &data_length, sizeof(guint8));
-            GByteArray *byteArray = g_byte_array_sized_new(data_length);
-            g_byte_array_append(byteArray, data, data_length);
+            GByteArray *byteArray = g_byte_array_sized_new((guint) data_length);
+            g_byte_array_append(byteArray, data, (guint) data_length);
 
             int *keyCopy = g_new0 (gint, 1);
             *keyCopy = key;
@@ -1191,10 +1191,10 @@ void binc_internal_device_update_property(Device *device, const char *property_n
         GHashTable *service_data = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                          g_free, (GDestroyNotify) byte_array_free);
         while (g_variant_iter_loop(iter, "{sv}", &key, &array)) {
-            size_t data_length = 0;
+            gsize data_length = 0;
             guint8 *data = (guint8 *) g_variant_get_fixed_array(array, &data_length, sizeof(guint8));
-            GByteArray *byteArray = g_byte_array_sized_new(data_length);
-            g_byte_array_append(byteArray, data, data_length);
+            GByteArray *byteArray = g_byte_array_sized_new((guint) data_length);
+            g_byte_array_append(byteArray, data, (guint) data_length);
 
             char *keyCopy = g_strdup(key);
 

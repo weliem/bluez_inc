@@ -282,15 +282,15 @@ static void binc_internal_signal_characteristic_changed(__attribute__((unused)) 
     Characteristic *characteristic = (Characteristic *) user_data;
     g_assert(characteristic != NULL);
 
-    GVariantIter *properties = NULL;
-    GVariantIter *unknown = NULL;
+    GVariantIter *properties_changed = NULL;
+    GVariantIter *properties_invalidated = NULL;
     const char *iface = NULL;
     const char *property_name = NULL;
     GVariant *property_value = NULL;
 
     g_assert(g_str_equal(g_variant_get_type_string(parameters), "(sa{sv}as)"));
-    g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties, &unknown);
-    while (g_variant_iter_loop(properties, "{&sv}", &property_name, &property_value)) {
+    g_variant_get(parameters, "(&sa{sv}as)", &iface, &properties_changed, &properties_invalidated);
+    while (g_variant_iter_loop(properties_changed, "{&sv}", &property_name, &property_value)) {
         if (g_str_equal(property_name, CHARACTERISTIC_PROPERTY_NOTIFYING)) {
             characteristic->notifying = g_variant_get_boolean(property_value);
             log_debug(TAG, "notifying %s <%s>", characteristic->notifying ? "true" : "false", characteristic->uuid);
@@ -319,11 +319,11 @@ static void binc_internal_signal_characteristic_changed(__attribute__((unused)) 
         }
     }
 
-    if (properties != NULL) {
-        g_variant_iter_free(properties);
+    if (properties_changed != NULL) {
+        g_variant_iter_free(properties_changed);
     }
-    if (unknown != NULL) {
-        g_variant_iter_free(unknown);
+    if (properties_invalidated != NULL) {
+        g_variant_iter_free(properties_invalidated);
     }
 }
 

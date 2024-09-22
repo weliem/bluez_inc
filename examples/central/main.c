@@ -42,6 +42,7 @@ GMainLoop *loop = NULL;
 Adapter *default_adapter = NULL;
 Agent *agent = NULL;
 
+
 void on_connection_state_changed(Device *device, ConnectionState state, const GError *error) {
     if (error != NULL) {
         log_debug(TAG, "(dis)connect failed (error %d: %s)", error->code, error->message);
@@ -169,10 +170,24 @@ void on_discovery_state_changed(Adapter *adapter, DiscoveryState state, const GE
               binc_adapter_get_path(adapter));
 }
 
+void start_scanning(Adapter *adapter) {
+    // Build UUID array so we can use it in the discovery filter
+    GPtrArray *service_uuids = g_ptr_array_new();
+    g_ptr_array_add(service_uuids, HTS_SERVICE_UUID);
+
+    // Set discovery callbacks and start discovery
+    binc_adapter_set_discovery_cb(adapter, &on_scan_result);
+    binc_adapter_set_discovery_state_cb(adapter, &on_discovery_state_changed);
+    binc_adapter_set_discovery_filter(adapter, -100, service_uuids, NULL);
+    g_ptr_array_free(service_uuids, TRUE);
+
+    binc_adapter_start_discovery(default_adapter);
+}
+
 void on_powered_state_changed(Adapter *adapter, gboolean state) {
     log_debug(TAG, "powered '%s' (%s)", state ? "on" : "off", binc_adapter_get_path(adapter));
     if (state) {
-        binc_adapter_start_discovery(default_adapter);
+        start_scanning(default_adapter);
     }
 }
 
@@ -223,22 +238,13 @@ int main(void) {
         binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
         binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
 
-        // Make sure the adapter is on
+        // Make sure the adapter is on before starting scanning
         binc_adapter_set_powered_state_cb(default_adapter, &on_powered_state_changed);
         if (!binc_adapter_get_powered_state(default_adapter)) {
             binc_adapter_power_on(default_adapter);
+        } else {
+            start_scanning(default_adapter);
         }
-
-        // Build UUID array so we can use it in the discovery filter
-        GPtrArray *service_uuids = g_ptr_array_new();
-        g_ptr_array_add(service_uuids, HTS_SERVICE_UUID);
-
-        // Set discovery callbacks and start discovery
-        binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
-        binc_adapter_set_discovery_state_cb(default_adapter, &on_discovery_state_changed);
-        binc_adapter_set_discovery_filter(default_adapter, -100, service_uuids, NULL);
-        g_ptr_array_free(service_uuids, TRUE);
-        binc_adapter_start_discovery(default_adapter);
     } else {
         log_error("MAIN", "No default_adapter found");
     }
