@@ -742,11 +742,15 @@ static int binc_characteristic_set_value(const Application *application, LocalCh
     if (characteristic->value != NULL) {
         g_byte_array_free(characteristic->value, TRUE);
     }
-    characteristic->value = byteArray;
+
+    // Copy the byte array contents to the characteristics value
+    GByteArray *newByteArray = g_byte_array_sized_new(byteArray->len);
+    g_byte_array_append(newByteArray, byteArray->data, byteArray->len);
+    characteristic->value = newByteArray;
 
     if (application->on_char_updated != NULL) {
         application->on_char_updated(characteristic->application, characteristic->service_uuid,
-                                     characteristic->uuid, byteArray);
+                                     characteristic->uuid, characteristic->value);
     }
 
     return 0;
@@ -1053,7 +1057,6 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
 
         // Get the byte array to be written
         GByteArray *byteArray = g_variant_get_byte_array(valueVariant);
-        g_variant_unref(valueVariant);
 
         log_debug(TAG, "write <%s>", characteristic->uuid);
 
@@ -1075,8 +1078,11 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         // TODO deal with offset and mtu
         binc_characteristic_set_value(application, characteristic, byteArray);
 
-        // Send properties changed signal with new value
-        binc_application_notify(application, characteristic->service_uuid, characteristic->uuid, byteArray);
+        if (byteArray != NULL) {
+            g_byte_array_free(byteArray, FALSE);
+        }
+
+        g_variant_unref(valueVariant);
 
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     } else if (g_str_equal(method, CHARACTERISTIC_METHOD_START_NOTIFY)) {

@@ -62,6 +62,8 @@ void on_central_state_changed(Adapter *adapter, Device *device) {
     }
 }
 
+// This function is called when a read is done
+// Use this to set the characteristic value if it is not set or to reject the read request
 const char *on_local_char_read(const Application *application, const char *address, const char *service_uuid,
                         const char *char_uuid) {
     if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
@@ -69,14 +71,28 @@ const char *on_local_char_read(const Application *application, const char *addre
         GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
         g_byte_array_append(byteArray, bytes, sizeof(bytes));
         binc_application_set_char_value(application, service_uuid, char_uuid, byteArray);
+        g_byte_array_free(byteArray, TRUE);
         return NULL;
     }
     return BLUEZ_ERROR_REJECTED;
 }
 
+// This function should be used to validate or reject a write request
 const char *on_local_char_write(const Application *application, const char *address, const char *service_uuid,
                           const char *char_uuid, GByteArray *byteArray) {
+    GString *result = g_byte_array_as_hex(byteArray);
+    log_debug(TAG, "write request characteristic <%s> with value <%s>", char_uuid, result->str);
+    g_string_free(result, TRUE);
+
     return NULL;
+}
+
+// This function is called after a write request was validates and the characteristic value was set
+void on_local_char_updated(const Application *application, const char *service_uuid,
+                           const char *char_uuid, GByteArray *byteArray) {
+    GString *result = g_byte_array_as_hex(byteArray);
+    log_debug(TAG, "characteristic <%s> updated to <%s>", char_uuid, result->str);
+    g_string_free(result, TRUE);
 }
 
 void on_local_char_start_notify(const Application *application, const char *service_uuid, const char *char_uuid) {
@@ -166,7 +182,7 @@ int main(void) {
                 app,
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
-                GATT_CHR_PROP_INDICATE);
+                GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
         binc_application_add_descriptor(
                 app,
                 HTS_SERVICE_UUID,
@@ -183,13 +199,25 @@ int main(void) {
         binc_application_set_char_write_cb(app, &on_local_char_write);
         binc_application_set_char_start_notify_cb(app, &on_local_char_start_notify);
         binc_application_set_char_stop_notify_cb(app, &on_local_char_stop_notify);
+        binc_application_set_char_updated_cb(app, &on_local_char_updated);
         binc_adapter_register_application(default_adapter, app);
     } else {
         log_debug("MAIN", "No default_adapter found");
     }
 
+    const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
+    GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
+    g_byte_array_append(byteArray, bytes, sizeof(bytes));
+
+    GByteArray *newByteArray = g_byte_array_sized_new(byteArray->len);
+    g_byte_array_append(newByteArray, byteArray->data, byteArray->len);
+
+
+    g_byte_array_free(newByteArray, TRUE);
+    g_byte_array_free(byteArray, TRUE);
+
     // Bail out after some time
-    g_timeout_add_seconds(600, callback, loop);
+    g_timeout_add_seconds(30, callback, loop);
 
     // Start the mainloop
     g_main_loop_run(loop);
