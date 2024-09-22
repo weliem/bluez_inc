@@ -94,6 +94,8 @@ void binc_application_set_char_read_cb(Application *application, onLocalCharacte
 
 void binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback);
 
+void binc_application_set_char_updated_cb(Application *application, onLocalCharacteristicUpdated callback);
+
 void binc_application_set_char_start_notify_cb(Application *application, onLocalCharacteristicStartNotify callback);
 
 void binc_application_set_char_stop_notify_cb(Application *application, onLocalCharacteristicStopNotify callback);
