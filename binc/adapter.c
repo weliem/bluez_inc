@@ -244,7 +244,7 @@ static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
     if (binc_device_get_rssi(device) < adapter->discovery_filter.rssi) return FALSE;
 
     const char *pattern = adapter->discovery_filter.pattern;
-    if (pattern != NULL) {
+    if (pattern != NULL && binc_device_get_name(device) != NULL) {
         if (!(g_str_has_prefix(binc_device_get_name(device), pattern) ||
               g_str_has_prefix(binc_device_get_address(device), pattern)))
             return FALSE;
