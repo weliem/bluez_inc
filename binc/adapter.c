@@ -973,6 +973,11 @@ const char *binc_adapter_get_discovery_state_name(const Adapter *adapter) {
     return discovery_state_names[adapter->discovery_state];
 }
 
+Advertisement *binc_adapter_get_advertisement(const Adapter *adapter) {
+    g_assert(adapter != NULL);
+	return adapter->advertisement;
+}
+
 static void binc_internal_start_advertising_cb(__attribute__((unused)) GObject *source_object,
                                                GAsyncResult *res,
                                                gpointer user_data) {
