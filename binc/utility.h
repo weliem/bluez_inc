@@ -48,6 +48,8 @@ GByteArray *g_variant_get_byte_array(GVariant *variant);
 
 char* replace_char(char* str, char find, char replace);
 
+char* random_string(gsize length);
+
 #ifdef __cplusplus
 }
 #endif
