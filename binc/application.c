@@ -573,10 +573,11 @@ void binc_application_publish(Application *application, const Adapter *adapter) 
 
 Application *binc_create_application(const Adapter *adapter) {
     g_assert(adapter != NULL);
+    char* random_str = random_string(4);
 
     Application *application = g_new0(Application, 1);
     application->connection = binc_adapter_get_dbus_connection(adapter);
-    application->path = g_strdup("/org/bluez/bincapplication");
+    application->path = g_strdup_printf("/org/bluez/bincapp_%s_%s", binc_adapter_get_name(adapter), random_str);
     application->services = g_hash_table_new_full(g_str_hash,
                                                   g_str_equal,
                                                   g_free,
@@ -584,6 +585,7 @@ Application *binc_create_application(const Adapter *adapter) {
 
     binc_application_publish(application, adapter);
 
+    g_free(random_str);
     return application;
 }
 

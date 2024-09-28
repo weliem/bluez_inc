@@ -168,15 +168,19 @@ void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *
 
 static void byte_array_free(GByteArray *byteArray) { g_byte_array_free(byteArray, TRUE); }
 
-Advertisement *binc_advertisement_create() {
+Advertisement *binc_advertisement_create(void) {
+    char* random_str = random_string(4);
+
     Advertisement *advertisement = g_new0(Advertisement, 1);
-    advertisement->path = g_strdup("/org/bluez/bincadvertisement");
+    advertisement->path = g_strdup_printf("/org/bluez/bincadv_%s", random_str);
     advertisement->manufacturer_data = g_hash_table_new_full(g_int_hash, g_int_equal, g_free,
                                                              (GDestroyNotify) byte_array_free);
     advertisement->service_data = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
                                                         (GDestroyNotify) byte_array_free);
     advertisement->min_interval = 200;
     advertisement->max_interval = 500;
+
+    g_free(random_str);
     return advertisement;
 }
 

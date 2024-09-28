@@ -21,6 +21,7 @@
  *
  */
 
+#include <sys/time.h>
 #include "utility.h"
 #include "math.h"
 
@@ -142,4 +143,21 @@ GByteArray *g_variant_get_byte_array(GVariant *variant) {
     size_t data_length = 0;
     guint8 *data = (guint8 *) g_variant_get_fixed_array(variant, &data_length, sizeof(guint8));
     return g_byte_array_new_take(data, data_length);
+}
+
+char* random_string(gsize length) {
+    GString *string = g_string_sized_new(length);
+
+    // Seed rand with current time in nanoseconds
+    struct timespec nanos;
+    clock_gettime(CLOCK_MONOTONIC, &nanos);
+    srand((unsigned int) nanos.tv_nsec);
+
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    for (size_t n = 0; n < length; n++) {
+        int key = rand() % (int)(sizeof(charset) - 1);
+        g_string_append_c(string, charset[key]);
+    }
+
+    return g_string_free(string, FALSE);
 }
