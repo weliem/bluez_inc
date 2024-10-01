@@ -600,6 +600,8 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
             while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
                 if (g_str_equal(interface_name, INTERFACE_ADAPTER)) {
                     Adapter *adapter = binc_adapter_create(dbusConnection, object_path);
+                    log_debug(TAG, "found adapter '%s'", object_path);
+
                     char *property_name;
                     GVariantIter iter3;
                     GVariant *property_value;
