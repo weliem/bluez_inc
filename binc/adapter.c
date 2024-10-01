@@ -330,6 +330,11 @@ static void binc_internal_device_appeared(__attribute__((unused)) GDBusConnectio
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     while (g_variant_iter_loop(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
+
+            // Skip this device if it is not for this adapter
+            if (!g_str_has_prefix(object, adapter->path))
+                break;
+
             Device *device = binc_device_create(object, adapter);
 
             char *property_name = NULL;
