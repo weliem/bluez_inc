@@ -108,6 +108,7 @@ Device *binc_device_create(const char *path, Adapter *adapter) {
     g_assert(path != NULL);
     g_assert(strlen(path) > 0);
     g_assert(adapter != NULL);
+    g_assert(g_str_has_prefix(path, binc_adapter_get_path(adapter)));
 
     Device *device = g_new0(Device, 1);
     device->path = g_strdup(path);
