@@ -330,6 +330,11 @@ static void binc_internal_device_appeared(__attribute__((unused)) GDBusConnectio
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     while (g_variant_iter_loop(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
+
+            // Skip this device if it is not for this adapter
+            if (!g_str_has_prefix(object, adapter->path))
+                break;
+
             Device *device = binc_device_create(object, adapter);
 
             char *property_name = NULL;
@@ -430,7 +435,7 @@ static void binc_internal_device_changed(__attribute__((unused)) GDBusConnection
     g_assert(adapter != NULL);
 
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
-    if (device == NULL) {
+    if (device == NULL && g_str_has_prefix(path, adapter->path)) {
         device = binc_device_create(path, adapter);
         g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
         binc_internal_device_getall_properties(adapter, device);
@@ -595,6 +600,8 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
             while (g_variant_iter_loop(&iter2, "{&s@a{sv}}", &interface_name, &properties)) {
                 if (g_str_equal(interface_name, INTERFACE_ADAPTER)) {
                     Adapter *adapter = binc_adapter_create(dbusConnection, object_path);
+                    log_debug(TAG, "found adapter '%s'", object_path);
+
                     char *property_name;
                     GVariantIter iter3;
                     GVariant *property_value;
