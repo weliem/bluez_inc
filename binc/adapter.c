@@ -435,10 +435,12 @@ static void binc_internal_device_changed(__attribute__((unused)) GDBusConnection
     g_assert(adapter != NULL);
 
     Device *device = g_hash_table_lookup(adapter->devices_cache, path);
-    if (device == NULL && g_str_has_prefix(path, adapter->path)) {
-        device = binc_device_create(path, adapter);
-        g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
-        binc_internal_device_getall_properties(adapter, device);
+    if (device == NULL) {
+        if (g_str_has_prefix(path, adapter->path)) {
+            device = binc_device_create(path, adapter);
+            g_hash_table_insert(adapter->devices_cache, g_strdup(binc_device_get_path(device)), device);
+            binc_internal_device_getall_properties(adapter, device);
+        }
     } else {
         gboolean isDiscoveryResult = FALSE;
         ConnectionState oldState = binc_device_get_connection_state(device);
