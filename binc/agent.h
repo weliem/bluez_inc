@@ -49,6 +49,8 @@ void binc_agent_set_request_passkey_cb(Agent *agent, AgentRequestPasskeyCallback
 
 void binc_agent_free(Agent *agent);
 
+const char *binc_agent_get_path(const Agent *agent);
+
 #ifdef __cplusplus
 }
 #endif
