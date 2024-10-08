@@ -298,3 +298,9 @@ void binc_agent_set_request_passkey_cb(Agent *agent, AgentRequestPasskeyCallback
     g_assert(callback != NULL);
     agent->request_passkey_callback = callback;
 }
+
+const char *binc_agent_get_path(const Agent *agent) {
+    g_assert(agent != NULL);
+    return agent->path;
+}
+
