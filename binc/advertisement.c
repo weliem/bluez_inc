@@ -221,6 +221,11 @@ const char *binc_advertisement_get_path(const Advertisement *advertisement) {
     return advertisement->path;
 }
 
+const char *binc_advertisement_get_local_name(const Advertisement *advertisement) {
+    g_assert(advertisement != NULL);
+    return advertisement->local_name;
+}
+
 void binc_advertisement_set_services(Advertisement *advertisement, const GPtrArray *service_uuids) {
     g_assert(advertisement != NULL);
     g_assert(service_uuids != NULL);
