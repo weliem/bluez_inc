@@ -51,6 +51,8 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
 
 void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter);
 
+const char *binc_advertisement_get_local_name(const Advertisement *advertisement);
+
 #ifdef __cplusplus
 }
 #endif
