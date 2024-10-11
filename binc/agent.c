@@ -304,3 +304,9 @@ const char *binc_agent_get_path(const Agent *agent) {
     return agent->path;
 }
 
+Adapter *binc_agent_get_adapter(const Agent *agent){
+	g_assert(agent != NULL);
+	return agent->adapter;
+}
+
+
