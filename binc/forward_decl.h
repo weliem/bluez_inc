@@ -28,6 +28,7 @@
 extern "C" {
 #endif
 
+typedef struct binc_agent Agent;
 typedef struct binc_adapter Adapter;
 typedef struct binc_device Device;
 typedef struct binc_service Service;

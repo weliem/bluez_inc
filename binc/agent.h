@@ -51,6 +51,8 @@ void binc_agent_free(Agent *agent);
 
 const char *binc_agent_get_path(const Agent *agent);
 
+Adapter *binc_agent_get_adapter(const Agent *agent);
+
 #ifdef __cplusplus
 }
 #endif
