@@ -85,6 +85,7 @@ struct binc_adapter {
     guint iface_removed;
 
     AdapterDiscoveryResultCallback discoveryResultCallback;
+    AdapterDeviceRemovalCallback deviceRemovalCallback;
     AdapterDiscoveryStateChangeCallback discoveryStateCallback;
     AdapterPoweredStateChangeCallback poweredStateCallback;
     RemoteCentralConnectionStateCallback centralStateCallback;
@@ -280,6 +281,15 @@ static void deliver_discovery_result(Adapter *adapter, Device *device) {
     }
 }
 
+static void deliver_device_removal(Adapter *adapter, Device *device) {
+   g_assert(adapter != NULL);
+   g_assert(device != NULL);
+
+   if (adapter->deviceRemovalCallback != NULL) {
+       adapter->deviceRemovalCallback(adapter, device);
+   }
+}
+
 static void binc_internal_device_disappeared(__attribute__((unused)) GDBusConnection *conn,
                                              __attribute__((unused)) const gchar *sender_name,
                                              __attribute__((unused)) const gchar *object_path,
@@ -300,7 +310,10 @@ static void binc_internal_device_disappeared(__attribute__((unused)) GDBusConnec
     while (g_variant_iter_loop(interfaces, "s", &interface_name)) {
         if (g_str_equal(interface_name, INTERFACE_DEVICE)) {
             log_debug(TAG, "Device %s removed", object);
-            if (g_hash_table_lookup(adapter->devices_cache, object) != NULL) {
+            
+            Device *device = g_hash_table_lookup(adapter->devices_cache, object);
+            if (device != NULL) {
+  	            deliver_device_removal(adapter, device);
                 g_hash_table_remove(adapter->devices_cache, object);
             }
         }
@@ -919,6 +932,13 @@ void binc_adapter_set_discovery_cb(Adapter *adapter, AdapterDiscoveryResultCallb
     g_assert(callback != NULL);
 
     adapter->discoveryResultCallback = callback;
+}
+
+void binc_adapter_set_device_removal_cb(Adapter *adapter, AdapterDeviceRemovalCallback callback) {
+    g_assert(adapter != NULL);
+    g_assert(callback != NULL);
+
+    adapter->deviceRemovalCallback = callback;
 }
 
 void binc_adapter_set_discovery_state_cb(Adapter *adapter, AdapterDiscoveryStateChangeCallback callback) {
