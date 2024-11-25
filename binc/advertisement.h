@@ -53,6 +53,12 @@ void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *
 
 const char *binc_advertisement_get_local_name(const Advertisement *advertisement);
 
+void binc_advertisement_set_appearance(Advertisement *advertisement, guint16 appearance);
+
+guint16 binc_advertisement_get_appearance(Advertisement *advertisement);
+
+void binc_advertisement_set_general_discoverable(Advertisement *advertisement, gboolean general_discoverable);
+
 #ifdef __cplusplus
 }
 #endif

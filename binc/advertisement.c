@@ -37,6 +37,8 @@ struct binc_advertisement {
     guint registration_id;
     guint32 min_interval;
     guint32 max_interval;
+    guint16 appearance;
+    gboolean general_discoverable;
 };
 
 static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdata) {
@@ -102,6 +104,10 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
     } else if (g_str_equal(property_name, "MaxInterval")) {
         log_debug(TAG, "setting advertising MaxInterval to %dms (requires experimental if version < v5.77)", advertisement->max_interval);
         ret = g_variant_new_uint32(advertisement->max_interval);
+    } else if (g_str_equal(property_name, "Appearance")) {
+        ret = g_variant_new_uint16(advertisement->appearance);
+    } else if (g_str_equal(property_name, "Discoverable")) {
+        ret = g_variant_new_boolean(advertisement->general_discoverable);
     }
     return ret;
 }
@@ -137,6 +143,8 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
             "       <property name='ServiceUUIDs' type='as' access='read'/>"
             "       <property name='MinInterval' type='u' access='read'/>"
             "       <property name='MaxInterval' type='u' access='read'/>"
+            "       <property name='Appearance' type='q' access='read'/>"
+            "       <property name='Discoverable' type='b' access='read'/>"
             "   </interface>"
             "</node>";
 
@@ -282,5 +290,21 @@ void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, 
     advertisement->max_interval = max;
 }
 
+void binc_advertisement_set_appearance(Advertisement *advertisement, guint16 appearance) {
+    g_assert(advertisement != NULL);
 
+    advertisement->appearance = appearance;
+}
+
+guint16 binc_advertisement_get_appearance(Advertisement *advertisement) {
+    g_assert(advertisement != NULL);
+
+    return advertisement->appearance;
+}
+
+void binc_advertisement_set_general_discoverable(Advertisement *advertisement, gboolean general_discoverable) {
+    g_assert(advertisement != NULL);
+
+    advertisement->general_discoverable = general_discoverable;
+}
 
