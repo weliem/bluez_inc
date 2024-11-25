@@ -290,13 +290,13 @@ void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, 
     advertisement->max_interval = max;
 }
 
-void binc_advertisement_set_apperance(Advertisement *advertisement, guint16 appearance) {
+void binc_advertisement_set_appearance(Advertisement *advertisement, guint16 appearance) {
     g_assert(advertisement != NULL);
 
     advertisement->appearance = appearance;
 }
 
-guint16 binc_advertisement_get_apperance(Advertisement *advertisement) {
+guint16 binc_advertisement_get_appearance(Advertisement *advertisement) {
     g_assert(advertisement != NULL);
 
     return advertisement->appearance;
