@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+#define TAG "Logger"
 #define BUFFER_SIZE 1024
 #define MAX_FILE_SIZE 1024 * 64
 #define MAX_LOGS 5
