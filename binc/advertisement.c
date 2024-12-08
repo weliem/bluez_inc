@@ -26,7 +26,7 @@
 #include "logger.h"
 #include "utility.h"
 
-static const char *const TAG = "Advertisement";
+#define TAG __func__
 
 struct binc_advertisement {
     char *path; // Owned
@@ -227,6 +227,11 @@ void binc_advertisement_set_local_name(Advertisement *advertisement, const char 
 const char *binc_advertisement_get_path(const Advertisement *advertisement) {
     g_assert(advertisement != NULL);
     return advertisement->path;
+}
+
+GPtrArray *binc_advertisement_get_services(const Advertisement *advertisement) {
+     g_assert(advertisement != NULL);
+     return advertisement->services;
 }
 
 const char *binc_advertisement_get_local_name(const Advertisement *advertisement) {

@@ -26,7 +26,7 @@
 #include "utility.h"
 #include "device_internal.h"
 
-static const char *const TAG = "Characteristic";
+#define TAG __func__
 static const char *const INTERFACE_CHARACTERISTIC = "org.bluez.GattCharacteristic1";
 static const char *const BLUEZ_DBUS = "org.bluez";
 

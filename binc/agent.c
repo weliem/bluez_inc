@@ -30,7 +30,7 @@
 #include <glib.h>
 #include <stdio.h>
 
-static const char *const TAG = "Agent";
+#define TAG __func__
 
 struct binc_agent {
     char *path; // Owned

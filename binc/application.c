@@ -32,7 +32,7 @@
 #define GATT_CHAR_INTERFACE "org.bluez.GattCharacteristic1"
 #define GATT_DESC_INTERFACE "org.bluez.GattDescriptor1"
 
-static const char *const TAG = "Application";
+#define TAG __func__
 
 static const char *const CHARACTERISTIC_METHOD_READ_VALUE = "ReadValue";
 static const char *const CHARACTERISTIC_METHOD_WRITE_VALUE = "WriteValue";

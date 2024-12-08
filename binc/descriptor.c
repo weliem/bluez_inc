@@ -32,7 +32,7 @@
 #include "utility.h"
 #include "logger.h"
 
-static const char *const TAG = "Descriptor";
+#define TAG __func__
 
 static const char *const BLUEZ_DBUS = "org.bluez";
 static const char *const INTERFACE_DESCRIPTOR = "org.bluez.GattDescriptor1";
