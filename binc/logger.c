@@ -53,6 +53,10 @@ void log_set_level(LogLevel level) {
     LogSettings.level = level;
 }
 
+LogLevel log_get_level(void) {
+	return LogSettings.level;
+}
+
 void log_set_handler(LogEventCallback callback) {
     LogSettings.logCallback = callback;
 }
