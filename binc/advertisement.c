@@ -39,6 +39,7 @@ struct binc_advertisement {
     guint32 max_interval;
     guint16 appearance;
     gboolean general_discoverable;
+    gint16 tx_power;
 };
 
 static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdata) {
@@ -108,6 +109,8 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
         ret = g_variant_new_uint16(advertisement->appearance);
     } else if (g_str_equal(property_name, "Discoverable")) {
         ret = g_variant_new_boolean(advertisement->general_discoverable);
+    } else if (g_str_equal(property_name, "TxPower")) {
+        ret = g_variant_new_int16(advertisement->tx_power);
     }
     return ret;
 }
@@ -145,6 +148,7 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
             "       <property name='MaxInterval' type='u' access='read'/>"
             "       <property name='Appearance' type='q' access='read'/>"
             "       <property name='Discoverable' type='b' access='read'/>"
+            "       <property name='TxPower' type='n' access='read'/>"
             "   </interface>"
             "</node>";
 
@@ -187,6 +191,7 @@ Advertisement *binc_advertisement_create(void) {
                                                         (GDestroyNotify) byte_array_free);
     advertisement->min_interval = 200;
     advertisement->max_interval = 500;
+    advertisement->tx_power = 4;
 
     g_free(random_str);
     return advertisement;
@@ -307,4 +312,21 @@ void binc_advertisement_set_general_discoverable(Advertisement *advertisement, g
 
     advertisement->general_discoverable = general_discoverable;
 }
+
+// The provided value must be in range [-127 to +20], where units are in dBm.
+void binc_advertisement_set_tx_power(Advertisement *advertisement, gint16 tx_power) {
+    g_assert(advertisement != NULL);
+    g_assert(tx_power >= -127);
+    g_assert(tx_power <= 20);
+
+    advertisement->tx_power = tx_power;
+}
+
+gint16 binc_advertisement_get_tx_power(Advertisement *advertisement) {
+    g_assert(advertisement != NULL);
+
+    return advertisement->tx_power;
+}
+
+
 

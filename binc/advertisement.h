@@ -59,6 +59,10 @@ guint16 binc_advertisement_get_appearance(Advertisement *advertisement);
 
 void binc_advertisement_set_general_discoverable(Advertisement *advertisement, gboolean general_discoverable);
 
+void binc_advertisement_set_tx_power(Advertisement *advertisement, gint16 tx_power);
+
+gint16 binc_advertisement_get_tx_power(Advertisement *advertisement);
+
 #ifdef __cplusplus
 }
 #endif

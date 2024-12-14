@@ -171,6 +171,7 @@ int main(void) {
         advertisement = binc_advertisement_create();
         binc_advertisement_set_local_name(advertisement, "BINC");
         binc_advertisement_set_interval(advertisement, 500, 500);
+        binc_advertisement_set_tx_power(advertisement, 0);
         binc_advertisement_set_services(advertisement, adv_service_uuids);
         g_ptr_array_free(adv_service_uuids, TRUE);
         binc_adapter_start_advertising(default_adapter, advertisement);
