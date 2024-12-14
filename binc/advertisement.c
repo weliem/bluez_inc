@@ -40,6 +40,7 @@ struct binc_advertisement {
     guint16 appearance;
     gboolean general_discoverable;
     gint16 tx_power;
+    GPtrArray *includes; // owned
 };
 
 static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdata) {
@@ -111,6 +112,16 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
         ret = g_variant_new_boolean(advertisement->general_discoverable);
     } else if (g_str_equal(property_name, "TxPower")) {
         ret = g_variant_new_int16(advertisement->tx_power);
+    } else if (g_str_equal(property_name, "Includes")) {
+        GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+        if (advertisement->includes != NULL) {
+            for (guint i = 0; i < advertisement->includes->len; i++) {
+                char *element = g_ptr_array_index(advertisement->includes, i);
+                g_variant_builder_add(builder, "s", element);
+            }
+        }
+        ret = g_variant_builder_end(builder);
+        g_variant_builder_unref(builder);
     }
     return ret;
 }
@@ -149,6 +160,7 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
             "       <property name='Appearance' type='q' access='read'/>"
             "       <property name='Discoverable' type='b' access='read'/>"
             "       <property name='TxPower' type='n' access='read'/>"
+            "       <property name='Includes' type='as' access='read'/>"
             "   </interface>"
             "</node>";
 
@@ -192,7 +204,7 @@ Advertisement *binc_advertisement_create(void) {
     advertisement->min_interval = 200;
     advertisement->max_interval = 500;
     advertisement->tx_power = 4;
-
+    advertisement->includes = NULL;
     g_free(random_str);
     return advertisement;
 }
@@ -217,6 +229,11 @@ void binc_advertisement_free(Advertisement *advertisement) {
     if (advertisement->service_data != NULL) {
         g_hash_table_destroy(advertisement->service_data);
         advertisement->service_data = NULL;
+    }
+
+    if (advertisement->includes != NULL) {
+        g_ptr_array_free(advertisement->includes, TRUE);
+        advertisement->includes = NULL;
     }
 
     g_free(advertisement);
@@ -320,6 +337,13 @@ void binc_advertisement_set_tx_power(Advertisement *advertisement, gint16 tx_pow
     g_assert(tx_power <= 20);
 
     advertisement->tx_power = tx_power;
+
+    // Add 'tx-power' to the list of includes if needed
+    if (advertisement->includes == NULL) {
+        GPtrArray *includes = g_ptr_array_new();
+        g_ptr_array_add(includes, "tx-power");
+        advertisement->includes = includes;
+    }
 }
 
 gint16 binc_advertisement_get_tx_power(Advertisement *advertisement) {
