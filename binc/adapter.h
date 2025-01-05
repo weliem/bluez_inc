@@ -78,6 +78,10 @@ void binc_adapter_discoverable_on(Adapter *adapter);
 
 void binc_adapter_discoverable_off(Adapter *adapter);
 
+void binc_adapter_set_alias(Adapter *adapter, char *alias);
+
+const char *binc_adapter_get_alias(Adapter *adapter);
+
 const char *binc_adapter_get_path(const Adapter *adapter);
 
 const char *binc_adapter_get_name(const Adapter *adapter);

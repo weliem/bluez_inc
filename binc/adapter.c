@@ -46,6 +46,7 @@ static const char *const ADAPTER_PROPERTY_POWERED = "Powered";
 static const char *const ADAPTER_PROPERTY_DISCOVERING = "Discovering";
 static const char *const ADAPTER_PROPERTY_ADDRESS = "Address";
 static const char *const ADAPTER_PROPERTY_DISCOVERABLE = "Discoverable";
+static const char *const ADAPTER_PROPERTY_ALIAS = "Alias";
 
 static const char *const DEVICE_PROPERTY_RSSI = "RSSI";
 static const char *const DEVICE_PROPERTY_UUIDS = "UUIDs";
@@ -72,6 +73,7 @@ typedef struct binc_discovery_filter {
 struct binc_adapter {
     const char *path; // Owned
     const char *address; // Owned
+    const char *alias;
     gboolean powered;
     gboolean discoverable;
     gboolean discovering;
@@ -557,6 +559,7 @@ static Adapter *binc_adapter_create(GDBusConnection *connection, const char *pat
     Adapter *adapter = g_new0(Adapter, 1);
     adapter->connection = connection;
     adapter->path = g_strdup(path);
+    adapter->alias = NULL;
     adapter->discovery_filter.rssi = -255;
     adapter->devices_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                    g_free, (GDestroyNotify) binc_device_free);
@@ -924,6 +927,20 @@ void binc_adapter_discoverable_off(Adapter *adapter) {
     g_assert(adapter != NULL);
 
     adapter_set_property(adapter, ADAPTER_PROPERTY_DISCOVERABLE, g_variant_new("b", FALSE));
+}
+
+void binc_adapter_set_alias(Adapter *adapter, char *alias) {
+    g_assert(adapter != NULL);
+    g_assert(alias != NULL );
+
+    adapter->alias = alias;
+    adapter_set_property(adapter, ADAPTER_PROPERTY_ALIAS, g_variant_new("s", alias));
+}
+
+const char *binc_adapter_get_alias(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+	return adapter->alias;
 }
 
 
