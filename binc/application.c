@@ -108,6 +108,7 @@ static const gchar descriptor_xml[] =
         "</node>";
 
 struct binc_application {
+    const Adapter *adapter;
     char *path;
     guint registration_id;
     GDBusConnection *connection;
@@ -578,6 +579,7 @@ Application *binc_create_application(const Adapter *adapter) {
     Application *application = g_new0(Application, 1);
     application->connection = binc_adapter_get_dbus_connection(adapter);
     application->path = g_strdup_printf("/org/bluez/bincapp_%s_%s", binc_adapter_get_name(adapter), random_str);
+    application->adapter = adapter;
     application->services = g_hash_table_new_full(g_str_hash,
                                                   g_str_equal,
                                                   g_free,
@@ -1211,6 +1213,11 @@ int binc_application_add_characteristic(Application *application, const char *se
 const char *binc_application_get_path(const Application *application) {
     g_assert(application != NULL);
     return application->path;
+}
+
+const Adapter *binc_application_get_adapter(const Application *application) {
+    g_assert(application != NULL);
+    return application->adapter;
 }
 
 void binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback) {
