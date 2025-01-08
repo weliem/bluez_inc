@@ -943,6 +943,11 @@ const char *binc_adapter_get_alias(Adapter *adapter) {
 	return adapter->alias;
 }
 
+GDBusConnection *binc_adapter_get_connection(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+	return adapter->connection;
+}
 
 void binc_adapter_set_discovery_cb(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
     g_assert(adapter != NULL);

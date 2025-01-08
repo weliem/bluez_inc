@@ -45,6 +45,7 @@ typedef void (*AdapterPoweredStateChangeCallback)(Adapter *adapter, gboolean sta
 
 typedef void (*RemoteCentralConnectionStateCallback)(Adapter *adapter, Device *device);
 
+GDBusConnection *binc_adapter_get_connection(Adapter *adapter);
 
 Adapter *binc_adapter_get_default(GDBusConnection *dbusConnection);
 
