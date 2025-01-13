@@ -137,6 +137,8 @@ Adapter *binc_device_get_adapter(const Device *device);
 
 guint binc_device_get_mtu(const Device *device);
 
+void binc_device_set_is_central(Device *device, gboolean is_central);
+
 gboolean binc_device_is_central(const Device *device);
 
 GDBusConnection *binc_device_get_dbus_connection(const Device *device);
