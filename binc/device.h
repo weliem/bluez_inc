@@ -139,6 +139,8 @@ guint binc_device_get_mtu(const Device *device);
 
 gboolean binc_device_is_central(const Device *device);
 
+GDBusConnection *binc_device_get_dbus_connection(const Device *device);
+
 char *binc_device_to_string(const Device *device);
 
 void binc_device_set_user_data(Device *device, void *user_data);
