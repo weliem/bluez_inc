@@ -20,6 +20,9 @@
  *   SOFTWARE.
  *
  */
+#include <stdio.h>
+#define IPAD_ADDRESS "46:02:99:DF:2A:B0" // random
+#define FENIX_ADDRESS "E0:48:24:50:BB:EF" // public
 
 #include "adapter.h"
 #include "device.h"
@@ -366,9 +369,14 @@ static void binc_internal_device_appeared(__attribute__((unused)) GDBusConnectio
                 deliver_discovery_result(adapter, device);
             }
 
-            if (binc_device_get_connection_state(device) == BINC_CONNECTED &&
-                binc_device_get_rssi(device) == -255 &&
-                binc_device_get_uuids(device) == NULL) {
+// This original code was a heuristic assuming that a device without uuids and with an RSSI=-255 is a central
+// This is incorrect, particularly for multirole devices aka hub; such as the Fenix 8 and an iPad.
+// Really want is bluez to expose device->initiator and obtain using btd_device_is_initiator(device)
+            if ((binc_device_get_connection_state(device) == BINC_CONNECTED) &&
+                //binc_device_get_rssi(device) == -255 &&
+                //binc_device_get_uuids(device) == NULL) {
+                ((!g_str_has_prefix( binc_device_get_address(device), "iPad")) ||
+                (!g_str_has_prefix( binc_device_get_address(device), "fenix" )))){
                 binc_device_set_is_central(device, TRUE);
                 if (adapter->centralStateCallback != NULL) {
                     adapter->centralStateCallback(adapter, device);
@@ -471,7 +479,10 @@ static void binc_internal_device_changed(__attribute__((unused)) GDBusConnection
             deliver_discovery_result(adapter, device);
         }
 
-        if (binc_device_get_bonding_state(device) == BINC_BONDED && binc_device_get_rssi(device) == -255) {
+// As above, this was a heuristic to determine central that does not work
+        //if (binc_device_get_bonding_state(device) == BINC_BONDED && binc_device_get_rssi(device) == -255) {
+//        if (binc_device_get_bonding_state(device) == BINC_BONDED) {
+        if (!g_str_has_prefix( binc_device_get_address(device), "iPad") || !g_str_has_prefix( binc_device_get_address(device), "fenix" )){
             binc_device_set_is_central(device, TRUE);
         }
 
