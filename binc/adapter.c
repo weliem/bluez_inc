@@ -163,7 +163,7 @@ static void binc_internal_adapter_call_method_cb(__attribute__((unused)) GObject
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to call adapter method (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to call adapter '%s' method (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     }
 }
@@ -400,7 +400,7 @@ static void binc_internal_device_getall_properties_cb(__attribute__((unused)) GO
     GVariant *result = g_dbus_connection_call_finish(binc_device_get_dbus_connection(device), res, &error);
 
     if (error != NULL) {
-        log_error(TAG, "failed to call '%s' (error %d: %s)", "GetAll", error->code, error->message);
+        log_error(TAG, "failed to call '%s' on device '%s' (error %d: %s)", "GetAll", binc_device_get_name(device), error->code, error->message);
         g_clear_error(&error);
     }
 
@@ -725,7 +725,7 @@ static void binc_internal_start_discovery_cb(__attribute__((unused)) GObject *so
     GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
 
     if (error != NULL) {
-        log_error(TAG, "failed to call '%s' (error %d: %s)", METHOD_START_DISCOVERY, error->code, error->message);
+        log_error(TAG, "failed to call '%s' on adapter '%s' (error %d: %s)", METHOD_START_DISCOVERY, binc_adapter_get_path(adapter), error->code, error->message);
         adapter->discovery_state = BINC_DISCOVERY_STOPPED;
         if (adapter->discoveryStateCallback != NULL) {
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
@@ -770,7 +770,7 @@ static void binc_internal_stop_discovery_cb(__attribute__((unused)) GObject *sou
     GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
 
     if (error != NULL) {
-        log_error(TAG, "failed to call '%s' (error %d: %s)", METHOD_STOP_DISCOVERY, error->code, error->message);
+        log_error(TAG, "failed to call '%s' on adapter '%s' (error %d: %s)", METHOD_STOP_DISCOVERY, binc_adapter_get_path(adapter), error->code, error->message);
         if (adapter->discoveryStateCallback != NULL) {
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
@@ -889,7 +889,7 @@ static void binc_internal_set_property_cb(__attribute__((unused)) GObject *sourc
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to set adapter property (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to set adapter '%s' property (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     }
 }
@@ -1031,7 +1031,7 @@ static void binc_internal_start_advertising_cb(__attribute__((unused)) GObject *
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to register advertisement (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to register advertisement on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         log_debug(TAG, "started advertising (%s)", adapter->address);
@@ -1072,7 +1072,7 @@ static void binc_internal_stop_advertising_cb(__attribute__((unused)) GObject *s
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to unregister advertisement (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to unregister advertisement on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         binc_advertisement_unregister(adapter->advertisement, adapter);
@@ -1111,7 +1111,7 @@ static void binc_internal_register_appl_cb(__attribute__((unused)) GObject *sour
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to register application (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to register application on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         log_debug(TAG, "successfully registered application");
@@ -1150,7 +1150,7 @@ static void binc_internal_unregister_appl_cb(__attribute__((unused)) GObject *so
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to unregister application (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to unregister application on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         log_debug(TAG, "successfully unregistered application");
