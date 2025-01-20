@@ -41,7 +41,7 @@ typedef enum {
 
 typedef struct binc_agent Agent;
 
-Agent *binc_agent_create(Adapter *adapter, const char *path, IoCapability io_capability);
+Agent *binc_agent_create(GDBusConnection *dbconnection, const char *path, IoCapability io_capability);
 
 void binc_agent_set_request_authorization_cb(Agent *agent, AgentRequestAuthorizationCallback callback);
 
@@ -51,7 +51,10 @@ void binc_agent_free(Agent *agent);
 
 const char *binc_agent_get_path(const Agent *agent);
 
-Adapter *binc_agent_get_adapter(const Agent *agent);
+GDBusConnection *binc_agent_get_connection(const Agent *agent);
+
+Device *binc_agent_get_device_by_path(Agent *agent, const char *device_path);
+
 
 #ifdef __cplusplus
 }
