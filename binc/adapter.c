@@ -20,6 +20,9 @@
  *   SOFTWARE.
  *
  */
+#include <stdio.h>
+#define IPAD_ADDRESS "46:02:99:DF:2A:B0" // random
+#define FENIX_ADDRESS "E0:48:24:50:BB:EF" // public
 
 #include "adapter.h"
 #include "device.h"
@@ -160,7 +163,7 @@ static void binc_internal_adapter_call_method_cb(__attribute__((unused)) GObject
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to call adapter method (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to call adapter '%s' method (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     }
 }
@@ -366,9 +369,14 @@ static void binc_internal_device_appeared(__attribute__((unused)) GDBusConnectio
                 deliver_discovery_result(adapter, device);
             }
 
-            if (binc_device_get_connection_state(device) == BINC_CONNECTED &&
-                binc_device_get_rssi(device) == -255 &&
-                binc_device_get_uuids(device) == NULL) {
+// This original code was a heuristic assuming that a device without uuids and with an RSSI=-255 is a central
+// This is incorrect, particularly for multirole devices aka hub; such as the Fenix 8 and an iPad.
+// Really want is bluez to expose device->initiator and obtain using btd_device_is_initiator(device)
+            if ((binc_device_get_connection_state(device) == BINC_CONNECTED) &&
+                //binc_device_get_rssi(device) == -255 &&
+                //binc_device_get_uuids(device) == NULL) {
+                ((!g_str_has_prefix( binc_device_get_address(device), "iPad")) ||
+                (!g_str_has_prefix( binc_device_get_address(device), "fenix" )))){
                 binc_device_set_is_central(device, TRUE);
                 if (adapter->centralStateCallback != NULL) {
                     adapter->centralStateCallback(adapter, device);
@@ -392,7 +400,7 @@ static void binc_internal_device_getall_properties_cb(__attribute__((unused)) GO
     GVariant *result = g_dbus_connection_call_finish(binc_device_get_dbus_connection(device), res, &error);
 
     if (error != NULL) {
-        log_error(TAG, "failed to call '%s' (error %d: %s)", "GetAll", error->code, error->message);
+        log_error(TAG, "failed to call '%s' on device '%s' (error %d: %s)", "GetAll", binc_device_get_name(device), error->code, error->message);
         g_clear_error(&error);
     }
 
@@ -471,7 +479,10 @@ static void binc_internal_device_changed(__attribute__((unused)) GDBusConnection
             deliver_discovery_result(adapter, device);
         }
 
-        if (binc_device_get_bonding_state(device) == BINC_BONDED && binc_device_get_rssi(device) == -255) {
+// As above, this was a heuristic to determine central that does not work
+        //if (binc_device_get_bonding_state(device) == BINC_BONDED && binc_device_get_rssi(device) == -255) {
+//        if (binc_device_get_bonding_state(device) == BINC_BONDED) {
+        if (!g_str_has_prefix( binc_device_get_address(device), "iPad") || !g_str_has_prefix( binc_device_get_address(device), "fenix" )){
             binc_device_set_is_central(device, TRUE);
         }
 
@@ -714,7 +725,7 @@ static void binc_internal_start_discovery_cb(__attribute__((unused)) GObject *so
     GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
 
     if (error != NULL) {
-        log_error(TAG, "failed to call '%s' (error %d: %s)", METHOD_START_DISCOVERY, error->code, error->message);
+        log_error(TAG, "failed to call '%s' on adapter '%s' (error %d: %s)", METHOD_START_DISCOVERY, binc_adapter_get_path(adapter), error->code, error->message);
         adapter->discovery_state = BINC_DISCOVERY_STOPPED;
         if (adapter->discoveryStateCallback != NULL) {
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
@@ -759,7 +770,7 @@ static void binc_internal_stop_discovery_cb(__attribute__((unused)) GObject *sou
     GVariant *value = g_dbus_connection_call_finish(adapter->connection, res, &error);
 
     if (error != NULL) {
-        log_error(TAG, "failed to call '%s' (error %d: %s)", METHOD_STOP_DISCOVERY, error->code, error->message);
+        log_error(TAG, "failed to call '%s' on adapter '%s' (error %d: %s)", METHOD_STOP_DISCOVERY, binc_adapter_get_path(adapter), error->code, error->message);
         if (adapter->discoveryStateCallback != NULL) {
             adapter->discoveryStateCallback(adapter, adapter->discovery_state, error);
         }
@@ -878,7 +889,7 @@ static void binc_internal_set_property_cb(__attribute__((unused)) GObject *sourc
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to set adapter property (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to set adapter '%s' property (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     }
 }
@@ -1020,7 +1031,7 @@ static void binc_internal_start_advertising_cb(__attribute__((unused)) GObject *
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to register advertisement (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to register advertisement on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         log_debug(TAG, "started advertising (%s)", adapter->address);
@@ -1061,7 +1072,7 @@ static void binc_internal_stop_advertising_cb(__attribute__((unused)) GObject *s
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to unregister advertisement (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to unregister advertisement on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         binc_advertisement_unregister(adapter->advertisement, adapter);
@@ -1100,7 +1111,7 @@ static void binc_internal_register_appl_cb(__attribute__((unused)) GObject *sour
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to register application (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to register application on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         log_debug(TAG, "successfully registered application");
@@ -1139,7 +1150,7 @@ static void binc_internal_unregister_appl_cb(__attribute__((unused)) GObject *so
     }
 
     if (error != NULL) {
-        log_error(TAG, "failed to unregister application (error %d: %s)", error->code, error->message);
+        log_error(TAG, "failed to unregister application on adapter '%s' (error %d: %s)", binc_adapter_get_path(adapter), error->code, error->message);
         g_clear_error(&error);
     } else {
         log_debug(TAG, "successfully unregistered application");
