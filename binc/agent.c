@@ -266,13 +266,17 @@ int binc_agentmanager_register_agent(Agent *agent) {
     int result = binc_agentmanager_call_method(agent->connection, "RegisterAgent",
                                                g_variant_new("(os)", agent->path, capability));
     if (result == EXIT_FAILURE) {
-        log_debug(TAG, "failed to register agent");
+        log_error(TAG, "Failed to register agent '%s' : '%s'", agent->path, capability);
+        return result;
     }
 
     result = binc_agentmanager_call_method(agent->connection, "RequestDefaultAgent", g_variant_new("(o)", agent->path));
     if (result == EXIT_FAILURE) {
-        log_debug(TAG, "failed to register agent as default agent");
+        log_error(TAG, "failed to register agent as default agent");
+        return result;
     }
+
+    log_debug(TAG, "[%s]: Registered agent '%s' : '%s'", __func__, agent->path, capability);
     return result;
 }
 

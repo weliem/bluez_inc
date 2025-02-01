@@ -312,20 +312,26 @@ static void binc_on_descriptor_write(Device *device, Descriptor *descriptor, con
     }
 }
 
-static void binc_device_internal_set_conn_state(Device *device, ConnectionState state, GError *error) {
-    ConnectionState old_state = device->connection_state;
+void binc_device_internal_set_conn_state(Device *device, ConnectionState state, GError *error) {
+    //ConnectionState old_state = device->connection_state;
     device->connection_state = state;
-    if (device->connection_state_callback != NULL) {
-        if (device->connection_state != old_state) {
-            device->connection_state_callback(device, state, error);
-        }
-    }
+
+//    if (device->connection_state_callback != NULL) {
+//        if (device->connection_state != old_state) {
+//			log_debug(TAG,CYEL"[%s]: Call cb %p"CNRM, __func__, device->connection_state_callback);
+//            device->connection_state_callback(device, state, error);
+//        }
+//    }
+//    else
+//        if (device->connection_state != old_state) {
+//   			log_error(TAG,CRED"[%s]: Null cb %p"CNRM, __func__, device->connection_state_callback);
+//	}
 }
 
 // Need this in adapter.c
-void binc_device_set_conn_state_run_cb(Device *device, ConnectionState state, GError *error) {
-	binc_device_internal_set_conn_state (device, state, error);
-}
+//void binc_device_set_conn_state_run_cb(Device *device, ConnectionState state, GError *error) {
+//	binc_device_internal_set_conn_state (device, state, error);
+//}
 
 static void binc_internal_extract_service(Device *device, const char *object_path, GVariant *properties) {
     g_assert(device != NULL);
@@ -782,6 +788,7 @@ void binc_device_set_connection_state_change_cb(Device *device, ConnectionStateC
     g_assert(device != NULL);
     g_assert(callback != NULL);
 
+	log_debug(TAG, "[%s]: Setting cb to %p", __func__, callback);
     device->connection_state_callback = callback;
 }
 
@@ -1249,4 +1256,12 @@ RoleState binc_device_get_role(const Device *device) {
 const char *binc_device_get_role_name(const Device *device) {
     g_assert(device != NULL);
     return role_names[device->role];
+}
+
+void binc_device_run_conn_state_change_cb(Device *device, ConnectionState state, GError *error) {
+	g_assert(device != NULL);
+
+    if (device->connection_state_callback != NULL) {
+        device->connection_state_callback(device, state, error);
+	}
 }

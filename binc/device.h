@@ -111,6 +111,8 @@ Characteristic *binc_device_get_characteristic(const Device *device,
 
 ConnectionState binc_device_get_connection_state(const Device *device);
 
+void binc_device_internal_set_conn_state(Device *device, ConnectionState state, GError *error);
+
 const char *binc_device_get_connection_state_name(const Device *device);
 
 const char *binc_device_get_address(const Device *device);
@@ -151,11 +153,11 @@ void *binc_device_get_user_data(const Device *device);
 
 GDBusConnection *binc_device_get_dbus_connection(const Device *device);
 
-void binc_device_set_conn_state_run_cb(Device *device, ConnectionState state, GError *error);
+void binc_device_run_conn_state_change_cb(Device *device, ConnectionState state, GError *error);
 
 void binc_device_set_role(Device *device, RoleState role);
 
-void binc_device_set_role(Device *device, RoleState role);
+RoleState binc_device_get_role(const Device *device);
 
 const char *binc_device_get_role_name(const Device *device);
 

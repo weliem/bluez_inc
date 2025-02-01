@@ -118,6 +118,8 @@ void binc_adapter_set_user_data(Adapter *adapter, void *user_data);
 
 void *binc_adapter_get_user_data(const Adapter *adapter);
 
+void binc_adapter_run_remote_central_connection_state_cb (Adapter *adapter, Device *device);
+
 #ifdef __cplusplus
 }
 #endif
