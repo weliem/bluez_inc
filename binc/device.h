@@ -145,6 +145,8 @@ void binc_device_set_user_data(Device *device, void *user_data);
 
 void *binc_device_get_user_data(const Device *device);
 
+GDBusConnection *binc_device_get_dbus_connection(const Device *device);
+
 #ifdef __cplusplus
 }
 #endif
