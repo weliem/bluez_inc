@@ -40,6 +40,10 @@ typedef enum BondingState {
     BINC_BOND_NONE = 0, BINC_BONDING = 1, BINC_BONDED = 2
 } BondingState;
 
+typedef enum RoleState {
+	BINC_ROLE_UNDEFINED = 0, BINC_ROLE_PERIPHERAL = 1, BINC_ROLE_CENTRAL = 2
+} RoleState;
+
 typedef void (*ConnectionStateChangedCallback)(Device *device, ConnectionState state, const GError *error);
 
 typedef void (*ServicesResolvedCallback)(Device *device);
