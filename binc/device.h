@@ -143,8 +143,6 @@ Adapter *binc_device_get_adapter(const Device *device);
 
 guint binc_device_get_mtu(const Device *device);
 
-gboolean binc_device_is_central(const Device *device);
-
 char *binc_device_to_string(const Device *device);
 
 void binc_device_set_user_data(Device *device, void *user_data);
@@ -152,6 +150,14 @@ void binc_device_set_user_data(Device *device, void *user_data);
 void *binc_device_get_user_data(const Device *device);
 
 GDBusConnection *binc_device_get_dbus_connection(const Device *device);
+
+void binc_device_set_conn_state_run_cb(Device *device, ConnectionState state, GError *error);
+
+void binc_device_set_role(Device *device, RoleState role);
+
+void binc_device_set_role(Device *device, RoleState role);
+
+const char *binc_device_get_role_name(const Device *device);
 
 #ifdef __cplusplus
 }
