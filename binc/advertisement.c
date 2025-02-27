@@ -41,6 +41,13 @@ struct binc_advertisement {
     gboolean general_discoverable;
     gint16 tx_power;
     GPtrArray *includes; // owned
+    SecondaryChannel secondary_channel;
+};
+
+static char *secondary_channel_str[] = {
+    "1M",
+    "2M",
+    "Coded"
 };
 
 static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdata) {
@@ -122,6 +129,8 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
+    } else if (g_str_equal(property_name, "SecondaryChannel")) {
+        ret = g_variant_new_string(secondary_channel_str[advertisement->secondary_channel]);
     }
     return ret;
 }
@@ -161,6 +170,7 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
             "       <property name='Discoverable' type='b' access='read'/>"
             "       <property name='TxPower' type='n' access='read'/>"
             "       <property name='Includes' type='as' access='read'/>"
+            "       <property name='SecondaryChannel' type='s' access='read'/>"
             "   </interface>"
             "</node>";
 
@@ -205,6 +215,7 @@ Advertisement *binc_advertisement_create(void) {
     advertisement->max_interval = 500;
     advertisement->tx_power = 4;
     advertisement->includes = NULL;
+    advertisement->secondary_channel = BINC_SC_1M;
     g_free(random_str);
     return advertisement;
 }
@@ -352,5 +363,16 @@ gint16 binc_advertisement_get_tx_power(Advertisement *advertisement) {
     return advertisement->tx_power;
 }
 
+void binc_advertisement_set_secondary_channel(Advertisement *advertisement, SecondaryChannel secondary_channel) {
+    g_assert(advertisement != NULL);
+    g_assert(secondary_channel <= BINC_SC_CODED);
 
+    advertisement->secondary_channel = secondary_channel;
+}
+
+SecondaryChannel binc_advertisement_get_secondary_channel(Advertisement *advertisement) {
+    g_assert(advertisement != NULL);
+
+    return advertisement->secondary_channel;
+}
 
