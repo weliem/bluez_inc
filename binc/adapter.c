@@ -46,6 +46,8 @@ static const char *const ADAPTER_PROPERTY_POWERED = "Powered";
 static const char *const ADAPTER_PROPERTY_DISCOVERING = "Discovering";
 static const char *const ADAPTER_PROPERTY_ADDRESS = "Address";
 static const char *const ADAPTER_PROPERTY_DISCOVERABLE = "Discoverable";
+static const char *const ADAPTER_PROPERTY_CONNECTABLE = "Connectable";
+static const char *const ADAPTER_PROPERTY_ALIAS = "Alias";
 
 static const char *const DEVICE_PROPERTY_RSSI = "RSSI";
 static const char *const DEVICE_PROPERTY_UUIDS = "UUIDs";
@@ -72,8 +74,10 @@ typedef struct binc_discovery_filter {
 struct binc_adapter {
     const char *path; // Owned
     const char *address; // Owned
+    const char *alias; //Owned
     gboolean powered;
     gboolean discoverable;
+    gboolean connectable;
     gboolean discovering;
     DiscoveryState discovery_state;
     DiscoveryFilter discovery_filter;
@@ -142,6 +146,11 @@ void binc_adapter_free(Adapter *adapter) {
 
     g_free((char *) adapter->address);
     adapter->address = NULL;
+
+    if (adapter->alias != NULL) {
+        g_free((char *) adapter->alias);
+        adapter->alias = NULL;
+    }
 
     adapter->connection = NULL;
     g_free(adapter);
@@ -228,6 +237,8 @@ static void binc_internal_adapter_changed(__attribute__((unused)) GDBusConnectio
             }
         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERABLE)) {
             adapter->discoverable = g_variant_get_boolean(property_value);
+        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_CONNECTABLE)) {
+            adapter->connectable = g_variant_get_boolean(property_value);
         }
     }
 
@@ -557,6 +568,7 @@ static Adapter *binc_adapter_create(GDBusConnection *connection, const char *pat
     Adapter *adapter = g_new0(Adapter, 1);
     adapter->connection = connection;
     adapter->path = g_strdup(path);
+    adapter->alias = NULL;
     adapter->discovery_filter.rssi = -255;
     adapter->devices_cache = g_hash_table_new_full(g_str_hash, g_str_equal,
                                                    g_free, (GDestroyNotify) binc_device_free);
@@ -630,6 +642,10 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
                             adapter->discovering = g_variant_get_boolean(property_value);
                         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_DISCOVERABLE)) {
                             adapter->discoverable = g_variant_get_boolean(property_value);
+                        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_CONNECTABLE)) {
+                            adapter->connectable = g_variant_get_boolean(property_value);
+                        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_ALIAS)) {
+                            adapter->alias = g_strdup(g_variant_get_string(property_value, NULL));
                         }
                     }
                     g_ptr_array_add(binc_adapters, adapter);
@@ -926,6 +942,17 @@ void binc_adapter_discoverable_off(Adapter *adapter) {
     adapter_set_property(adapter, ADAPTER_PROPERTY_DISCOVERABLE, g_variant_new("b", FALSE));
 }
 
+void binc_adapter_connectable_on(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    adapter_set_property(adapter, ADAPTER_PROPERTY_CONNECTABLE, g_variant_new("b", TRUE));
+}
+
+void binc_adapter_connectable_off(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    adapter_set_property(adapter, ADAPTER_PROPERTY_CONNECTABLE, g_variant_new("b", FALSE));
+}
 
 void binc_adapter_set_discovery_cb(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
     g_assert(adapter != NULL);
@@ -973,6 +1000,11 @@ gboolean binc_adapter_get_powered_state(const Adapter *adapter) {
 gboolean binc_adapter_is_discoverable(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->discoverable;
+}
+
+gboolean binc_adapter_is_connectable(const Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->connectable;
 }
 
 Device *binc_adapter_get_device_by_path(const Adapter *adapter, const char *path) {
