@@ -31,6 +31,12 @@
 extern "C" {
 #endif
 
+typedef enum {
+    BINC_SC_1M = 0, //default
+    BINC_SC_2M,
+    BINC_SC_CODED
+} SecondaryChannel;
+
 Advertisement *binc_advertisement_create(void);
 
 void binc_advertisement_free(Advertisement *advertisement);
@@ -62,6 +68,10 @@ void binc_advertisement_set_general_discoverable(Advertisement *advertisement, g
 void binc_advertisement_set_tx_power(Advertisement *advertisement, gint16 tx_power);
 
 gint16 binc_advertisement_get_tx_power(Advertisement *advertisement);
+
+void binc_advertisement_set_secondary_channel(Advertisement *advertisement, SecondaryChannel secondary_channel);
+
+SecondaryChannel binc_advertisement_get_secondary_channel(Advertisement *advertisement);
 
 #ifdef __cplusplus
 }
