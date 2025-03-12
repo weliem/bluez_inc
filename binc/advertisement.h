@@ -73,6 +73,8 @@ void binc_advertisement_set_secondary_channel(Advertisement *advertisement, Seco
 
 SecondaryChannel binc_advertisement_get_secondary_channel(Advertisement *advertisement);
 
+void binc_advertisement_set_rsi(Advertisement *advertisement);
+
 #ifdef __cplusplus
 }
 #endif

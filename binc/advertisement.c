@@ -351,10 +351,11 @@ void binc_advertisement_set_tx_power(Advertisement *advertisement, gint16 tx_pow
 
     // Add 'tx-power' to the list of includes if needed
     if (advertisement->includes == NULL) {
-        GPtrArray *includes = g_ptr_array_new();
-        g_ptr_array_add(includes, "tx-power");
-        advertisement->includes = includes;
+        advertisement->includes = g_ptr_array_new();
     }
+    // Try to remove to avoid adding duplicated value
+    g_ptr_array_remove(advertisement->includes, "tx-power");
+    g_ptr_array_add(advertisement->includes, "tx-power");
 }
 
 gint16 binc_advertisement_get_tx_power(Advertisement *advertisement) {
@@ -376,3 +377,13 @@ SecondaryChannel binc_advertisement_get_secondary_channel(Advertisement *adverti
     return advertisement->secondary_channel;
 }
 
+void binc_advertisement_set_rsi(Advertisement *advertisement) {
+    g_assert(advertisement != NULL);
+
+    if (advertisement->includes == NULL) {
+        advertisement->includes = g_ptr_array_new();
+    }
+    // Try to remove to avoid adding duplicated value
+    g_ptr_array_remove(advertisement->includes, "rsi");
+    g_ptr_array_add(advertisement->includes, "rsi");
+}
