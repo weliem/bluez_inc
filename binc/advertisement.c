@@ -155,7 +155,25 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
     g_assert(advertisement != NULL);
     g_assert(adapter != NULL);
 
-    static const char advertisement_xml[] =
+    static const char legacy_advertisement_xml[] =
+            "<node name='/'>"
+            "   <interface name='org.bluez.LEAdvertisement1'>"
+            "       <method name='Release' />"
+            "       <property name='Type' type='s' access='read'/>"
+            "       <property name='LocalName' type='s' access='read'/>"
+            "       <property name='ManufacturerData' type='a{qv}' access='read'/>"
+            "       <property name='ServiceData' type='a{sv}' access='read'/>"
+            "       <property name='ServiceUUIDs' type='as' access='read'/>"
+            "       <property name='MinInterval' type='u' access='read'/>"
+            "       <property name='MaxInterval' type='u' access='read'/>"
+            "       <property name='Appearance' type='q' access='read'/>"
+            "       <property name='Discoverable' type='b' access='read'/>"
+            "       <property name='TxPower' type='n' access='read'/>"
+            "       <property name='Includes' type='as' access='read'/>"
+            "   </interface>"
+            "</node>";
+
+    static const char extended_advertisement_xml[] =
             "<node name='/'>"
             "   <interface name='org.bluez.LEAdvertisement1'>"
             "       <method name='Release' />"
@@ -175,7 +193,10 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
             "</node>";
 
     GError *error = NULL;
-    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(advertisement_xml, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(
+            advertisement->secondary_channel == BINC_SC_1M ? legacy_advertisement_xml : extended_advertisement_xml,
+            &error
+            );
     advertisement->registration_id = g_dbus_connection_register_object(binc_adapter_get_dbus_connection(adapter),
                                                                        advertisement->path,
                                                                        info->interfaces[0],
