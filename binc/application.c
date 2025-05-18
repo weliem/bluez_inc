@@ -745,7 +745,7 @@ static int binc_characteristic_set_value(const Application *application, LocalCh
         g_byte_array_free(characteristic->value, TRUE);
     }
 
-    // Copy the byte array contents to the characteristics value
+    // Copy the byte array contents to the characteristic's value
     GByteArray *newByteArray = g_byte_array_sized_new(byteArray->len);
     g_byte_array_append(newByteArray, byteArray->data, byteArray->len);
     characteristic->value = newByteArray;
@@ -771,7 +771,11 @@ static int binc_descriptor_set_value(const Application *application, LocalDescri
     if (descriptor->value != NULL) {
         g_byte_array_free(descriptor->value, TRUE);
     }
-    descriptor->value = byteArray;
+
+    // Copy the byte array contents to the descriptor's value
+    GByteArray *newByteArray = g_byte_array_sized_new(byteArray->len);
+    g_byte_array_append(newByteArray, byteArray->data, byteArray->len);
+    descriptor->value = newByteArray;
 
 //    if (application->on_char_updated != NULL) {
 //        application->on_char_updated(characteristic->application, characteristic->service_uuid,
@@ -828,7 +832,7 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
     if (g_str_equal(method, DESCRIPTOR_METHOD_READ_VALUE)) {
         ReadOptions *options = parse_read_options(params);
 
-        log_debug(TAG, "read descriptor <%s> by ", localDescriptor->uuid, options->device);
+        log_debug(TAG, "read descriptor <%s> by %s", localDescriptor->uuid, options->device);
 
         const char *result = NULL;
         if (application->on_desc_read != NULL) {
@@ -864,7 +868,6 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
 
         // Get the byte array to be written
         GByteArray *byteArray = g_variant_get_byte_array(valueVariant);
-        g_variant_unref(valueVariant);
 
         log_debug(TAG, "write descriptor <%s> by %s", localDescriptor->uuid, options->device);
 
@@ -883,10 +886,20 @@ static void binc_internal_descriptor_method_call(GDBusConnection *conn,
         if (result) {
             g_dbus_method_invocation_return_dbus_error(invocation, result, "write error");
             log_debug(TAG, "write error");
+            g_variant_unref(valueVariant);
+            if (byteArray != NULL) {
+                g_byte_array_free(byteArray, FALSE);
+            }
             return;
         }
 
         binc_descriptor_set_value(application, localDescriptor, byteArray);
+
+        if (byteArray != NULL) {
+            g_byte_array_free(byteArray, FALSE);
+        }
+
+        g_variant_unref(valueVariant);
 
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     }

@@ -42,6 +42,7 @@ GMainLoop *loop = NULL;
 Adapter *default_adapter = NULL;
 Advertisement *advertisement = NULL;
 Application *app = NULL;
+Agent *agent = NULL;
 
 
 void on_powered_state_changed(Adapter *adapter, gboolean state) {
@@ -110,7 +111,28 @@ void on_local_char_stop_notify(const Application *application, const char *servi
     log_debug(TAG, "on stop notify");
 }
 
+gboolean on_request_authorization(Device *device) {
+    log_debug(TAG, "requesting authorization for '%s", binc_device_get_name(device));
+    return TRUE;
+}
+
+guint32 on_request_passkey(Device *device) {
+    guint32 pass = 000000;
+    log_debug(TAG, "requesting passkey for '%s", binc_device_get_name(device));
+    log_debug(TAG, "Enter 6 digit pin code: ");
+    int result = fscanf(stdin, "%d", &pass);
+    if (result != 1) {
+        log_debug(TAG, "didn't read a pin code");
+    }
+    return pass;
+}
+
 gboolean callback(gpointer data) {
+    if (agent != NULL) {
+        binc_agent_free(agent);
+        agent = NULL;
+    }
+
     if (app != NULL) {
         binc_adapter_unregister_application(default_adapter, app);
         binc_application_free(app);
@@ -160,6 +182,11 @@ int main(void) {
         if (!binc_adapter_get_powered_state(default_adapter)) {
             binc_adapter_power_on(default_adapter);
         }
+
+        // Register an agent and set callbacks
+        agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
+        binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
+        binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
 
         // Setup remote central connection state callback
         binc_adapter_set_remote_central_cb(default_adapter, &on_central_state_changed);
