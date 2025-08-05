@@ -46,6 +46,7 @@ static const char *const ADAPTER_PROPERTY_POWERED = "Powered";
 static const char *const ADAPTER_PROPERTY_DISCOVERING = "Discovering";
 static const char *const ADAPTER_PROPERTY_ADDRESS = "Address";
 static const char *const ADAPTER_PROPERTY_DISCOVERABLE = "Discoverable";
+static const char *const ADAPTER_PROPERTY_PAIRABLE = "Pairable";
 static const char *const ADAPTER_PROPERTY_CONNECTABLE = "Connectable";
 static const char *const ADAPTER_PROPERTY_ALIAS = "Alias";
 
@@ -78,6 +79,7 @@ struct binc_adapter {
     gboolean powered;
     gboolean discoverable;
     gboolean connectable;
+    gboolean pairable;
     gboolean discovering;
     DiscoveryState discovery_state;
     DiscoveryFilter discovery_filter;
@@ -239,6 +241,8 @@ static void binc_internal_adapter_changed(__attribute__((unused)) GDBusConnectio
             adapter->discoverable = g_variant_get_boolean(property_value);
         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_CONNECTABLE)) {
             adapter->connectable = g_variant_get_boolean(property_value);
+        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_PAIRABLE)) {
+            adapter->pairable = g_variant_get_boolean(property_value);
         }
     }
 
@@ -644,6 +648,8 @@ GPtrArray *binc_adapter_find_all(GDBusConnection *dbusConnection) {
                             adapter->discoverable = g_variant_get_boolean(property_value);
                         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_CONNECTABLE)) {
                             adapter->connectable = g_variant_get_boolean(property_value);
+                        } else if (g_str_equal(property_name, ADAPTER_PROPERTY_PAIRABLE)) {
+                            adapter->pairable = g_variant_get_boolean(property_value);
                         } else if (g_str_equal(property_name, ADAPTER_PROPERTY_ALIAS)) {
                             adapter->alias = g_strdup(g_variant_get_string(property_value, NULL));
                         }
@@ -942,6 +948,18 @@ void binc_adapter_discoverable_off(Adapter *adapter) {
     adapter_set_property(adapter, ADAPTER_PROPERTY_DISCOVERABLE, g_variant_new("b", FALSE));
 }
 
+void binc_adapter_pairable_on(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    adapter_set_property(adapter, ADAPTER_PROPERTY_PAIRABLE, g_variant_new("b", TRUE));
+}
+
+void binc_adapter_pairable_off(Adapter *adapter) {
+    g_assert(adapter != NULL);
+
+    adapter_set_property(adapter, ADAPTER_PROPERTY_PAIRABLE, g_variant_new("b", FALSE));
+}
+
 void binc_adapter_connectable_on(Adapter *adapter) {
     g_assert(adapter != NULL);
 
@@ -1000,6 +1018,11 @@ gboolean binc_adapter_get_powered_state(const Adapter *adapter) {
 gboolean binc_adapter_is_discoverable(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->discoverable;
+}
+
+gboolean binc_adapter_is_pairable(const Adapter *adapter) {
+    g_assert(adapter != NULL);
+    return adapter->pairable;
 }
 
 gboolean binc_adapter_is_connectable(const Adapter *adapter) {

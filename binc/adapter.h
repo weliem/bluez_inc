@@ -78,6 +78,10 @@ void binc_adapter_discoverable_on(Adapter *adapter);
 
 void binc_adapter_discoverable_off(Adapter *adapter);
 
+void binc_adapter_pairable_on(Adapter *adapter);
+
+void binc_adapter_pairable_off(Adapter *adapter);
+
 void binc_adapter_connectable_on(Adapter *adapter);
 
 void binc_adapter_connectable_off(Adapter *adapter);
@@ -109,6 +113,8 @@ void binc_adapter_set_powered_state_cb(Adapter *adapter, AdapterPoweredStateChan
 GDBusConnection *binc_adapter_get_dbus_connection(const Adapter *adapter);
 
 gboolean binc_adapter_is_discoverable(const Adapter *adapter);
+
+gboolean binc_adapter_is_pairable(const Adapter *adapter);
 
 gboolean binc_adapter_is_connectable(const Adapter *adapter);
 
