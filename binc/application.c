@@ -119,6 +119,7 @@ struct binc_application {
     onLocalCharacteristicStopNotify on_char_stop_notify;
     onLocalDescriptorWrite on_desc_write;
     onLocalDescriptorRead on_desc_read;
+    void *user_data; // Borrowed
 };
 
 typedef struct binc_local_service {
@@ -1338,4 +1339,14 @@ gboolean binc_application_char_is_notifying(const Application *application, cons
     }
 
     return characteristic->notifying;
+}
+
+void binc_application_set_user_data(Application *application, void *user_data){
+    g_assert(application != NULL);
+    application->user_data = user_data;
+}
+
+void *binc_application_get_user_data(const Application *application){
+    g_assert(application != NULL);
+    return application->user_data;
 }

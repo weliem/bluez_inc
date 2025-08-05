@@ -119,6 +119,10 @@ int binc_application_notify(const Application *application, const char *service_
 gboolean binc_application_char_is_notifying(const Application *application, const char *service_uuid,
                                             const char *char_uuid);
 
+void binc_application_set_user_data(Application *application, void *user_data);
+
+void *binc_application_get_user_data(const Application *application);
+
 #ifdef __cplusplus
 }
 #endif
