@@ -44,12 +44,14 @@ extern "C" {
 // Use it to update the characteristic before it is read
 // For accepting the read, return NULL, otherwise return an error (BLUEZ_ERROR_*)
 typedef const char *(*onLocalCharacteristicRead)(const Application *application, const char *address,
-                                          const char *service_uuid, const char *char_uuid);
+                                                 const char *service_uuid, const char *char_uuid, const guint16 mtu,
+                                                 const guint16 offset);
 
 // This callback is called just before the characteristic's value is set.
 // Use it to accept (return NULL), or reject (return BLUEZ_ERROR_*) the byte array
 typedef const char *(*onLocalCharacteristicWrite)(const Application *application, const char *address,
-                                            const char *service_uuid, const char *char_uuid, GByteArray *byteArray);
+                                                  const char *service_uuid, const char *char_uuid,
+                                                  GByteArray *byteArray, const guint16 mtu, const guint16 offset);
 
 // This callback is called after a characteristic's value is set, e.g. because of a 'write' or 'notify'
 // Use it to act upon the new value set
@@ -67,13 +69,13 @@ typedef void (*onLocalCharacteristicStopNotify)(const Application *application, 
 // This callback is called just before the descriptor's value is returned.
 // Use it to update the descriptor before it is read
 typedef const char *(*onLocalDescriptorRead)(const Application *application, const char *address,
-                                          const char *service_uuid, const char *char_uuid, const char *desc_uuid);
+                                             const char *service_uuid, const char *char_uuid, const char *desc_uuid);
 
 // This callback is called just before the descriptor's value is set.
 // Use it to accept (return NULL), or reject (return BLUEZ_ERROR_*) the byte array
 typedef const char *(*onLocalDescriptorWrite)(const Application *application, const char *address,
-                                            const char *service_uuid, const char *char_uuid,
-                                            const char *desc_uuid, const GByteArray *byteArray);
+                                              const char *service_uuid, const char *char_uuid,
+                                              const char *desc_uuid, const GByteArray *byteArray);
 
 // Methods
 Application *binc_create_application(const Adapter *adapter);

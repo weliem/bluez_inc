@@ -1041,7 +1041,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         if (application->on_char_read != NULL) {
             result = application->on_char_read(characteristic->application, options->device,
                                                characteristic->service_uuid,
-                                               characteristic->uuid);
+                                               characteristic->uuid, options->mtu, options->offset);
         }
         read_options_free(options);
 
@@ -1080,7 +1080,7 @@ static void binc_internal_characteristic_method_call(GDBusConnection *conn,
         if (application->on_char_write != NULL) {
             result = application->on_char_write(characteristic->application, options->device,
                                                 characteristic->service_uuid,
-                                                characteristic->uuid, byteArray);
+                                                characteristic->uuid, byteArray, options->mtu, options->offset);
         }
         write_options_free(options);
 

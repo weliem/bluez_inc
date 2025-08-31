@@ -66,7 +66,7 @@ void on_central_state_changed(Adapter *adapter, Device *device) {
 // This function is called when a read is done
 // Use this to set the characteristic value if it is not set or to reject the read request
 const char *on_local_char_read(const Application *application, const char *address, const char *service_uuid,
-                        const char *char_uuid) {
+                        const char *char_uuid, const guint16 mtu, const guint16 offset) {
     if (g_str_equal(service_uuid, HTS_SERVICE_UUID) && g_str_equal(char_uuid, TEMPERATURE_CHAR_UUID)) {
         const guint8 bytes[] = {0x06, 0x6f, 0x01, 0x00, 0xff, 0xe6, 0x07, 0x03, 0x03, 0x10, 0x04, 0x00, 0x01};
         GByteArray *byteArray = g_byte_array_sized_new(sizeof(bytes));
@@ -80,7 +80,7 @@ const char *on_local_char_read(const Application *application, const char *addre
 
 // This function should be used to validate or reject a write request
 const char *on_local_char_write(const Application *application, const char *address, const char *service_uuid,
-                          const char *char_uuid, GByteArray *byteArray) {
+                          const char *char_uuid, GByteArray *byteArray, const guint16 mtu, const guint16 offset) {
     GString *result = g_byte_array_as_hex(byteArray);
     log_debug(TAG, "write request characteristic <%s> with value <%s>", char_uuid, result->str);
     g_string_free(result, TRUE);
@@ -197,6 +197,7 @@ int main(void) {
 
         advertisement = binc_advertisement_create();
         binc_advertisement_set_local_name(advertisement, "BINC");
+        binc_advertisement_set_secondary_channel(advertisement, BINC_SC_2M);
         binc_advertisement_set_interval(advertisement, 500, 500);
         binc_advertisement_set_tx_power(advertisement, 5);
         binc_advertisement_set_services(advertisement, adv_service_uuids);
