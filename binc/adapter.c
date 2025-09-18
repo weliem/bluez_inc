@@ -1102,6 +1102,26 @@ void binc_adapter_start_advertising(Adapter *adapter, Advertisement *advertiseme
                            (GAsyncReadyCallback) binc_internal_start_advertising_cb, adapter);
 }
 
+void binc_adapter_start_advertising_xml(Adapter *adapter, Advertisement *advertisement, const char *xml) {
+    g_assert(adapter != NULL);
+    g_assert(advertisement != NULL);
+
+    adapter->advertisement = advertisement;
+    binc_advertisement_register_xml(advertisement, adapter, xml);
+
+    g_dbus_connection_call(binc_adapter_get_dbus_connection(adapter),
+                           "org.bluez",
+                           adapter->path,
+                           "org.bluez.LEAdvertisingManager1",
+                           "RegisterAdvertisement",
+                           g_variant_new("(oa{sv})", binc_advertisement_get_path(advertisement), NULL),
+                           NULL,
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           (GAsyncReadyCallback) binc_internal_start_advertising_cb, adapter);
+}
+
 static void binc_internal_stop_advertising_cb(__attribute__((unused)) GObject *source_object,
                                               GAsyncResult *res,
                                               gpointer user_data) {

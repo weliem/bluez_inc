@@ -45,15 +45,23 @@ void binc_advertisement_set_local_name(Advertisement *advertisement, const char*
 
 void binc_advertisement_set_services(Advertisement *advertisement, const GPtrArray * service_uuids);
 
+void binc_advertisement_set_scan_response_services(Advertisement *advertisement, const GPtrArray * service_uuids);
+
 void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guint16 manufacturer_id, const GByteArray *byteArray);
 
+void binc_advertisement_set_scan_response_manufacturer_data(Advertisement *advertisement, guint16 manufacturer_id, const GByteArray *byteArray);
+
 void binc_advertisement_set_service_data(Advertisement *advertisement, const char* service_uuid, const GByteArray *byteArray);
+
+void binc_advertisement_set_scan_response_service_data(Advertisement *advertisement, const char* service_uuid, const GByteArray *byteArray);
 
 void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, guint32 max);
 
 const char *binc_advertisement_get_path(const Advertisement *advertisement);
 
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter);
+
+void binc_advertisement_register_xml(Advertisement *advertisement, const Adapter *adapter, const char *xml);
 
 void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter);
 
