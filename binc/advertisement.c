@@ -298,7 +298,7 @@ void binc_advertisement_free(Advertisement *advertisement) {
     }
     if (advertisement->scan_response_services != NULL) {
         g_ptr_array_free(advertisement->scan_response_services, TRUE);
-        advertisement->services = NULL;
+        advertisement->scan_response_services = NULL;
     }
     if (advertisement->manufacturer_data != NULL) {
         g_hash_table_destroy(advertisement->manufacturer_data);
