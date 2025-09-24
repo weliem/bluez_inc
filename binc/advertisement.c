@@ -39,13 +39,23 @@ struct binc_advertisement {
     GHashTable *scan_response_service_data; // Owned
     guint registration_id;
     guint32 min_interval;
+    gboolean min_interval_enabled;
     guint32 max_interval;
+    gboolean max_interval_enabled;
     guint16 appearance;
+    gboolean appearance_enabled;
     gboolean general_discoverable;
+    gboolean general_discoverable_enabled;
     gint16 tx_power;
+    gboolean tx_power_enabled;
     GPtrArray *includes; // owned
     SecondaryChannel secondary_channel;
 };
+
+/* Provide the Advertisement typedef used throughout this file (original code
+ * used Advertisement* everywhere but declared the struct as binc_advertisement).
+ * If your advertisement.h already typedefs this, this typedef is harmless. */
+typedef struct binc_advertisement Advertisement;
 
 static char *secondary_channel_str[] = {
     "1M",
@@ -185,66 +195,115 @@ static const GDBusInterfaceVTable advertisement_method_table = {
 };
 
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter) {
-
-    static const char legacy_advertisement_xml[] =
-            "<node name='/'>"
-            "   <interface name='org.bluez.LEAdvertisement1'>"
-            "       <method name='Release' />"
-            "       <property name='Type' type='s' access='read'/>"
-            "       <property name='LocalName' type='s' access='read'/>"
-            "       <property name='ManufacturerData' type='a{qv}' access='read'/>"
-            "       <property name='ServiceData' type='a{sv}' access='read'/>"
-            "       <property name='ServiceUUIDs' type='as' access='read'/>"
-            "       <property name='MinInterval' type='u' access='read'/>"
-            "       <property name='MaxInterval' type='u' access='read'/>"
-            "       <property name='Appearance' type='q' access='read'/>"
-            "       <property name='Discoverable' type='b' access='read'/>"
-            "       <property name='TxPower' type='n' access='read'/>"
-            "       <property name='Includes' type='as' access='read'/>"
-            "   </interface>"
-            "</node>";
-
-    static const char extended_advertisement_xml[] =
-            "<node name='/'>"
-            "   <interface name='org.bluez.LEAdvertisement1'>"
-            "       <method name='Release' />"
-            "       <property name='Type' type='s' access='read'/>"
-            "       <property name='LocalName' type='s' access='read'/>"
-            "       <property name='ManufacturerData' type='a{qv}' access='read'/>"
-            "       <property name='ServiceData' type='a{sv}' access='read'/>"
-            "       <property name='ServiceUUIDs' type='as' access='read'/>"
-            "       <property name='MinInterval' type='u' access='read'/>"
-            "       <property name='MaxInterval' type='u' access='read'/>"
-            "       <property name='Appearance' type='q' access='read'/>"
-            "       <property name='Discoverable' type='b' access='read'/>"
-            "       <property name='TxPower' type='n' access='read'/>"
-            "       <property name='Includes' type='as' access='read'/>"
-            "       <property name='SecondaryChannel' type='s' access='read'/>"
-            "   </interface>"
-            "</node>";
-
-    binc_advertisement_register_xml(advertisement, adapter, advertisement->secondary_channel == BINC_SC_1M ? legacy_advertisement_xml : extended_advertisement_xml);
-}
-
-void binc_advertisement_register_xml(Advertisement *advertisement, const Adapter *adapter, const char *xml) {
     g_assert(advertisement != NULL);
     g_assert(adapter != NULL);
 
+    log_debug(TAG, "binc_advertisement_register_dynamic");
+
+    // Use a GString to build the XML dynamically
+    GString *xml_builder = g_string_new("<node name='/'>\n"
+                                        "  <interface name='org.bluez.LEAdvertisement1'>\n"
+                                        "    <method name='Release' />\n"
+                                        "    <property name='Type' type='s' access='read'/>\n");
+
+    // Conditionally add properties based on the advertisement struct's data
+    if (advertisement->local_name != NULL) {
+        g_string_append(xml_builder, "    <property name='LocalName' type='s' access='read'/>\n");
+    }
+
+    if (advertisement->manufacturer_data != NULL && g_hash_table_size(advertisement->manufacturer_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ManufacturerData' type='a{qv}' access='read'/>\n");
+    }
+
+    if (advertisement->scan_response_manufacturer_data != NULL && g_hash_table_size(advertisement->scan_response_manufacturer_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ScanResponseManufacturerData' type='a{qv}' access='read'/>\n");
+    }
+
+    if (advertisement->service_data != NULL && g_hash_table_size(advertisement->service_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ServiceData' type='a{sv}' access='read'/>\n");
+    }
+
+    if (advertisement->scan_response_service_data != NULL && g_hash_table_size(advertisement->scan_response_service_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ScanResponseServiceData' type='a{sv}' access='read'/>\n");
+    }
+
+    if (advertisement->services != NULL && advertisement->services->len > 0) {
+        g_string_append(xml_builder, "    <property name='ServiceUUIDs' type='as' access='read'/>\n");
+    }
+
+    if (advertisement->scan_response_services != NULL && advertisement->scan_response_services->len > 0) {
+        g_string_append(xml_builder, "    <property name='ScanResponseServiceUUIDs' type='as' access='read'/>\n");
+    }
+
+    if (advertisement->min_interval_enabled) {
+        g_string_append(xml_builder, "    <property name='MinInterval' type='u' access='read'/>\n");
+    }
+
+    if (advertisement->max_interval_enabled) {
+        g_string_append(xml_builder, "    <property name='MaxInterval' type='u' access='read'/>\n");
+    }
+
+    if (advertisement->tx_power_enabled && advertisement->tx_power >= -127 && advertisement->tx_power <= 20) {
+        g_string_append(xml_builder, "    <property name='TxPower' type='n' access='read'/>\n");
+    }
+
+    if (advertisement->appearance_enabled && advertisement->appearance != 0) {
+        g_string_append(xml_builder, "    <property name='Appearance' type='q' access='read'/>\n");
+    }
+
+    if (advertisement->general_discoverable_enabled) {
+        g_string_append(xml_builder, "    <property name='Discoverable' type='b' access='read'/>\n");
+    }
+
+    // Optional: still support includes[] if your app uses it to track rsi, etc.
+    if (advertisement->includes != NULL) {
+        for (guint i = 0; i < advertisement->includes->len; i++) {
+            char *element = g_ptr_array_index(advertisement->includes, i);
+
+            if (g_str_equal(element, "rsi")) {
+                g_string_append(xml_builder, "    <property name='Includes' type='as' access='read'/>\n");
+                break;
+            }
+        }
+    }
+
+    // Check for secondary channel as it is a key property
+    if (advertisement->secondary_channel != BINC_SC_1M) {
+        g_string_append(xml_builder, "    <property name='SecondaryChannel' type='s' access='read'/>\n");
+    }
+
+    // Close XML
+    g_string_append(xml_builder, "  </interface>\n"
+                                 " </node>\n");
+
+    const char *final_xml = g_string_free(xml_builder, FALSE);
+    log_debug(TAG, "Generated advertisement introspection XML:\n%s", final_xml);
+
     GError *error = NULL;
-    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(
-            xml,
-            &error
-            );
-    advertisement->registration_id = g_dbus_connection_register_object(binc_adapter_get_dbus_connection(adapter),
-                                                                       advertisement->path,
-                                                                       info->interfaces[0],
-                                                                       &advertisement_method_table,
-                                                                       advertisement, NULL, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(final_xml, &error);
+
+    if (info == NULL) {
+        log_debug(TAG, "failed to parse generated XML for dbus node: %s", error ? error->message : "unknown");
+        if (error) g_clear_error(&error);
+        g_free((gpointer)final_xml);
+        return;
+    }
+
+    advertisement->registration_id = g_dbus_connection_register_object(
+        binc_adapter_get_dbus_connection(adapter),
+        advertisement->path,
+        info->interfaces[0],
+        &advertisement_method_table,
+        advertisement, NULL, &error
+    );
+
+    g_free((gpointer)final_xml);
 
     if (error != NULL) {
         log_debug(TAG, "registering advertisement failed: %s", error->message);
         g_clear_error(&error);
     }
+
     g_dbus_node_info_unref(info);
 }
 
@@ -439,13 +498,16 @@ void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, 
     g_assert(min <= max);
 
     advertisement->min_interval = min;
+    advertisement->min_interval_enabled = TRUE;
     advertisement->max_interval = max;
+    advertisement->max_interval_enabled = TRUE;
 }
 
 void binc_advertisement_set_appearance(Advertisement *advertisement, guint16 appearance) {
     g_assert(advertisement != NULL);
 
     advertisement->appearance = appearance;
+    advertisement->appearance_enabled = TRUE;
 }
 
 guint16 binc_advertisement_get_appearance(Advertisement *advertisement) {
@@ -458,6 +520,7 @@ void binc_advertisement_set_general_discoverable(Advertisement *advertisement, g
     g_assert(advertisement != NULL);
 
     advertisement->general_discoverable = general_discoverable;
+    advertisement->general_discoverable_enabled = TRUE;
 }
 
 // The provided value must be in range [-127 to +20], where units are in dBm.
@@ -467,6 +530,7 @@ void binc_advertisement_set_tx_power(Advertisement *advertisement, gint16 tx_pow
     g_assert(tx_power <= 20);
 
     advertisement->tx_power = tx_power;
+    advertisement->tx_power_enabled = TRUE;
 
     // Add 'tx-power' to the list of includes if needed
     if (advertisement->includes == NULL) {

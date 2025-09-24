@@ -61,8 +61,6 @@ const char *binc_advertisement_get_path(const Advertisement *advertisement);
 
 void binc_advertisement_register(Advertisement *advertisement, const Adapter *adapter);
 
-void binc_advertisement_register_xml(Advertisement *advertisement, const Adapter *adapter, const char *xml);
-
 void binc_advertisement_unregister(Advertisement *advertisement, const Adapter *adapter);
 
 const char *binc_advertisement_get_local_name(const Advertisement *advertisement);

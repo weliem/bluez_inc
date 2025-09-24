@@ -120,8 +120,6 @@ gboolean binc_adapter_is_connectable(const Adapter *adapter);
 
 void binc_adapter_start_advertising(Adapter *adapter, Advertisement *advertisement);
 
-void binc_adapter_start_advertising_xml(Adapter *adapter, Advertisement *advertisement, const char *xml);
-
 void binc_adapter_stop_advertising(Adapter *adapter, Advertisement *advertisement);
 
 void binc_adapter_register_application(Adapter *adapter, Application *application);
