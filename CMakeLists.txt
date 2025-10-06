@@ -20,8 +20,3 @@ include_directories(${GLIB_INCLUDE_DIRS})
 add_subdirectory(binc)
 add_subdirectory(examples/central)
 add_subdirectory(examples/peripheral)
-
-install(
-    DIRECTORY include/
-    DESTINATION include
-)
