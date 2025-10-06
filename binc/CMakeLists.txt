@@ -37,5 +37,5 @@ install(
 
 install(
     FILES ${PUBLIC_HEADERS}
-    DESTINATION include
+    DESTINATION include/binc
 )
