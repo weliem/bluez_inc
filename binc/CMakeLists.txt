@@ -24,6 +24,7 @@ set(PUBLIC_HEADERS
     characteristic.h
     descriptor.h
     device.h
+    forward_decl.h
     logger.h
     parser.h
     service.h
