@@ -44,7 +44,7 @@ struct binc_advertisement {
     SecondaryChannel secondary_channel;
 };
 
-static char *secondary_channel_str[] = {
+static const char *const secondary_channel_str[] = {
     "1M",
     "2M",
     "Coded"
