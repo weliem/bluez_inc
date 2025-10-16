@@ -107,7 +107,7 @@ static void remove_signal_subscribers(Adapter *adapter) {
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->device_prop_changed);
     adapter->device_prop_changed = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->adapter_prop_changed);
-    adapter->device_prop_changed = 0;
+    adapter->adapter_prop_changed = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_added);
     adapter->iface_added = 0;
     g_dbus_connection_signal_unsubscribe(adapter->connection, adapter->iface_removed);
@@ -117,15 +117,19 @@ static void remove_signal_subscribers(Adapter *adapter) {
 static void free_discovery_filter(Adapter *adapter) {
     g_assert(adapter != NULL);
 
-    for (guint i = 0; i < adapter->discovery_filter.services->len; i++) {
-        char *uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
-        g_free(uuid_filter);
+    if (adapter->discovery_filter.services != NULL) {
+        for (guint i = 0; i < adapter->discovery_filter.services->len; i++) {
+            char *uuid_filter = g_ptr_array_index(adapter->discovery_filter.services, i);
+            g_free(uuid_filter);
+        }
+        g_ptr_array_free(adapter->discovery_filter.services, TRUE);
+        adapter->discovery_filter.services = NULL;
     }
-    g_ptr_array_free(adapter->discovery_filter.services, TRUE);
-    adapter->discovery_filter.services = NULL;
 
-    g_free((char *) adapter->discovery_filter.pattern);
-    adapter->discovery_filter.pattern = NULL;
+    if (adapter->discovery_filter.pattern != NULL) {
+        g_free((char *) adapter->discovery_filter.pattern);
+        adapter->discovery_filter.pattern = NULL;
+    }
 }
 
 void binc_adapter_free(Adapter *adapter) {
@@ -260,9 +264,12 @@ static gboolean matches_discovery_filter(Adapter *adapter, Device *device) {
     if (binc_device_get_rssi(device) < adapter->discovery_filter.rssi) return FALSE;
 
     const char *pattern = adapter->discovery_filter.pattern;
-    if (pattern != NULL && binc_device_get_name(device) != NULL) {
-        if (!(g_str_has_prefix(binc_device_get_name(device), pattern) ||
-              g_str_has_prefix(binc_device_get_address(device), pattern)))
+    if (pattern != NULL) {
+        const char *name = binc_device_get_name(device);
+        const char *addr = binc_device_get_address(device);
+        gboolean name_matches = (name != NULL) && g_str_has_prefix(name, pattern);
+        gboolean addr_matches = (addr != NULL) && g_str_has_prefix(addr, pattern);
+        if (!(name_matches || addr_matches))
             return FALSE;
     }
 
