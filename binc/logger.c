@@ -26,9 +26,11 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <stdarg.h>
+#include <string.h>
 
 #define BUFFER_SIZE 1024
-#define MAX_FILE_SIZE 1024 * 64
+#define MAX_FILE_SIZE (1024 * 64)
 #define MAX_LOGS 5
 
 static struct {
@@ -69,21 +71,33 @@ static void open_log_file(void) {
     LogSettings.fout = fopen(LogSettings.filename, "a");
     if (LogSettings.fout == NULL) {
         LogSettings.fout = stdout;
+        LogSettings.currentSize = 0;
         return;
     }
 
     struct stat finfo;
-    fstat(fileno(LogSettings.fout), &finfo);
-    LogSettings.currentSize = (size_t) finfo.st_size;
+    if (fstat(fileno(LogSettings.fout), &finfo) == 0) {
+        LogSettings.currentSize = (size_t) finfo.st_size;
+    } else {
+        LogSettings.currentSize = 0;
+    }
 }
 
 void log_set_filename(const char *filename, unsigned long max_size, unsigned int max_files) {
     g_assert(filename != NULL);
     g_assert(strlen(filename) > 0);
 
+    // Close any previously opened file (but not stdout)
+    if (LogSettings.fout && LogSettings.fout != stdout) {
+        fclose(LogSettings.fout);
+    }
+    LogSettings.fout = NULL;
+    LogSettings.currentSize = 0;
+
     LogSettings.maxFileSize = max_size ? max_size : MAX_FILE_SIZE;
     LogSettings.maxFiles = max_files ? max_files : MAX_LOGS;
     strncpy(LogSettings.filename, filename, sizeof(LogSettings.filename) - 1);
+    LogSettings.filename[sizeof(LogSettings.filename) - 1] = '\0';
     open_log_file();
 }
 
@@ -114,9 +128,9 @@ static char *current_time_string(void) {
 
 static void log_log(const char *tag, const char *level, const char *message) {
     char *timestamp = current_time_string();
-    int bytes_written;
-    if ((bytes_written = fprintf(LogSettings.fout, "%s %s [%s] %s\n", timestamp, level, tag, message)) > 0) {
-        LogSettings.currentSize += (unsigned int) bytes_written;
+    int bytes_written = fprintf(LogSettings.fout, "%s %s [%s] %s\n", timestamp, level, tag, message);
+    if (bytes_written > 0) {
+        LogSettings.currentSize += (size_t) bytes_written;
         fflush(LogSettings.fout);
     }
 
