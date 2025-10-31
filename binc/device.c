@@ -1162,8 +1162,11 @@ void binc_internal_device_update_property(Device *device, const char *property_n
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_UUIDS)) {
         binc_device_set_uuids(device, g_variant_string_array_to_list(property_value));
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_MANUFACTURER_DATA)) {
+        // Setup iterator
         GVariantIter *iter;
         g_variant_get(property_value, "a{qv}", &iter);
+        if (iter == NULL)
+            return;
 
         GVariant *array;
         guint16 key;
@@ -1185,6 +1188,8 @@ void binc_internal_device_update_property(Device *device, const char *property_n
     } else if (g_str_equal(property_name, DEVICE_PROPERTY_SERVICE_DATA)) {
         GVariantIter *iter;
         g_variant_get(property_value, "a{sv}", &iter);
+        if (iter == NULL)
+            return;
 
         GVariant *array;
         char *key;

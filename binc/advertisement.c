@@ -52,12 +52,9 @@ struct binc_advertisement {
     SecondaryChannel secondary_channel;
 };
 
-/* Provide the Advertisement typedef used throughout this file (original code
- * used Advertisement* everywhere but declared the struct as binc_advertisement).
- * If your advertisement.h already typedefs this, this typedef is harmless. */
 typedef struct binc_advertisement Advertisement;
 
-static char *secondary_channel_str[] = {
+static const char *const secondary_channel_str[] = {
     "1M",
     "2M",
     "Coded"
