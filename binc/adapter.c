@@ -972,6 +972,13 @@ void binc_adapter_connectable_off(Adapter *adapter) {
     adapter_set_property(adapter, ADAPTER_PROPERTY_CONNECTABLE, g_variant_new("b", FALSE));
 }
 
+void binc_adapter_set_alias(Adapter *adapter, const char *alias) {
+    g_assert(adapter != NULL);
+    g_assert(alias != NULL);
+
+    adapter_set_property(adapter, ADAPTER_PROPERTY_ALIAS, g_variant_new("s", alias));
+}
+
 void binc_adapter_set_discovery_cb(Adapter *adapter, AdapterDiscoveryResultCallback callback) {
     g_assert(adapter != NULL);
     g_assert(callback != NULL);
