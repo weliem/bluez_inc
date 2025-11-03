@@ -21,14 +21,22 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      # 2. Configure CMake
+      # 2. Install system dependencies
+      # This step installs libglib2.0-dev, which provides glib-2.0 and gio-2.0
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglib2.0-dev
+
+      # 3. Configure CMake
       # This step creates a 'build' directory, moves into it,
       # and runs cmake to configure the project.
       # '..' points cmake to the CMakeLists.txt in the parent (root) directory.
       - name: Configure CMake
         run: cmake -B ${{github.workspace}}/build -S .
 
-      # 3. Build the project
+      # 4. Build the project
       # This step runs the build command from inside the 'build' directory.
       - name: Build Project
         run: cmake --build ${{github.workspace}}/build
+
