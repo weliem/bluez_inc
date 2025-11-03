@@ -29,14 +29,14 @@ jobs:
           sudo apt-get install -y libglib2.0-dev
 
       # 3. Configure CMake
-      # This step creates a 'build' directory, moves into it,
-      # and runs cmake to configure the project.
-      # '..' points cmake to the CMakeLists.txt in the parent (root) directory.
+      # This step creates a 'build' directory and runs cmake to configure.
+      # -DCMAKE_C_FLAGS="-Werror" and -DCMAKE_CXX_FLAGS="-Werror" are added
+      # to treat all compiler warnings as errors, failing the build.
       - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/build -S .
+        run: cmake -B ${{github.workspace}}/build -S . -DCMAKE_C_FLAGS="-Werror" -DCMAKE_CXX_FLAGS="-Werror"
 
       # 4. Build the project
-      # This step runs the build command from inside the 'build' directory.
+      # This step will now fail if any compiler warnings are issued.
       - name: Build Project
         run: cmake --build ${{github.workspace}}/build
 
