@@ -1,3 +1,7 @@
+# Built binaries
+/examples/central/central
+/examples/peripheral/peripheral
+
 # Prerequisites
 *.d
 
@@ -51,7 +55,19 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-cmake-build-debug/
-cmake-build-release/
 .idea/
 
+# CMake build directories
+/build/
+/build*/
+/cmake-build-*/
+/out/
+
+# CMake-generated files
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake

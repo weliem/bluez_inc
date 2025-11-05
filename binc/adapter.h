@@ -92,6 +92,8 @@ const char *binc_adapter_get_name(const Adapter *adapter);
 
 const char *binc_adapter_get_alias(const Adapter *adapter);
 
+void binc_adapter_set_alias(Adapter *adapter, const char *alias);
+
 const char *binc_adapter_get_address(const Adapter *adapter);
 
 DiscoveryState binc_adapter_get_discovery_state(const Adapter *adapter);

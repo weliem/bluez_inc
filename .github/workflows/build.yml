@@ -1,0 +1,63 @@
+name: CMake Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglib2.0-dev
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/build
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
+
+      - name: Configure CMake
+        run: >
+          cmake -B ${{github.workspace}}/build -S . 
+          -DCMAKE_C_FLAGS="-Werror" 
+          -DCMAKE_CXX_FLAGS="-Werror" 
+          -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install
+
+      - name: Build Project
+        run: cmake --build ${{github.workspace}}/build -- -j$(nproc)
+
+      - name: Install Project
+        run: cmake --install ${{github.workspace}}/build
+
+      - name: Run Tests
+        if: always()
+        run: ctest --test-dir ${{github.workspace}}/build --output-on-failure
+
+      - name: Test Installation
+        run: |
+          echo "--- Checking for installed libraries ---"
+          ls -l ${{github.workspace}}/install/lib
+          test -d ${{github.workspace}}/install/lib
+          
+          echo "--- Checking for installed headers ---"
+          ls -l ${{github.workspace}}/install/include/binc
+          test -d ${{github.workspace}}/install/include/binc
+          echo "Installation test passed."
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-files
+          path: ${{github.workspace}}/install
+          retention-days: 5

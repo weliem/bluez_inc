@@ -32,17 +32,27 @@ struct binc_advertisement {
     char *path; // Owned
     char *local_name; // Owned
     GPtrArray *services; // Owned
+    GPtrArray *scan_response_services; // Owned
     GHashTable *manufacturer_data; // Owned
+    GHashTable *scan_response_manufacturer_data; // Owned
     GHashTable *service_data; // Owned
+    GHashTable *scan_response_service_data; // Owned
     guint registration_id;
     guint32 min_interval;
+    gboolean min_interval_enabled;
     guint32 max_interval;
+    gboolean max_interval_enabled;
     guint16 appearance;
+    gboolean appearance_enabled;
     gboolean general_discoverable;
+    gboolean general_discoverable_enabled;
     gint16 tx_power;
+    gboolean tx_power_enabled;
     GPtrArray *includes; // owned
     SecondaryChannel secondary_channel;
 };
+
+typedef struct binc_advertisement Advertisement;
 
 static const char *const secondary_channel_str[] = {
     "1M",
@@ -91,6 +101,18 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
+    } else if (g_str_equal(property_name, "ScanResponseServiceUUIDs")) {
+        // May require experimental to be enabled
+        // See https://github.com/bluez/bluez/commit/ab6502473a622fa795cc45bb14b65f8d6f271ac1
+        GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+        if (advertisement->scan_response_services != NULL) {
+            for (guint i = 0; i < advertisement->scan_response_services->len; i++) {
+                char *service_uuid = g_ptr_array_index(advertisement->scan_response_services, i);
+                g_variant_builder_add(builder, "s", service_uuid);
+            }
+        }
+        ret = g_variant_builder_end(builder);
+        g_variant_builder_unref(builder);
     } else if (g_str_equal(property_name, "ManufacturerData")) {
         GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{qv}"));
         if (advertisement->manufacturer_data != NULL && g_hash_table_size(advertisement->manufacturer_data) > 0) {
@@ -98,10 +120,28 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
+    } else if (g_str_equal(property_name, "ScanResponseManufacturerData")) {
+        // May require experimental to be enabled
+        // See https://github.com/bluez/bluez/commit/ab6502473a622fa795cc45bb14b65f8d6f271ac1
+        GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{qv}"));
+        if (advertisement->scan_response_manufacturer_data != NULL && g_hash_table_size(advertisement->scan_response_manufacturer_data) > 0) {
+            g_hash_table_foreach(advertisement->scan_response_manufacturer_data, add_manufacturer_data, builder);
+        }
+        ret = g_variant_builder_end(builder);
+        g_variant_builder_unref(builder);
     } else if (g_str_equal(property_name, "ServiceData")) {
         GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
         if (advertisement->service_data != NULL && g_hash_table_size(advertisement->service_data) > 0) {
             g_hash_table_foreach(advertisement->service_data, add_service_data, builder);
+        }
+        ret = g_variant_builder_end(builder);
+        g_variant_builder_unref(builder);
+    } else if (g_str_equal(property_name, "ScanResponseServiceData")) {
+        // May require experimental to be enabled
+        // See https://github.com/bluez/bluez/commit/ab6502473a622fa795cc45bb14b65f8d6f271ac1
+        GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+        if (advertisement->scan_response_service_data != NULL && g_hash_table_size(advertisement->scan_response_service_data) > 0) {
+            g_hash_table_foreach(advertisement->scan_response_service_data, add_service_data, builder);
         }
         ret = g_variant_builder_end(builder);
         g_variant_builder_unref(builder);
@@ -155,58 +195,112 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
     g_assert(advertisement != NULL);
     g_assert(adapter != NULL);
 
-    static const char legacy_advertisement_xml[] =
-            "<node name='/'>"
-            "   <interface name='org.bluez.LEAdvertisement1'>"
-            "       <method name='Release' />"
-            "       <property name='Type' type='s' access='read'/>"
-            "       <property name='LocalName' type='s' access='read'/>"
-            "       <property name='ManufacturerData' type='a{qv}' access='read'/>"
-            "       <property name='ServiceData' type='a{sv}' access='read'/>"
-            "       <property name='ServiceUUIDs' type='as' access='read'/>"
-            "       <property name='MinInterval' type='u' access='read'/>"
-            "       <property name='MaxInterval' type='u' access='read'/>"
-            "       <property name='Appearance' type='q' access='read'/>"
-            "       <property name='Discoverable' type='b' access='read'/>"
-            "       <property name='TxPower' type='n' access='read'/>"
-            "       <property name='Includes' type='as' access='read'/>"
-            "   </interface>"
-            "</node>";
+    log_debug(TAG, "binc_advertisement_register_dynamic");
 
-    static const char extended_advertisement_xml[] =
-            "<node name='/'>"
-            "   <interface name='org.bluez.LEAdvertisement1'>"
-            "       <method name='Release' />"
-            "       <property name='Type' type='s' access='read'/>"
-            "       <property name='LocalName' type='s' access='read'/>"
-            "       <property name='ManufacturerData' type='a{qv}' access='read'/>"
-            "       <property name='ServiceData' type='a{sv}' access='read'/>"
-            "       <property name='ServiceUUIDs' type='as' access='read'/>"
-            "       <property name='MinInterval' type='u' access='read'/>"
-            "       <property name='MaxInterval' type='u' access='read'/>"
-            "       <property name='Appearance' type='q' access='read'/>"
-            "       <property name='Discoverable' type='b' access='read'/>"
-            "       <property name='TxPower' type='n' access='read'/>"
-            "       <property name='Includes' type='as' access='read'/>"
-            "       <property name='SecondaryChannel' type='s' access='read'/>"
-            "   </interface>"
-            "</node>";
+    // Use a GString to build the XML dynamically
+    GString *xml_builder = g_string_new("<node name='/'>\n"
+                                        "  <interface name='org.bluez.LEAdvertisement1'>\n"
+                                        "    <method name='Release' />\n"
+                                        "    <property name='Type' type='s' access='read'/>\n");
+
+    // Conditionally add properties based on the advertisement struct's data
+    if (advertisement->local_name != NULL) {
+        g_string_append(xml_builder, "    <property name='LocalName' type='s' access='read'/>\n");
+    }
+
+    if (advertisement->manufacturer_data != NULL && g_hash_table_size(advertisement->manufacturer_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ManufacturerData' type='a{qv}' access='read'/>\n");
+    }
+
+    if (advertisement->scan_response_manufacturer_data != NULL && g_hash_table_size(advertisement->scan_response_manufacturer_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ScanResponseManufacturerData' type='a{qv}' access='read'/>\n");
+    }
+
+    if (advertisement->service_data != NULL && g_hash_table_size(advertisement->service_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ServiceData' type='a{sv}' access='read'/>\n");
+    }
+
+    if (advertisement->scan_response_service_data != NULL && g_hash_table_size(advertisement->scan_response_service_data) > 0) {
+        g_string_append(xml_builder, "    <property name='ScanResponseServiceData' type='a{sv}' access='read'/>\n");
+    }
+
+    if (advertisement->services != NULL && advertisement->services->len > 0) {
+        g_string_append(xml_builder, "    <property name='ServiceUUIDs' type='as' access='read'/>\n");
+    }
+
+    if (advertisement->scan_response_services != NULL && advertisement->scan_response_services->len > 0) {
+        g_string_append(xml_builder, "    <property name='ScanResponseServiceUUIDs' type='as' access='read'/>\n");
+    }
+
+    if (advertisement->min_interval_enabled) {
+        g_string_append(xml_builder, "    <property name='MinInterval' type='u' access='read'/>\n");
+    }
+
+    if (advertisement->max_interval_enabled) {
+        g_string_append(xml_builder, "    <property name='MaxInterval' type='u' access='read'/>\n");
+    }
+
+    if (advertisement->tx_power_enabled && advertisement->tx_power >= -127 && advertisement->tx_power <= 20) {
+        g_string_append(xml_builder, "    <property name='TxPower' type='n' access='read'/>\n");
+    }
+
+    if (advertisement->appearance_enabled && advertisement->appearance != 0) {
+        g_string_append(xml_builder, "    <property name='Appearance' type='q' access='read'/>\n");
+    }
+
+    if (advertisement->general_discoverable_enabled) {
+        g_string_append(xml_builder, "    <property name='Discoverable' type='b' access='read'/>\n");
+    }
+
+    // Optional: still support includes[] if your app uses it to track rsi, etc.
+    if (advertisement->includes != NULL) {
+        for (guint i = 0; i < advertisement->includes->len; i++) {
+            char *element = g_ptr_array_index(advertisement->includes, i);
+
+            if (g_str_equal(element, "rsi")) {
+                g_string_append(xml_builder, "    <property name='Includes' type='as' access='read'/>\n");
+                break;
+            }
+        }
+    }
+
+    // Check for secondary channel as it is a key property
+    if (advertisement->secondary_channel != BINC_SC_1M) {
+        g_string_append(xml_builder, "    <property name='SecondaryChannel' type='s' access='read'/>\n");
+    }
+
+    // Close XML
+    g_string_append(xml_builder, "  </interface>\n"
+                                 " </node>\n");
+
+    const char *final_xml = g_string_free(xml_builder, FALSE);
+    log_debug(TAG, "Generated advertisement introspection XML:\n%s", final_xml);
 
     GError *error = NULL;
-    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(
-            advertisement->secondary_channel == BINC_SC_1M ? legacy_advertisement_xml : extended_advertisement_xml,
-            &error
-            );
-    advertisement->registration_id = g_dbus_connection_register_object(binc_adapter_get_dbus_connection(adapter),
-                                                                       advertisement->path,
-                                                                       info->interfaces[0],
-                                                                       &advertisement_method_table,
-                                                                       advertisement, NULL, &error);
+    GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(final_xml, &error);
+
+    if (info == NULL) {
+        log_debug(TAG, "failed to parse generated XML for dbus node: %s", error ? error->message : "unknown");
+        if (error) g_clear_error(&error);
+        g_free((gpointer)final_xml);
+        return;
+    }
+
+    advertisement->registration_id = g_dbus_connection_register_object(
+        binc_adapter_get_dbus_connection(adapter),
+        advertisement->path,
+        info->interfaces[0],
+        &advertisement_method_table,
+        advertisement, NULL, &error
+    );
+
+    g_free((gpointer)final_xml);
 
     if (error != NULL) {
         log_debug(TAG, "registering advertisement failed: %s", error->message);
         g_clear_error(&error);
     }
+
     g_dbus_node_info_unref(info);
 }
 
@@ -230,7 +324,11 @@ Advertisement *binc_advertisement_create(void) {
     advertisement->path = g_strdup_printf("/org/bluez/bincadv_%s", random_str);
     advertisement->manufacturer_data = g_hash_table_new_full(g_int_hash, g_int_equal, g_free,
                                                              (GDestroyNotify) byte_array_free);
+    advertisement->scan_response_manufacturer_data = g_hash_table_new_full(g_int_hash, g_int_equal, g_free,
+                                                             (GDestroyNotify) byte_array_free);
     advertisement->service_data = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+                                                        (GDestroyNotify) byte_array_free);
+    advertisement->scan_response_service_data = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
                                                         (GDestroyNotify) byte_array_free);
     advertisement->min_interval = 200;
     advertisement->max_interval = 500;
@@ -254,15 +352,26 @@ void binc_advertisement_free(Advertisement *advertisement) {
         g_ptr_array_free(advertisement->services, TRUE);
         advertisement->services = NULL;
     }
+    if (advertisement->scan_response_services != NULL) {
+        g_ptr_array_free(advertisement->scan_response_services, TRUE);
+        advertisement->scan_response_services = NULL;
+    }
     if (advertisement->manufacturer_data != NULL) {
         g_hash_table_destroy(advertisement->manufacturer_data);
         advertisement->manufacturer_data = NULL;
+    }
+    if (advertisement->scan_response_manufacturer_data != NULL) {
+        g_hash_table_destroy(advertisement->scan_response_manufacturer_data);
+        advertisement->scan_response_manufacturer_data = NULL;
     }
     if (advertisement->service_data != NULL) {
         g_hash_table_destroy(advertisement->service_data);
         advertisement->service_data = NULL;
     }
-
+    if (advertisement->scan_response_service_data != NULL) {
+        g_hash_table_destroy(advertisement->scan_response_service_data);
+        advertisement->scan_response_service_data = NULL;
+    }
     if (advertisement->includes != NULL) {
         g_ptr_array_free(advertisement->includes, TRUE);
         advertisement->includes = NULL;
@@ -302,6 +411,50 @@ void binc_advertisement_set_services(Advertisement *advertisement, const GPtrArr
     }
 }
 
+void binc_advertisement_set_scan_response_services(Advertisement *advertisement, const GPtrArray *service_uuids) {
+    g_assert(advertisement != NULL);
+    g_assert(service_uuids != NULL);
+
+    if (advertisement->scan_response_services != NULL) {
+        g_ptr_array_free(advertisement->scan_response_services, TRUE);
+    }
+    advertisement->scan_response_services = g_ptr_array_new_with_free_func(g_free);
+
+    for (guint i = 0; i < service_uuids->len; i++) {
+        g_ptr_array_add(advertisement->scan_response_services, g_strdup(g_ptr_array_index(service_uuids, i)));
+    }
+}
+
+void binc_advertisement_set_service_data(Advertisement *advertisement, const char* service_uuid, const GByteArray *byteArray) {
+    g_assert(advertisement != NULL);
+    g_assert(advertisement->service_data != NULL);
+    g_assert(service_uuid != NULL);
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(byteArray != NULL);
+
+    g_hash_table_remove(advertisement->service_data, service_uuid);
+
+    GByteArray *value = g_byte_array_sized_new(byteArray->len);
+    g_byte_array_append(value, byteArray->data, byteArray->len);
+
+    g_hash_table_insert(advertisement->service_data, g_strdup(service_uuid), value);
+}
+
+void binc_advertisement_set_scan_response_service_data(Advertisement *advertisement, const char* service_uuid, const GByteArray *byteArray) {
+    g_assert(advertisement != NULL);
+    g_assert(advertisement->scan_response_service_data != NULL);
+    g_assert(service_uuid != NULL);
+    g_assert(is_valid_uuid(service_uuid));
+    g_assert(byteArray != NULL);
+
+    g_hash_table_remove(advertisement->scan_response_service_data, service_uuid);
+
+    GByteArray *value = g_byte_array_sized_new(byteArray->len);
+    g_byte_array_append(value, byteArray->data, byteArray->len);
+
+    g_hash_table_insert(advertisement->scan_response_service_data, g_strdup(service_uuid), value);
+}
+
 void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guint16 manufacturer_id,
                                               const GByteArray *byteArray) {
     g_assert(advertisement != NULL);
@@ -320,20 +473,21 @@ void binc_advertisement_set_manufacturer_data(Advertisement *advertisement, guin
     g_hash_table_insert(advertisement->manufacturer_data, key, value);
 }
 
-void binc_advertisement_set_service_data(Advertisement *advertisement, const char *service_uuid,
-                                         const GByteArray *byteArray) {
+void binc_advertisement_set_scan_response_manufacturer_data(Advertisement *advertisement, guint16 manufacturer_id, const GByteArray *byteArray) {
     g_assert(advertisement != NULL);
-    g_assert(advertisement->service_data != NULL);
-    g_assert(service_uuid != NULL);
-    g_assert(is_valid_uuid(service_uuid));
+    g_assert(advertisement->scan_response_manufacturer_data != NULL);
     g_assert(byteArray != NULL);
 
-    g_hash_table_remove(advertisement->service_data, service_uuid);
+    int man_id = manufacturer_id;
+    g_hash_table_remove(advertisement->scan_response_manufacturer_data, &man_id);
+
+    int *key = g_new0 (int, 1);
+    *key = manufacturer_id;
 
     GByteArray *value = g_byte_array_sized_new(byteArray->len);
     g_byte_array_append(value, byteArray->data, byteArray->len);
 
-    g_hash_table_insert(advertisement->service_data, g_strdup(service_uuid), value);
+    g_hash_table_insert(advertisement->scan_response_manufacturer_data, key, value);
 }
 
 void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, guint32 max) {
@@ -341,13 +495,16 @@ void binc_advertisement_set_interval(Advertisement *advertisement, guint32 min, 
     g_assert(min <= max);
 
     advertisement->min_interval = min;
+    advertisement->min_interval_enabled = TRUE;
     advertisement->max_interval = max;
+    advertisement->max_interval_enabled = TRUE;
 }
 
 void binc_advertisement_set_appearance(Advertisement *advertisement, guint16 appearance) {
     g_assert(advertisement != NULL);
 
     advertisement->appearance = appearance;
+    advertisement->appearance_enabled = TRUE;
 }
 
 guint16 binc_advertisement_get_appearance(Advertisement *advertisement) {
@@ -360,6 +517,7 @@ void binc_advertisement_set_general_discoverable(Advertisement *advertisement, g
     g_assert(advertisement != NULL);
 
     advertisement->general_discoverable = general_discoverable;
+    advertisement->general_discoverable_enabled = TRUE;
 }
 
 // The provided value must be in range [-127 to +20], where units are in dBm.
@@ -369,6 +527,7 @@ void binc_advertisement_set_tx_power(Advertisement *advertisement, gint16 tx_pow
     g_assert(tx_power <= 20);
 
     advertisement->tx_power = tx_power;
+    advertisement->tx_power_enabled = TRUE;
 
     // Add 'tx-power' to the list of includes if needed
     if (advertisement->includes == NULL) {
