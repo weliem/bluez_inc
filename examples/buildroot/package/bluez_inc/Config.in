@@ -1,0 +1,12 @@
+config BR2_PACKAGE_BLUEZ_INC
+	bool "bluez_inc (BlueZ in C library)"
+	select BR2_PACKAGE_LIBGLIB2
+	select BR2_PACKAGE_HOST_PKGCONF
+	help
+	  bluez_inc is a C library that abstracts DBus
+	  communication for BlueZ (Bluetooth LE), supporting both
+	  Central and Peripheral roles.
+
+	  This library requires GLib 2.0 and CMake.
+
+	  https://github.com/weliem/bluez_inc
