@@ -197,7 +197,6 @@ int main(void) {
 
         advertisement = binc_advertisement_create();
         binc_advertisement_set_local_name(advertisement, "BINC");
-        binc_advertisement_set_secondary_channel(advertisement, BINC_SC_2M);
         binc_advertisement_set_interval(advertisement, 500, 500);
         binc_advertisement_set_tx_power(advertisement, 5);
         binc_advertisement_set_services(advertisement, adv_service_uuids);
