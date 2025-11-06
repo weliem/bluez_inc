@@ -274,7 +274,7 @@ void binc_advertisement_register(Advertisement *advertisement, const Adapter *ad
                                  " </node>\n");
 
     const char *final_xml = g_string_free(xml_builder, FALSE);
-    log_debug(TAG, "Generated advertisement introspection XML:\n%s", final_xml);
+    //log_debug(TAG, "Generated advertisement introspection XML:\n%s", final_xml);
 
     GError *error = NULL;
     GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(final_xml, &error);
