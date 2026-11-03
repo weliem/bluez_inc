@@ -611,3 +611,18 @@ GList *binc_characteristic_get_descriptors(const Characteristic *characteristic)
     g_assert(characteristic != NULL);
     return characteristic->descriptors;
 }
+
+// This eliminates the need to allocate temporary GByteArray objects for raw byte buffers
+void binc_characteristic_write_raw(Characteristic *characteristic, 
+                                   const uint8_t *data, 
+                                   guint length, 
+                                   gboolean with_response) {
+    g_return_if_fail(characteristic != NULL);
+    g_return_if_fail(data != NULL);
+
+    GByteArray *bytes = g_byte_array_sized_new(length);
+    g_byte_array_append(bytes, data, length);
+    binc_characteristic_write(characteristic, bytes, with_response);
+    g_byte_array_unref(bytes);
+}
+

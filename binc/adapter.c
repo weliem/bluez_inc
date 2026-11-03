@@ -1262,3 +1262,56 @@ void *binc_adapter_get_user_data(const Adapter *adapter) {
     g_assert(adapter != NULL);
     return adapter->user_data;
 }
+
+
+/**
+ * @brief Checks if the adapter is currently in discovery mode via BlueZ org.bluez.Adapter1
+ *
+ * @param adapter Pointer to the Binc Adapter
+ * @return gboolean TRUE if discovering, FALSE otherwise
+ */
+gboolean binc_adapter_is_discovering(const Adapter *adapter) {
+    if (adapter == NULL) {
+        return FALSE;
+    }
+
+    const char *path = binc_adapter_get_path(adapter);
+    GDBusConnection *conn = binc_adapter_get_dbus_connection(adapter);
+    if (path == NULL || conn == NULL) {
+        return FALSE;
+    }
+
+    GError *error = NULL;
+    GVariant *result = g_dbus_connection_call_sync(
+        conn,
+        "org.bluez",
+        path,
+        "org.freedesktop.DBus.Properties",
+        "Get",
+        g_variant_new("(ss)", "org.bluez.Adapter1", "Discovering"),
+        G_VARIANT_TYPE("(v)"),
+        G_DBUS_CALL_FLAGS_NONE,
+        1000,
+        NULL,
+        &error
+    );
+
+    if (error != NULL) {
+        g_error_free(error);
+        return FALSE;
+    }
+
+    gboolean discovering = FALSE;
+    if (result != NULL) {
+        GVariant *property_variant = NULL;
+        g_variant_get(result, "(v)", &property_variant);
+        if (property_variant != NULL) {
+            discovering = g_variant_get_boolean(property_variant);
+            g_variant_unref(property_variant);
+        }
+        g_variant_unref(result);
+    }
+
+    return discovering;
+}
+

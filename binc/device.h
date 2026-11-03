@@ -47,6 +47,14 @@ typedef void (*ServicesResolvedCallback)(Device *device);
 typedef void (*BondingStateChangedCallback)(Device *device, BondingState new_state, BondingState old_state,
                                             const GError *error);
 
+typedef void (*BincAsyncWriteCallback)(Device *device, const char *service_uuid, const char *char_uuid, const GError *error);
+
+typedef struct {
+    Device *device;
+    char *service_uuid;
+    char *char_uuid;
+    BincAsyncWriteCallback cb;
+} BincAsyncWriteContext;
 
 /**
  * Connect to a device asynchronously
@@ -144,6 +152,14 @@ char *binc_device_to_string(const Device *device);
 void binc_device_set_user_data(Device *device, void *user_data);
 
 void *binc_device_get_user_data(const Device *device);
+
+void binc_device_write_char_async(Device *device,
+                                  const char *service_uuid,
+                                  const char *char_uuid,
+                                  const GByteArray *byteArray,
+                                  int write_type);
+
+Characteristic *binc_device_get_characteristic_by_uuid(Device *device, const char *uuid_substring); 
 
 #ifdef __cplusplus
 }
