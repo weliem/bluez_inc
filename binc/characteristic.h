@@ -24,6 +24,7 @@
 #ifndef BINC_CHARACTERISTIC_H
 #define BINC_CHARACTERISTIC_H
 
+#include <stdint.h>
 #include <gio/gio.h>
 #include "service.h"
 #include "forward_decl.h"
@@ -110,6 +111,11 @@ GList *binc_characteristic_get_descriptors(const Characteristic *characteristic)
  * @return string representation of characteristic, caller must free
  */
 char *binc_characteristic_to_string(const Characteristic *characteristic);
+
+void binc_characteristic_write_raw(Characteristic *characteristic, 
+                                   const uint8_t *data, 
+                                   guint length, 
+                                   gboolean with_response);
 
 #ifdef __cplusplus
 }

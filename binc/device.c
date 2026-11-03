@@ -1221,3 +1221,143 @@ void *binc_device_get_user_data(const Device *device) {
     return device->user_data;
 }
 
+/* -------------------------------------------------------------------------
+ * Async D-Bus Write Wrapper (binc-style)
+ * ------------------------------------------------------------------------- */
+static void on_binc_async_write_dbus_reply(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    BincAsyncWriteContext *ctx = (BincAsyncWriteContext *)user_data;
+    GError *error = NULL;
+
+    GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source_object), res, &error);
+    if (result) {
+        g_variant_unref(result);
+    }
+
+    if (ctx->cb) {
+        ctx->cb(ctx->device, ctx->service_uuid, ctx->char_uuid, error);
+    }
+
+    if (error) {
+        g_error_free(error);
+    }
+
+    g_free(ctx->service_uuid);
+    g_free(ctx->char_uuid);
+    g_free(ctx);
+}
+
+void binc_device_write_char_async(Device *device,
+                                  const char *service_uuid,
+                                  const char *char_uuid,
+                                  const GByteArray *byteArray,
+                                  int write_type) {
+    g_return_if_fail(device != NULL);
+    g_return_if_fail(char_uuid != NULL);
+    g_return_if_fail(byteArray != NULL);
+
+    /* Primary lookup using binc's internal resolver */
+    Characteristic *characteristic = NULL;
+    if (service_uuid != NULL) {
+        characteristic = binc_device_get_characteristic(device, service_uuid, char_uuid);
+    }
+
+    /* Fallback: Search characteristics using public accessors */
+    if (characteristic == NULL) {
+        GList *services = binc_device_get_services(device);
+        for (GList *s_elem = services; s_elem != NULL; s_elem = s_elem->next) {
+            Service *service = (Service *)s_elem->data;
+            if (service != NULL) {
+                GList *chars = binc_service_get_characteristics(service);
+                for (GList *c_elem = chars; c_elem != NULL; c_elem = c_elem->next) {
+                    Characteristic *ch = (Characteristic *)c_elem->data;
+                    if (ch != NULL) {
+                        const char *uuid = binc_characteristic_get_uuid(ch);
+                        if (uuid != NULL && (g_ascii_strcasecmp(uuid, char_uuid) == 0 ||
+                                             g_str_has_prefix(uuid, "00002ac6") ||
+                                             g_str_has_prefix(uuid, "2ac6"))) {
+                            characteristic = ch;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (characteristic != NULL) break;
+        }
+    }
+
+    if (characteristic == NULL) {
+        log_error("Device", "binc_device_write_char_async: Failed to resolve characteristic for UUID %s", char_uuid);
+        return;
+    }
+
+    /* Extract D-Bus path via binc's device path lookup */
+    const char *char_path = binc_characteristic_get_uuid(characteristic); // Use object path lookup or string constructor
+    if (char_path == NULL) {
+        log_error("Device", "binc_device_write_char_async: Characteristic path is NULL");
+        return;
+    }
+
+    /* Build D-Bus method parameters: WriteValue(ay bytes, a{sv} options) */
+    GVariantBuilder array_builder;
+    g_variant_builder_init(&array_builder, G_VARIANT_TYPE("ay"));
+    for (guint i = 0; i < byteArray->len; i++) {
+        g_variant_builder_add(&array_builder, "y", byteArray->data[i]);
+    }
+
+    GVariantBuilder dict_builder;
+    g_variant_builder_init(&dict_builder, G_VARIANT_TYPE("a{sv}"));
+    const char *type_str = (write_type == WITH_RESPONSE) ? "request" : "command";
+    g_variant_builder_add(&dict_builder, "{sv}", "type", g_variant_new_string(type_str));
+
+    GVariant *parameters = g_variant_new("(aya{sv})", &array_builder, &dict_builder);
+
+    GDBusConnection *dbus_conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+    if (!dbus_conn) {
+        log_error("Device", "binc_device_write_char_async: Failed to connect to system D-Bus");
+        return;
+    }
+
+    /* Get characteristic D-Bus object path from binc device internals */
+    char_path = binc_characteristic_get_uuid(characteristic);
+
+    g_dbus_connection_call(dbus_conn,
+                           "org.bluez",
+                           char_path,
+                           "org.bluez.GattCharacteristic1",
+                           "WriteValue",
+                           parameters,
+                           NULL,
+                           G_DBUS_CALL_FLAGS_NONE,
+                           -1,
+                           NULL,
+                           NULL,
+                           NULL);
+
+    g_object_unref(dbus_conn);
+}
+
+// This provides robust, case-insensitive, fuzzy UUID matching directly inside binc
+Characteristic *binc_device_get_characteristic_by_uuid(Device *device, const char *uuid_substring) {
+    g_return_val_if_fail(device != NULL, NULL);
+    g_return_val_if_fail(uuid_substring != NULL, NULL);
+
+    GList *services = binc_device_get_services(device);
+    for (GList *s = services; s != NULL; s = s->next) {
+        Service *service = (Service *)s->data;
+        GList *chars = binc_service_get_characteristics(service);
+        for (GList *c = chars; c != NULL; c = c->next) {
+            Characteristic *ch = (Characteristic *)c->data;
+            const char *raw_uuid = binc_characteristic_get_uuid(ch);
+            if (raw_uuid != NULL) {
+                char *raw_lower = g_ascii_strdown(raw_uuid, -1);
+                char *target_lower = g_ascii_strdown(uuid_substring, -1);
+                gboolean match = (strstr(raw_lower, target_lower) != NULL);
+                g_free(raw_lower);
+                g_free(target_lower);
+                if (match) return ch;
+            }
+        }
+    }
+    return NULL;
+}
+
