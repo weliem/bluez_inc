@@ -95,7 +95,7 @@ guint16 parser_get_uint16(Parser *parser) {
     byte1 = parser->bytes->data[parser->offset];
     byte2 = parser->bytes->data[parser->offset + 1];
     parser->offset = parser->offset + 2;
-    if (parser->byteOrder == LITTLE_ENDIAN) {
+    if (parser->byteOrder == G_LITTLE_ENDIAN) {
         return (guint16) ((byte2 << 8) + byte1);
     } else {
         return (guint16) ((byte1 << 8) + byte2);
@@ -110,7 +110,7 @@ gint16 parser_get_sint16(Parser *parser) {
     byte1 = parser->bytes->data[parser->offset];
     byte2 = parser->bytes->data[parser->offset + 1];
     parser->offset = parser->offset + 2;
-    if (parser->byteOrder == LITTLE_ENDIAN) {
+    if (parser->byteOrder == G_LITTLE_ENDIAN) {
         return (gint16) ((byte2 << 8) + byte1);
     } else {
         return (gint16) ((byte1 << 8) + byte2);
@@ -126,7 +126,7 @@ guint32 parser_get_uint24(Parser *parser) {
     byte2 = parser->bytes->data[parser->offset+1];
     byte3 = parser->bytes->data[parser->offset+2];
     parser->offset = parser->offset + 3;
-    if (parser->byteOrder == LITTLE_ENDIAN) {
+    if (parser->byteOrder == G_LITTLE_ENDIAN) {
         return (guint32) ((byte3 << 16) + (byte2 << 8) + byte1);
     } else {
         return (guint32) ((byte1 << 16) + (byte2 << 8) + byte3);
@@ -143,7 +143,7 @@ guint32 parser_get_uint32(Parser *parser) {
     byte3 = parser->bytes->data[parser->offset + 2];
     byte4 = parser->bytes->data[parser->offset + 3];
     parser->offset = parser->offset + 4;
-    if (parser->byteOrder == LITTLE_ENDIAN) {
+    if (parser->byteOrder == G_LITTLE_ENDIAN) {
         return (guint32) ((byte4 << 24) + (byte3 << 16) + (byte2 << 8) + byte1);
     } else {
         return (guint32) ((byte1 << 24) + (byte2 << 16) + (byte3 << 8) + byte4);

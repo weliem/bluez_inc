@@ -66,6 +66,10 @@ typedef void (*onLocalCharacteristicStartNotify)(const Application *application,
 typedef void (*onLocalCharacteristicStopNotify)(const Application *application, const char *service_uuid,
                                                 const char *char_uuid);
 
+typedef void (*onLocalCharacteristicNotifyState)(const Application *application, const char *address,
+                                                  const char *service_uuid, const char *char_uuid,
+                                                  gboolean notifying, guint16 mtu);
+
 // This callback is called just before the descriptor's value is returned.
 // Use it to update the descriptor before it is read
 typedef const char *(*onLocalDescriptorRead)(const Application *application, const char *address,
@@ -92,6 +96,15 @@ int binc_application_add_characteristic(Application *application, const char *se
 int binc_application_add_descriptor(Application *application, const char *service_uuid,
                                     const char *char_uuid, const char *desc_uuid, guint permissions);
 
+int binc_application_set_service_handle(const Application *application, const char *service_uuid,
+                                         guint16 handle);
+
+int binc_application_set_char_handle(const Application *application, const char *service_uuid,
+                                      const char *char_uuid, guint16 handle);
+
+int binc_application_set_desc_handle(const Application *application, const char *service_uuid,
+                                      const char *char_uuid, const char *desc_uuid, guint16 handle);
+
 void binc_application_set_char_read_cb(Application *application, onLocalCharacteristicRead callback);
 
 void binc_application_set_char_write_cb(Application *application, onLocalCharacteristicWrite callback);
@@ -101,6 +114,8 @@ void binc_application_set_char_updated_cb(Application *application, onLocalChara
 void binc_application_set_char_start_notify_cb(Application *application, onLocalCharacteristicStartNotify callback);
 
 void binc_application_set_char_stop_notify_cb(Application *application, onLocalCharacteristicStopNotify callback);
+
+void binc_application_set_char_notify_state_cb(Application *application, onLocalCharacteristicNotifyState callback);
 
 int binc_application_set_char_value(const Application *application, const char *service_uuid,
                                     const char *char_uuid, GByteArray *byteArray);
@@ -117,6 +132,10 @@ int binc_application_set_desc_value(const Application *application, const char *
 
 int binc_application_notify(const Application *application, const char *service_uuid, const char *char_uuid,
                             const GByteArray *byteArray);
+
+int binc_application_notify_device(const Application *application, const char *address,
+                                    const char *service_uuid, const char *char_uuid,
+                                    const GByteArray *byteArray);
 
 gboolean binc_application_char_is_notifying(const Application *application, const char *service_uuid,
                                             const char *char_uuid);

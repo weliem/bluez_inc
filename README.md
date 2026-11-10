@@ -1,7 +1,7 @@
 # Bluez in C
 
 
-The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood. 
+The goal of this library is to provide a clean C interface to Bluez, without needing to use DBus commands. Using Bluez over the DBus is quite tricky to say the least, and this library does all the hard work under the hood.
 As a result, it looks like a 'normal' C library for Bluetooth!
 
 The library focuses on BLE and supports both **Central** and **Peripheral** roles. Some interesting facts include:
@@ -21,16 +21,81 @@ cmake .
 cmake --build .
 ```
 
+## Per-device notifications
+
+Applications serving independent clients can opt in with
+`binc_application_set_char_notify_state_cb()`, before registering the application
+with BlueZ. BlueZ 5.86 uses `AcquireNotify` to pass one notification socket per
+subscribing device. The callback reports the device address, subscription state
+and negotiated MTU. Send that client's data with
+`binc_application_notify_device()` using the address from the callback.
+
+The function returns `0` on success, `ENOTCONN` without a matching subscription,
+`EMSGSIZE` above the peer's MTU minus three bytes, or a socket error such as
+`EAGAIN` when the caller must retry. No broadcast fallback is performed. The
+ordinary `binc_application_notify()` returns `ENOTSUP` for opted-in applications.
+Legacy applications keep their existing broadcast notification behavior.
+
+The application must outlive all notification sends and callbacks. Freeing it
+closes every notification socket and removes its main-context sources. Phone
+clients continue using ordinary BLE CCCD subscriptions; no custom phone API is
+required. Actual controller capacity and older BlueZ versions must be validated
+separately.
+
+## Stable local GATT handles
+
+Local services, characteristic values and descriptors default to handle `0`,
+which asks BlueZ to allocate handles automatically. To request stable handles,
+add the objects as usual and set their handles before calling
+`binc_adapter_register_application()`:
+
+```c
+int result = binc_application_set_service_handle(application, service_uuid, 0x0100);
+if (result == 0) {
+    result = binc_application_set_char_handle(application, service_uuid, char_uuid, 0x0102);
+}
+if (result == 0) {
+    result = binc_application_set_desc_handle(application, service_uuid, char_uuid,
+                                              desc_uuid, 0x0104);
+}
+```
+
+The setters return `0` on success or `EINVAL` for an invalid or missing object.
+Only register the application if all configuration calls succeed. Changing a
+handle after registration does not move the attribute in BlueZ's live database.
+
+The characteristic handle identifies its **value**, not its declaration. Leave
+space for the preceding declaration and for BlueZ-generated descriptors. In the
+example, a notifying characteristic can use `0x0101` for its declaration,
+`0x0102` for its value, `0x0103` for BlueZ's automatic CCCD, and `0x0104` for its
+explicit descriptor. Do not add a second CCCD yourself.
+
+Choose a collision-free range and reuse the complete layout on each registration.
+BlueZ can reject unavailable or inconsistent handle requests; libBinc does not
+reserve ranges or silently substitute another layout. Its existing registration
+callback logs registration failures. The D-Bus `Handle` properties are writable
+so BlueZ can report assigned handles back to the exported objects. A database
+layout change still requires appropriate client cache invalidation; these APIs
+do not implement Service Changed handling.
+
+The isolated handle tests require `dbus-daemon`, but no Bluetooth hardware:
+
+```sh
+cmake -S . -B build -DBUILD_TESTING=ON
+cmake --build build --target application_handles_test
+ctest --test-dir build -R application_handles --output-on-failure
+```
+
 ## Discovering devices
 
-In order to discover devices, you first need to get hold of a Bluetooth *adapter*. 
+In order to discover devices, you first need to get hold of a Bluetooth *adapter*.
 You do this by calling `binc_adapter_get_default()` with your DBus connection as an argument:
 
 ```c
 int main(void) {
     GDBusConnection *dbusConnection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
     Adapter *default_adapter = binc_adapter_get_default(dbusConnection);
-    
+
     //...
 }
 ```
@@ -39,16 +104,16 @@ The next step is to set any scanfilters and set the callback you want to receive
 
 ```c
 int main(void) {
-    
+
     // ...
-    
+
     binc_adapter_set_discovery_cb(default_adapter, &on_scan_result);
     binc_adapter_set_discovery_filter(default_adapter, -100, NULL, NULL);
     binc_adapter_start_discovery(default_adapter);
 }
 ```
 
-When you pass 'NULL' as the 3rd argument to `binc_adapter_set_discovery_filter`, you indicate that you don't want to filter on service UUIDs. Otherwise you can pass a GPtrArray with a number of service UUIDs that you want to filter on. The 4th argument allows you to filter on a 'pattern' which is defined in Bluez as the 'prefix of an address or name'. 
+When you pass 'NULL' as the 3rd argument to `binc_adapter_set_discovery_filter`, you indicate that you don't want to filter on service UUIDs. Otherwise you can pass a GPtrArray with a number of service UUIDs that you want to filter on. The 4th argument allows you to filter on a 'pattern' which is defined in Bluez as the 'prefix of an address or name'.
 The discovery will deliver all found devices on the callback you provided. You typically check if it is the device you are looking for, stop the discovery and then connect to it:
 
 ```c
@@ -72,7 +137,7 @@ As you can see, just before connecting, you must set up some callbacks for recei
 You connect by calling `binc_device_connect(device)`. Then the following sequence will happen:
 * first, the *connection_state* will change to 'connecting'.
 * when the device is connected, the *connection_state* changes to 'connected' and your registered callback will be called. However, you cannot use the device yet because the service discovery has not yet been done.
-* Bluez will then start the service discovery automatically and when it finishes, the *services_resolved* callback is called. So the *service_resolved* callback is the right place to start reading and writing characteristics or starting notifications. 
+* Bluez will then start the service discovery automatically and when it finishes, the *services_resolved* callback is called. So the *service_resolved* callback is the right place to start reading and writing characteristics or starting notifications.
 
 ```c
 void on_connection_state_changed(Device *device, ConnectionState state, GError *error) {
@@ -90,12 +155,12 @@ void on_connection_state_changed(Device *device, ConnectionState state, GError *
 
 If a connection attempt fails or times out after 25 seconds, the *connection_state* callback is called with an error.
 
-To disconnect a connected device, call `binc_device_disconnect(device)` and the device will be disconnected. Again, the *connection_state* callback will be called. If you want to remove the device from the DBus after disconnecting, you call `binc_adapter_remove_device(default_adapter, device)`. 
+To disconnect a connected device, call `binc_device_disconnect(device)` and the device will be disconnected. Again, the *connection_state* callback will be called. If you want to remove the device from the DBus after disconnecting, you call `binc_adapter_remove_device(default_adapter, device)`.
 
 ## Reading and writing characteristics
 
-We can start using characteristics once the service discovery has been completed. 
-Typically, we read some characteristics like its model and manufacturer. In order to read or write, you first need to get the **Characteristic** by using `binc_device_get_characteristic(device, DIS_SERVICE, DIS_MANUFACTURER_CHAR)`. 
+We can start using characteristics once the service discovery has been completed.
+Typically, we read some characteristics like its model and manufacturer. In order to read or write, you first need to get the **Characteristic** by using `binc_device_get_characteristic(device, DIS_SERVICE, DIS_MANUFACTURER_CHAR)`.
 You need to provide the **service UUID** and **characteristic UUID** to find a characteristic:
 
 ```c
@@ -110,7 +175,7 @@ void on_services_resolved(Device *device) {
 ```
 
 As you can see, there is also a convenience method `binc_device_read_char` that will look up a characteristic and do a read if the characteristic is found.
-Like all BLE operations, reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_cb(device, &on_read)`. 
+Like all BLE operations, reading and writing are **asynchronous** operations. So you issue them and they will complete immediately, but you then have to wait for the result to come in on a callback. You register your callback by calling `binc_device_set_read_char_cb(device, &on_read)`.
 
 ```c
 void on_read(Device *device, Characteristic *characteristic, GByteArray *byteArray, GError *error) {
@@ -119,9 +184,9 @@ void on_read(Device *device, Characteristic *characteristic, GByteArray *byteArr
         log_debug(TAG, "failed to read '%s' (error %d: %s)", uuid, error->code, error->message);
         return;
     }
-    
+
     if (byteArray == NULL) return;
-    
+
     if (g_str_equal(uuid, DIS_MANUFACTURER_CHAR)) {
         log_debug(TAG, "manufacturer = %s", byteArray->data);
     } else if (g_str_equal(uuid, MODEL_CHAR)) {
@@ -136,7 +201,7 @@ Writing to characteristics works in a similar way. Register your callback using 
 void on_services_resolved(Device *device) {
 
     // ...
-    
+
     Characteristic *current_time = binc_device_get_characteristic(device, CTS_SERVICE, CURRENT_TIME_CHAR);
     if (current_time != NULL) {
         if (binc_characteristic_supports_write(current_time,WITH_RESPONSE)) {
@@ -156,12 +221,12 @@ Bluez treats notifications and indications in the same way, calling them 'notifi
 void on_services_resolved(Device *device) {
 
     // ...
-    
+
     Characteristic *temperature = binc_device_get_characteristic(device, HTS_SERVICE_UUID, TEMPERATURE_CHAR);
     if (temperature != NULL) {
         binc_characteristic_start_notify(temperature);
     }
-}    
+}
 ```
 
 And then receiving your notifications:
@@ -174,7 +239,7 @@ void on_notify(Device *device, Characteristic *characteristic, GByteArray *byteA
     if (g_str_equal(uuid, TEMPERATURE_CHAR)) {
         float temperature = parser_get_float(parser);
         log_debug(TAG, "temperature %.1f", temperature);
-    } 
+    }
     parser_free(parser);
 }
 ```
@@ -189,7 +254,7 @@ First you need to register an Agent and set the callbacks for these 2 types of b
 int main(void) {
 
     // ...
-        
+
     agent = binc_agent_create(default_adapter, "/org/bluez/BincAgent", KEYBOARD_DISPLAY);
     binc_agent_set_request_authorization_cb(agent, &on_request_authorization);
     binc_agent_set_request_passkey_cb(agent, &on_request_passkey);
@@ -238,13 +303,23 @@ g_ptr_array_add(adv_service_uuids, BLP_SERVICE_UUID);
 advertisement = binc_advertisement_create();
 binc_advertisement_set_local_name(advertisement, "BINC2");
 binc_advertisement_set_services(advertisement, adv_service_uuids);
-        
+binc_advertisement_set_type(advertisement, BINC_ADVERTISEMENT_TYPE_PERIPHERAL);
+
 // Start advertising
 binc_adapter_start_advertising(default_adapter, advertisement);
 g_ptr_array_free(adv_service_uuids, TRUE);
 ```
 
 The library also supports setting *manufacturer data* and *service data*.
+
+For non-connectable advertising, set the advertisement type to broadcast:
+
+```c
+advertisement = binc_advertisement_create();
+binc_advertisement_set_local_name(advertisement, "BINC-BEACON");
+binc_advertisement_set_type(advertisement, BINC_ADVERTISEMENT_TYPE_BROADCAST);
+binc_adapter_start_advertising(default_adapter, advertisement);
+```
 
 ## Adding services and characteristics
 In order to make your peripheral work you need to create an 'app' in Bluez terminology. The steps are:
@@ -264,7 +339,7 @@ binc_application_add_characteristic(
                 HTS_SERVICE_UUID,
                 TEMPERATURE_CHAR_UUID,
                 GATT_CHR_PROP_READ | GATT_CHR_PROP_INDICATE | GATT_CHR_PROP_WRITE);
-                
+
 // Set the callbacks for read/write
 binc_application_set_char_read_cb(app, &on_local_char_read);
 binc_application_set_char_write_cb(app, &on_local_char_write);
@@ -273,7 +348,7 @@ binc_application_set_char_write_cb(app, &on_local_char_write);
 binc_adapter_register_application(default_adapter, app);
 ```
 
-There are callbacks to be implemented where you can update the value of a characteristic just before the read/write is done. 
+There are callbacks to be implemented where you can update the value of a characteristic just before the read/write is done.
 If you accept the read, return NULL, otherwise return an error.
 
 ```c
@@ -304,14 +379,14 @@ void binc_application_notify(const Application *app, const char *service_uuid, c
 
 ## Examples
 
-The repository includes an example for both the **Central** and **Peripheral** role. 
+The repository includes an example for both the **Central** and **Peripheral** role.
 
 * The *central* example scans for thermometers and reads the thermometer value once it connects.
 * The *peripheral* example acts as a thermometer and can be used in combination with the central example.
 
 ## Logging
 
-The library contains its own logger that you can also use in your application. 
+The library contains its own logger that you can also use in your application.
 
 * Turn logging on/off: `log_enabled(TRUE)`
 * Set logging level: `log_set_level(LOG_DEBUG)`
@@ -320,7 +395,7 @@ The library contains its own logger that you can also use in your application.
 `
 ## Bluez documentation
 
-The official Bluez documentation is a bit sparse but can be found here: 
+The official Bluez documentation is a bit sparse but can be found here:
 * [Adapter documentation](https://github.com/bluez/bluez/blob/master/doc/org.bluez.Adapter.rst) (for default_adapter)
 * [Characteristic documentation](https://github.com/bluez/bluez/blob/master/doc/org.bluez.GattCharacteristic.rst) (for characteristics)
 * [Device documentation](https://github.com/bluez/bluez/blob/master/doc/org.bluez.Device.rst) (for device)

@@ -50,6 +50,7 @@ struct binc_advertisement {
     gboolean tx_power_enabled;
     GPtrArray *includes; // owned
     SecondaryChannel secondary_channel;
+    AdvertisementType type;
 };
 
 typedef struct binc_advertisement Advertisement;
@@ -58,6 +59,11 @@ static const char *const secondary_channel_str[] = {
     "1M",
     "2M",
     "Coded"
+};
+
+static const char *const advertisement_type_str[] = {
+    "peripheral",
+    "broadcast"
 };
 
 static void add_manufacturer_data(gpointer key, gpointer value, gpointer userdata) {
@@ -88,7 +94,7 @@ GVariant *advertisement_get_property(GDBusConnection *connection,
     g_assert(advertisement != NULL);
 
     if (g_str_equal(property_name, "Type")) {
-        ret = g_variant_new_string("peripheral");
+        ret = g_variant_new_string(advertisement_type_str[advertisement->type]);
     } else if (g_str_equal(property_name, "LocalName")) {
         ret = advertisement->local_name ? g_variant_new_string(advertisement->local_name) : NULL;
     } else if (g_str_equal(property_name, "ServiceUUIDs")) {
@@ -335,6 +341,7 @@ Advertisement *binc_advertisement_create(void) {
     advertisement->tx_power = 4;
     advertisement->includes = NULL;
     advertisement->secondary_channel = BINC_SC_1M;
+    advertisement->type = BINC_ADVERTISEMENT_TYPE_PERIPHERAL;
     g_free(random_str);
     return advertisement;
 }
@@ -555,6 +562,19 @@ SecondaryChannel binc_advertisement_get_secondary_channel(Advertisement *adverti
     g_assert(advertisement != NULL);
 
     return advertisement->secondary_channel;
+}
+
+void binc_advertisement_set_type(Advertisement *advertisement, AdvertisementType type) {
+    g_assert(advertisement != NULL);
+    g_assert(type <= BINC_ADVERTISEMENT_TYPE_BROADCAST);
+
+    advertisement->type = type;
+}
+
+AdvertisementType binc_advertisement_get_type(Advertisement *advertisement) {
+    g_assert(advertisement != NULL);
+
+    return advertisement->type;
 }
 
 void binc_advertisement_set_rsi(Advertisement *advertisement) {

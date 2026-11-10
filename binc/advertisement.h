@@ -37,6 +37,11 @@ typedef enum {
     BINC_SC_CODED
 } SecondaryChannel;
 
+typedef enum {
+    BINC_ADVERTISEMENT_TYPE_PERIPHERAL = 0,
+    BINC_ADVERTISEMENT_TYPE_BROADCAST
+} AdvertisementType;
+
 Advertisement *binc_advertisement_create(void);
 
 void binc_advertisement_free(Advertisement *advertisement);
@@ -78,6 +83,10 @@ gint16 binc_advertisement_get_tx_power(Advertisement *advertisement);
 void binc_advertisement_set_secondary_channel(Advertisement *advertisement, SecondaryChannel secondary_channel);
 
 SecondaryChannel binc_advertisement_get_secondary_channel(Advertisement *advertisement);
+
+void binc_advertisement_set_type(Advertisement *advertisement, AdvertisementType type);
+
+AdvertisementType binc_advertisement_get_type(Advertisement *advertisement);
 
 void binc_advertisement_set_rsi(Advertisement *advertisement);
 

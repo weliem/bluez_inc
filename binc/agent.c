@@ -42,22 +42,6 @@ struct binc_agent {
     AgentRequestPasskeyCallback request_passkey_callback;
 };
 
-void binc_agent_free(Agent *agent) {
-    g_assert (agent != NULL);
-    gboolean result = g_dbus_connection_unregister_object(agent->connection, agent->registration_id);
-    if (!result) {
-        log_debug(TAG, "could not unregister agent");
-    }
-
-    g_free((char *) agent->path);
-    agent->path = NULL;
-
-    agent->connection = NULL;
-    agent->adapter = NULL;
-
-    g_free(agent);
-}
-
 static void bluez_agent_method_call(GDBusConnection *conn,
                                     const gchar *sender,
                                     const gchar *path,
@@ -231,7 +215,10 @@ static int binc_agentmanager_call_method(GDBusConnection *connection, const gcha
                                          -1,
                                          NULL,
                                          &error);
-    g_variant_unref(result);
+
+    if (result != NULL) {
+        g_variant_unref(result);
+    }
 
     if (error != NULL) {
         log_error(TAG, "AgentManager call failed '%s': %s\n", method, error->message);
@@ -276,6 +263,17 @@ int binc_agentmanager_register_agent(Agent *agent) {
     return result;
 }
 
+static int binc_agentmanager_unregister_agent(Agent *agent)
+{
+    g_assert(agent != NULL);
+    int result = binc_agentmanager_call_method(agent->connection, "UnregisterAgent", g_variant_new("(o)", agent->path));
+    if (result == EXIT_FAILURE) {
+        log_debug(TAG, "failed to unregister agent");
+    }
+
+    return result;
+}
+
 Agent *binc_agent_create(Adapter *adapter, const char *path, IoCapability io_capability) {
     Agent *agent = g_new0(Agent, 1);
     agent->path = g_strdup(path);
@@ -285,6 +283,24 @@ Agent *binc_agent_create(Adapter *adapter, const char *path, IoCapability io_cap
     bluez_register_agent(agent);
     binc_agentmanager_register_agent(agent);
     return agent;
+}
+
+void binc_agent_free(Agent *agent) {
+    g_assert (agent != NULL);
+    binc_agentmanager_unregister_agent(agent);
+
+    gboolean result = g_dbus_connection_unregister_object(agent->connection, agent->registration_id);
+    if (!result) {
+        log_debug(TAG, "could not unregister agent");
+    }
+
+    g_free((char *) agent->path);
+    agent->path = NULL;
+
+    agent->connection = NULL;
+    agent->adapter = NULL;
+
+    g_free(agent);
 }
 
 void binc_agent_set_request_authorization_cb(Agent *agent, AgentRequestAuthorizationCallback callback) {
